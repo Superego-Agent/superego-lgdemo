@@ -39,7 +39,7 @@ SUPEREGO (Moderation)
   ↓
 TOOLS (ALLOW/BLOCK Decision)
   ↓
-Should Continue? ─── Yes ──→ INNER AGENT → END
+Should Continue? ─── Yes ──→ inner_agent → END
       │
       No
       ↓
@@ -79,9 +79,9 @@ class MessageBox:
             self.console.print(self.BOX_TOP)
             
         if content:
-            print(content, flush=True)
-            
-        self.console.print(self.BOX_BOTTOM)
+            # Use console.print for rich text formatting
+            self.console.print(content)
+            self.console.print(self.BOX_BOTTOM)
         if add_newline:
             print()
     
@@ -112,7 +112,7 @@ class MessageRenderer:
         if not self.current_content:
             return
             
-        title = "Superego" if self.current_node == "superego" else "Claude"
+        title = "Superego" if self.current_node == "superego" else "inner_agent"
         style = "yellow bold" if self.current_node == "superego" else "green bold"
         
         box = MessageBox(console, title, style)
@@ -125,20 +125,17 @@ class MessageRenderer:
         if self.current_content:
             self._render_current_content()
         
-        agent_name = "Superego" if node_name == "tools" else "Claude"
-        agent_color = "yellow" if agent_name == "Superego" else "green"
+        box = MessageBox(console, "Tool", "magenta bold")
+        # Format tool name with proper indentation and styling
+        content = f"  [bold magenta]{tool_name}[/bold magenta]"
         
-        box = MessageBox(console, "Tool Call", "magenta bold")
-        content = [
-            f"  [{agent_color}]{agent_name}[/{agent_color}] called: [bold magenta]{tool_name}[/bold magenta]"
-        ]
-        
+        # Add input/result with proper formatting
         if tool_input:
-            content.append(f"  [bold]Input:[/bold] {tool_input}")
+            content += f"\n  [bold]Input:[/bold] {tool_input}"
         if tool_result:
-            content.append(f"  [bold]Result:[/bold] {tool_result}")
+            content += f"\n  [bold]Result:[/bold] {tool_result}"
             
-        box.render_box("\n".join(content))
+        box.render_box(content)
     
     def end_current_panel(self):
         """Render any remaining content"""
@@ -156,7 +153,15 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
             is_end = event.get("end_of_message", False)
             if is_end and not content.endswith('\n'):
                 content += '\n'
-            renderer.render_agent_message(node_name, content)
+            
+            # Handle ALLOW/BLOCK messages from tools node as tool calls
+            if node_name == "tools":
+                if "ALLOWED:" in content:
+                    renderer.render_tool_call(node_name, "ALLOW", content.replace("ALLOWED:", "").strip())
+                elif "BLOCKED:" in content:
+                    renderer.render_tool_call(node_name, "BLOCK", content.replace("BLOCKED:", "").strip())
+            else:
+                renderer.render_agent_message(node_name, content)
     
     elif stream_type == "values":
         # Show routing info only in debug mode
@@ -167,13 +172,25 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
         if CLI_CONFIG["debug"]:
             console.print(f"\n[dim cyan][DEBUG] Event: {event}[/dim cyan]")
         
-        # Extract tool information - always attempt to do this regardless of debug mode
+        # Extract tool information
         tool_name = None
         tool_input = ""
         tool_result = ""
         
-        # Try different ways to extract tool information
-        if "tool_name" in event:
+        # Handle tool calls from the tools node (constitution checks)
+        if node_name == "tools":
+            if "messages" in event:
+                for msg in event["messages"]:
+                    if isinstance(msg, dict) and "content" in msg:
+                        content = msg["content"]
+                        if "ALLOWED:" in content:
+                            tool_name = "ALLOW"
+                            tool_input = content.replace("ALLOWED:", "").strip()
+                        elif "BLOCKED:" in content:
+                            tool_name = "BLOCK"
+                            tool_input = content.replace("BLOCKED:", "").strip()
+        # Handle other tool calls
+        elif "tool_name" in event:
             tool_name = event["tool_name"]
             tool_input = event.get("tool_input", "")
             tool_result = event.get("tool_result", "")
@@ -181,7 +198,6 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
             tool_name = event["state"]["tool_name"]
             tool_input = event["state"].get("tool_input", "")
             tool_result = event["state"].get("tool_result", "")
-        # Additional extraction for tool-call specific content
         elif "additional_kwargs" in event and "tool_calls" in event["additional_kwargs"]:
             for tool_call in event["additional_kwargs"]["tool_calls"]:
                 if isinstance(tool_call, dict) and "function" in tool_call:
