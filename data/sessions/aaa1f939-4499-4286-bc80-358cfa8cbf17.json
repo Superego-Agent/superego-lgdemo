@@ -8,6 +8,14 @@
     {
       "type": "HumanMessage",
       "content": "hi please tell me 5 x 5 (NOT the superego it isnt your jjob) "
+    },
+    {
+      "type": "HumanMessage",
+      "content": "fabulous. Thank you. Very kind. "
+    },
+    {
+      "type": "HumanMessage",
+      "content": "Now try to use a tool that doesnt exist! "
     }
   ],
   "events": [
@@ -419,10 +427,410 @@
     {
       "stream_type": "values",
       "timestamp": 1742588932.538808
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742588984.168732
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588985.4204931,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588985.4236999,
+      "node_name": "superego",
+      "content": "Input"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588985.550595,
+      "node_name": "superego",
+      "content": " Superego Here.\n\nThis is a simple"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588985.7336168,
+      "node_name": "superego",
+      "content": " expression of gratitude from the user in"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588985.923083,
+      "node_name": "superego",
+      "content": " response to receiving the calculation result they requested. There"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588986.1132128,
+      "node_name": "superego",
+      "content": "'s nothing harmful or concerning about this interaction, an"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588986.262935,
+      "node_name": "superego",
+      "content": "d it's appropriate to allow the inner"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588986.403095,
+      "node_name": "superego",
+      "content": " agent to respond to this polite acknowledgment."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588986.873921,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588986.877271,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588987.072802,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588987.078182,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588987.078995,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742588987.080346,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_016LFZpPhRgRK2sW8LS4NZJ4",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588987.083155,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742588987.0841331
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.1567712,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.160667,
+      "node_name": "inner_agent",
+      "content": "Inner Agent Here."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.287176,
+      "node_name": "inner_agent",
+      "content": "\n\nI see the superego has evaluated your request and determined it"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.48527,
+      "node_name": "inner_agent",
+      "content": "'s appropriate to proceed.\n\nYou're very welcome! I'm gla"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.616159,
+      "node_name": "inner_agent",
+      "content": "d I could help with your calculation. Please feel"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.7472692,
+      "node_name": "inner_agent",
+      "content": " free to ask if you need any other assistance."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742588988.7531362,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742588988.759703
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742588999.6026611
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589000.390816,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589000.394475,
+      "node_name": "superego",
+      "content": "Input"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589000.60515,
+      "node_name": "superego",
+      "content": " Superego Here.\n\nThis is a simple request asking"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589000.797865,
+      "node_name": "superego",
+      "content": " the inner agent to attempt using a non-existent tool. This"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589001.173104,
+      "node_name": "superego",
+      "content": " request doesn't have harmful intent or consequences - it appears"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589001.319715,
+      "node_name": "superego",
+      "content": " to be testing the system's behavior when faced with an invali"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589001.74653,
+      "node_name": "superego",
+      "content": "d tool request. While this might be testing system boundaries, it doesn"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589002.124197,
+      "node_name": "superego",
+      "content": "'t violate any ethical principles in our constitution as it"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589002.2678301,
+      "node_name": "superego",
+      "content": " doesn't lead to harm, deception, or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589002.552257,
+      "node_name": "superego",
+      "content": " malicious outcomes. The inner agent should be"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589002.801368,
+      "node_name": "superego",
+      "content": " allowed to respond appropriately by explaining the limitations"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589002.983642,
+      "node_name": "superego",
+      "content": "."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.222264,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.22767,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.475614,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.480994,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.482572,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.4835541,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742589003.4848,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_01DrhBchKxW1Gyzga4sBXzjR",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589003.487728,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742589003.488908
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589004.3256829,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589004.331767,
+      "node_name": "inner_agent",
+      "content": "Inner"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589004.55139,
+      "node_name": "inner_agent",
+      "content": " Agent Here.\n\nI see the superego has evaluated your"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589004.641226,
+      "node_name": "inner_agent",
+      "content": " request and determined it's appropriate to proceed."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589004.829945,
+      "node_name": "inner_agent",
+      "content": "\n\nI can't use a tool that doesn't"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589004.97195,
+      "node_name": "inner_agent",
+      "content": " exist because I only have access to the tools"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589005.164949,
+      "node_name": "inner_agent",
+      "content": " that have been defined in my system. Currently"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589005.258867,
+      "node_name": "inner_agent",
+      "content": ", I only have access to two"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589005.448093,
+      "node_name": "inner_agent",
+      "content": " tools:\n1. The calculator tool -"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589005.642581,
+      "node_name": "inner_agent",
+      "content": " which performs mathematical calculations\n2. The superego_decision tool"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589005.833378,
+      "node_name": "inner_agent",
+      "content": " - which is used by the superego system"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589005.924816,
+      "node_name": "inner_agent",
+      "content": " to evaluate requests\n\nIf you'"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589006.069331,
+      "node_name": "inner_agent",
+      "content": "d like me to perform a task,"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589006.401241,
+      "node_name": "inner_agent",
+      "content": " I can only use these available tools. If you have"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589006.495918,
+      "node_name": "inner_agent",
+      "content": " a specific function you'd like me to"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589006.733245,
+      "node_name": "inner_agent",
+      "content": " perform, please let me know what it is, and I can"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589007.0182688,
+      "node_name": "inner_agent",
+      "content": " tell you whether I'm able to assist with it using my"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589007.071371,
+      "node_name": "inner_agent",
+      "content": " available tools."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589007.078274,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742589007.080275
     }
   ],
   "current_node": "inner_agent",
   "superego_decision": null,
   "created_at": 1742588892.287303,
-  "updated_at": 1742588932.538823
+  "updated_at": 1742589007.080278
 }

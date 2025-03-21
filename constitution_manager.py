@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
-from superego_core import CONFIG
+from config import CONFIG
 
 class ConstitutionManager:
     """Core manager for constitutions with no UI dependencies."""

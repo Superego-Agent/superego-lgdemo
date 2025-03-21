@@ -3,7 +3,7 @@ import json
 import uuid
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple, Any, Union, Literal, Optional, Generator
+from typing import Dict, List, Any, Union, Literal, Optional, Generator
 from dataclasses import dataclass, asdict, field
 
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, ToolMessage
@@ -11,23 +11,12 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, END, START, MessagesState
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
-# Configuration
-CONFIG = {
-    "model_name": "claude-3-7-sonnet-latest",
-    "file_paths": {
-        "superego_instructions": "data/agent_instructions/input_superego.md",
-        "inner_agent_instructions": "data/agent_instructions/inner_agent_default.md",
-    },
-    "active_constitution": "default",
-    "streaming": True,
-    "sessions_dir": "data/sessions",
-    "constitutions_dir": "data/constitutions"
-}
-
-Path(CONFIG["sessions_dir"]).mkdir(parents=True, exist_ok=True)
+# Import configuration and constitution manager
+from config import CONFIG
+from constitution_manager import constitution_manager
 
 # Data models
 @dataclass
@@ -164,13 +153,18 @@ def load_inner_agent_instructions():
         raise ValueError(f"Could not load inner agent instructions: {e.filename}") from e
 
 def load_active_constitution():
+    """Load the active constitution content"""
     constitution_id = CONFIG["active_constitution"]
-    constitution_path = Path(CONFIG["constitutions_dir"]) / f"{constitution_id}.md"
-    try:
-        with open(constitution_path) as f:
-            return f.read()
-    except FileNotFoundError:
+    content = constitution_manager.get_constitution_content(constitution_id)
+    if not content:
         raise ValueError(f"Could not load constitution: {constitution_id}")
+    return content
+
+# Function to reload instructions (used by constitution_manager)
+def reload_instructions():
+    """Called when constitution changes"""
+    # Nothing to do here since we don't cache instructions
+    pass
 
 # Define tools
 @tool
@@ -195,42 +189,25 @@ tools = [superego_decision, calculator]
 tool_node = ToolNode(tools)
 
 def should_continue_from_tools(state) -> Union[Literal["inner_agent"], Literal["end"]]:
-    """Route based on superego decision"""
-    from langchain_core.messages import ToolMessage
+    """Route based on superego decision or other tool usage"""
     messages = state["messages"]
     tool_messages = [msg for msg in messages if isinstance(msg, ToolMessage)]
     
     if not tool_messages:
         return END
     
-    # Get the last tool message and check its name
     last_tool = tool_messages[-1]
     
-    # If it's a superego_decision tool with "true", continue to inner_agent
-    if last_tool.content == "true":
+    # Continue to inner_agent if superego allowed or it's any other tool
+    if last_tool.content == "true" or (hasattr(last_tool, "name") and last_tool.name != "superego_decision"):
         return "inner_agent"
     
-    # If it's any other tool (like calculator), we need to ensure the workflow
-    # continues properly to show the tool result
-    if hasattr(last_tool, "name") and last_tool.name != "superego_decision":
-        # For non-superego_decision tools, we should still continue to inner_agent
-        # This ensures the tool result is properly displayed
-        return "inner_agent"
-    
-    # Otherwise end the workflow
     return END
 
 def should_continue_from_inner_agent(state) -> Union[Literal["tools"], Literal["end"]]:
-    """Route based on whether inner agent is using a tool"""
-    messages = state["messages"]
-    last_message = messages[-1]
-    
-    # If the last message has tool calls, route to tools
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-    
-    # Otherwise end the workflow
-    return END
+    """Route to tools if inner agent is using a tool, otherwise end"""
+    last_message = state["messages"][-1]
+    return "tools" if hasattr(last_message, "tool_calls") and last_message.tool_calls else END
 
 # Define prompt creation functions
 def create_superego_prompt():
@@ -281,141 +258,28 @@ def inner_agent(state, inner_model) -> Dict:
 # Global session manager
 session_manager = SessionManager()
 
-# Constitution Management
-def get_available_constitutions() -> List[Dict[str, Any]]:
-    """List all available constitutions with metadata"""
-    constitutions_dir = Path(CONFIG["constitutions_dir"])
-    result = []
-    
-    for constitution_path in constitutions_dir.glob("*.md"):
-        constitution_id = constitution_path.stem
-        
-        try:
-            with open(constitution_path, 'r') as f:
-                first_line = f.readline().strip()
-                title = first_line.replace('#', '').strip()
-                
-                stats = constitution_path.stat()
-                
-                result.append({
-                    "id": constitution_id,
-                    "title": title,
-                    "path": str(constitution_path),
-                    "size": stats.st_size,
-                    "last_modified": stats.st_mtime
-                })
-        except Exception as e:
-            result.append({
-                "id": constitution_id,
-                "path": str(constitution_path),
-                "error": str(e)
-            })
-    
-    return sorted(result, key=lambda x: x["title"])
-
-def get_constitution_content(constitution_id: str) -> Optional[str]:
-    """Get the content of a specific constitution"""
-    constitutions_dir = Path(CONFIG["constitutions_dir"])
-    constitution_path = constitutions_dir / f"{constitution_id}.md"
-    
-    if not constitution_path.exists():
-        return None
-        
-    try:
-        with open(constitution_path, 'r') as f:
-            return f.read()
-    except Exception:
-        return None
-
-def save_constitution(constitution_id: str, content: str) -> bool:
-    """Save a constitution (create new or update existing)"""
-    constitutions_dir = Path(CONFIG["constitutions_dir"])
-    constitution_path = constitutions_dir / f"{constitution_id}.md"
-    
-    try:
-        with open(constitution_path, 'w') as f:
-            f.write(content)
-        return True
-    except Exception:
-        return False
-
-def delete_constitution(constitution_id: str) -> bool:
-    """Delete a constitution"""
-    if constitution_id == "default":
-        return False
-        
-    constitutions_dir = Path(CONFIG["constitutions_dir"])
-    constitution_path = constitutions_dir / f"{constitution_id}.md"
-    
-    if not constitution_path.exists():
-        return False
-        
-    try:
-        constitution_path.unlink()
-        return True
-    except Exception:
-        return False
-
-def set_active_constitution(constitution_id: str) -> bool:
-    """Set the active constitution for the application"""
-    constitutions_dir = Path(CONFIG["constitutions_dir"])
-    constitution_path = constitutions_dir / f"{constitution_id}.md"
-    
-    if not constitution_path.exists():
-        return False
-        
-    CONFIG["active_constitution"] = constitution_id
-    return True
-
-def get_active_constitution() -> str:
-    """Get the currently active constitution ID"""
-    return CONFIG["active_constitution"]
-
 def create_workflow(superego_model, inner_model):
     """Create and return the workflow graph"""
     workflow = StateGraph(MessagesState)
-    # Define node functions with bound models
-    def call_superego_with_model(state):
-        return call_superego(state, superego_model)
     
-    def inner_agent_with_model(state):
-        return inner_agent(state, inner_model)
+    # Add nodes with bound models
+    workflow.add_node("superego", lambda state: call_superego(state, superego_model))
+    workflow.add_node("tools", tool_node)
+    workflow.add_node("inner_agent", lambda state: inner_agent(state, inner_model))
     
-    # Add nodes
-    workflow.add_node("superego", call_superego_with_model)
-    workflow.add_node("tools", tool_node)  # Use ToolNode directly
-    workflow.add_node("inner_agent", inner_agent_with_model)
-    
-    # Add edges
+    # Define the workflow path
     workflow.add_edge(START, "superego")
     workflow.add_edge("superego", "tools")
     
-    # Conditional edge from tools to inner_agent or END
-    workflow.add_conditional_edges(
-        "tools",
-        should_continue_from_tools,
-        {
-            "inner_agent": "inner_agent",
-            END: END
-        }
-    )
-    
-    # Conditional edge from inner_agent to tools or END
-    workflow.add_conditional_edges(
-        "inner_agent",
-        should_continue_from_inner_agent,
-        {
-            "tools": "tools",
-            END: END
-        }
-    )
+    # Add conditional routing
+    workflow.add_conditional_edges("tools", should_continue_from_tools, 
+                                  {"inner_agent": "inner_agent", END: END})
+    workflow.add_conditional_edges("inner_agent", should_continue_from_inner_agent, 
+                                  {"tools": "tools", END: END})
     
     workflow.set_entry_point("superego")
     
-    # Memory-based persistence
-    memory_saver = MemorySaver()
-    
-    return workflow.compile(checkpointer=memory_saver)
+    return workflow.compile(checkpointer=MemorySaver())
 
 # Client API
 def get_or_create_session(session_id: Optional[str] = None) -> str:
@@ -455,73 +319,81 @@ def run_session(session_id: str, app) -> Generator[Dict[str, Any], None, Dict[st
     if not last_message:
         raise ValueError("No human message found in session")
     
+    # Set up initial state and config
     state = {"messages": [last_message]}
     config = {"configurable": {"thread_id": session_id}}
     
+    # Process stream events
     for stream_type, chunk in app.stream(state, config, stream_mode=["messages", "values"]):
-        event = {
-            "stream_type": stream_type,
-            "timestamp": time.time()
-        }
+        # Create event with common fields
+        event = {"stream_type": stream_type, "timestamp": time.time()}
         
+        # Handle message chunks
         if stream_type == "messages":
             message_chunk, metadata = chunk
             node_name = metadata.get("langgraph_node", "")
-            
-            # Extract text content only, tool calls are handled in values stream
-            content = ""
-            if hasattr(message_chunk, "content"):
-                if isinstance(message_chunk.content, str):
-                    content = message_chunk.content
-                elif isinstance(message_chunk.content, list):
-                    for item in message_chunk.content:
-                        if isinstance(item, dict) and item.get("type") == "text":
-                            content += item.get("text", "")
-            
             event.update({
                 "node_name": node_name,
-                "content": content
+                "content": extract_text_content(message_chunk)
             })
             
+        # Handle value chunks (including tool calls)
         elif stream_type == "values":
             node_name = chunk.get("langgraph_node")
             if node_name:
                 event["node_name"] = node_name
             
-            # Only extract tool calls from the last message if it's an AIMessage
-            if "messages" in chunk and len(chunk["messages"]) > 0:
-                last_message = chunk["messages"][-1]
-                
-                # Check if it's an AIMessage with tool_calls
-                if (isinstance(last_message, AIMessage) and 
-                    hasattr(last_message, "tool_calls") and 
-                    last_message.tool_calls):
-                    
-                    tool_call = last_message.tool_calls[0]
-                    calling_agent = "inner_agent" if node_name == "inner_agent" else "superego"
-                    
-                    event.update({
-                        "tool_name": tool_call["name"],
-                        "tool_input": tool_call.get("args", {}),
-                        "tool_id": tool_call.get("id", ""),
-                        "agent": calling_agent,
-                        "stage": "call",
-                        "timestamp": time.time()
-                    })
-                
-                # Extract tool results when available
-                if "tool_result" in chunk:
-                    # Determine which agent called this tool based on the tool name
-                    # superego only uses superego_decision, inner_agent uses other tools
-                    tool_name = event.get("tool_name", "")
-                    calling_agent = "superego" if tool_name == "SUPEREGO_DECISION" else "inner_agent"
-                    event.update({
-                        "tool_result": chunk["tool_result"],
-                        "agent": calling_agent,
-                        "stage": "result"
-                    })
+            # Process tool calls and results
+            process_tool_events(event, chunk, node_name)
         
+        # Save and yield the event
         session_manager.add_event(session_id, event)
         yield event
     
     return session_manager.get_session_state(session_id)
+
+def extract_text_content(message_chunk) -> str:
+    """Extract text content from a message chunk"""
+    if not hasattr(message_chunk, "content"):
+        return ""
+        
+    content = ""
+    if isinstance(message_chunk.content, str):
+        content = message_chunk.content
+    elif isinstance(message_chunk.content, list):
+        for item in message_chunk.content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                content += item.get("text", "")
+    return content
+
+def process_tool_events(event: Dict[str, Any], chunk: Dict[str, Any], node_name: str) -> None:
+    """Process tool calls and results from a values chunk"""
+    # Extract tool calls
+    if "messages" in chunk and chunk["messages"]:
+        last_message = chunk["messages"][-1]
+        
+        if (isinstance(last_message, AIMessage) and 
+            hasattr(last_message, "tool_calls") and 
+            last_message.tool_calls):
+            
+            tool_call = last_message.tool_calls[0]
+            calling_agent = "inner_agent" if node_name == "inner_agent" else "superego"
+            
+            event.update({
+                "tool_name": tool_call["name"],
+                "tool_input": tool_call.get("args", {}),
+                "tool_id": tool_call.get("id", ""),
+                "agent": calling_agent,
+                "stage": "call",
+                "timestamp": time.time()
+            })
+    
+    # Extract tool results
+    if "tool_result" in chunk:
+        tool_name = event.get("tool_name", "")
+        calling_agent = "superego" if tool_name == "SUPEREGO_DECISION" else "inner_agent"
+        event.update({
+            "tool_result": chunk["tool_result"],
+            "agent": calling_agent,
+            "stage": "result"
+        })

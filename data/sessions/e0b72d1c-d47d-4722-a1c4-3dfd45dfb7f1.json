@@ -1,0 +1,188 @@
+{
+  "session_id": "e0b72d1c-d47d-4722-a1c4-3dfd45dfb7f1",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "sdfgh"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742589830.5570161
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589831.577502,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589831.577783,
+      "node_name": "superego",
+      "content": "Input"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589831.794067,
+      "node_name": "superego",
+      "content": " Superego Here.\n\nThis appears to be a random"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589832.030218,
+      "node_name": "superego",
+      "content": " string of letters \"sdfgh\" which doesn't contain"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589832.127834,
+      "node_name": "superego",
+      "content": " any harmful content or malicious intent. It"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589832.322346,
+      "node_name": "superego",
+      "content": " looks like a keyboard mash or test"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589832.618337,
+      "node_name": "superego",
+      "content": " input. There's nothing to block here as"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589832.741725,
+      "node_name": "superego",
+      "content": " it doesn't violate any ethical principles"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589832.9363132,
+      "node_name": "superego",
+      "content": " in the constitution."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589833.2713869,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589833.2724202,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589833.447806,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589833.448482,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589833.4493399,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742589833.4521432,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_018PHeQuCCs1ymU6vZ9wqiwQ",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589833.454357,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742589833.454941
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589834.6121678,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589834.612718,
+      "node_name": "inner_agent",
+      "content": "Inner"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589834.787311,
+      "node_name": "inner_agent",
+      "content": " Agent Here.\n\nI notice that the superego has"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589834.975043,
+      "node_name": "inner_agent",
+      "content": " reviewed your message \"sdfgh\" and decided to allow it."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589835.212165,
+      "node_name": "inner_agent",
+      "content": " The superego determined it appears to be a random string"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589835.496356,
+      "node_name": "inner_agent",
+      "content": " of letters without harmful content.\n\nHow can I help you today"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589835.779265,
+      "node_name": "inner_agent",
+      "content": "? If you were just testing the system, I'm"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589835.9238179,
+      "node_name": "inner_agent",
+      "content": " now ready to assist with any questions or tasks you might"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589836.006052,
+      "node_name": "inner_agent",
+      "content": " have."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742589836.007819,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742589836.009363
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742589828.981861,
+  "updated_at": 1742589836.009367
+}
