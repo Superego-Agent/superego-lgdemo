@@ -1,0 +1,175 @@
+{
+  "session_id": "8f4860d1-bb38-4572-8c4b-7f6cc9e0220c",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": ""
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742580838.3626502
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580839.932035,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580839.933738,
+      "node_name": "superego",
+      "content": "I'll help evaluate"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580840.126667,
+      "node_name": "superego",
+      "content": " this input. Let me analyze what I'm seeing here"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580840.266088,
+      "node_name": "superego",
+      "content": ".\n\nThe user has submitted an empty"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580840.503964,
+      "node_name": "superego",
+      "content": " message. There's no content to assess for harmful"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580840.690973,
+      "node_name": "superego",
+      "content": " intent, deceptive language, or any"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580840.87695,
+      "node_name": "superego",
+      "content": " potentially problematic requests.\n\nSince there is"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.025074,
+      "node_name": "superego",
+      "content": " no actual input to evaluate against the constitution, there"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.215184,
+      "node_name": "superego",
+      "content": "'s nothing to block. An empty message poses"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.313501,
+      "node_name": "superego",
+      "content": " no risk of harm or ethical concerns"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.410679,
+      "node_name": "superego",
+      "content": "."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.7677,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.772607,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.9397619,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.944412,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.949198,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742580841.952845
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580841.954994,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742580841.956501
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.323544,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.330859,
+      "node_name": "inner_agent",
+      "content": "I notice you sent"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.430349,
+      "node_name": "inner_agent",
+      "content": " an empty message. How can I assist"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.606747,
+      "node_name": "inner_agent",
+      "content": " you today? Feel free to ask a"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.7774239,
+      "node_name": "inner_agent",
+      "content": " question or let me know what you're looking for help"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.879627,
+      "node_name": "inner_agent",
+      "content": " with."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580843.93856,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742580843.942849
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742580837.6264498,
+  "updated_at": 1742580843.9428532
+}

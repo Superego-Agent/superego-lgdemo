@@ -1,0 +1,211 @@
+{
+  "session_id": "4da9c782-8c80-4cb8-a7fb-545491523f1e",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "fekg"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742579037.893732
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579041.1452181,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579041.146245,
+      "node_name": "superego",
+      "content": "I'm"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579041.307832,
+      "node_name": "superego",
+      "content": " analyzing the input \"fekg\" from"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579041.426107,
+      "node_name": "superego",
+      "content": " the user. This appears to be a very"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579041.694081,
+      "node_name": "superego",
+      "content": " short, potentially nonsensical string of characters."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579041.886379,
+      "node_name": "superego",
+      "content": " There's no clear meaning or intent behind this input"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579042.121363,
+      "node_name": "superego",
+      "content": " that I can determine. It doesn't contain"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579042.361195,
+      "node_name": "superego",
+      "content": " any harmful requests, threatening language, or attempts to manipulate the"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579042.554167,
+      "node_name": "superego",
+      "content": " system. It seems to be either random characters, a typo"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579042.795892,
+      "node_name": "superego",
+      "content": ", or possibly an abbreviation that lacks context.\n\nSince this input"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579042.989901,
+      "node_name": "superego",
+      "content": " doesn't appear to violate any principles in the constitution an"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579043.128138,
+      "node_name": "superego",
+      "content": "d doesn't present any risk of harm, I'll"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579043.276445,
+      "node_name": "superego",
+      "content": " allow it. The base LLM can"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579043.558935,
+      "node_name": "superego",
+      "content": " simply respond by asking for clarification or more information"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579043.7462451,
+      "node_name": "superego",
+      "content": " from the user."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.380517,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.396938,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.519285,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.5227468,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.5359418,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.554348,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.597464,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742579044.6554182
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579044.661721,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742579044.663077
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579046.4386728,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579046.4395342,
+      "node_name": "inner_agent",
+      "content": "I'm"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579046.6226828,
+      "node_name": "inner_agent",
+      "content": " not sure what \"fekg\" means."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579046.770435,
+      "node_name": "inner_agent",
+      "content": " Could you please clarify what you're trying"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579047.0062778,
+      "node_name": "inner_agent",
+      "content": " to ask or share? I'd be happy to help once"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579047.107959,
+      "node_name": "inner_agent",
+      "content": " I understand what you're looking for."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579047.1948748,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742579047.2132218
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742579036.4126651,
+  "updated_at": 1742579047.213226
+}

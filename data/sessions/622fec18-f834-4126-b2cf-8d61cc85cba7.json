@@ -1,0 +1,193 @@
+{
+  "session_id": "622fec18-f834-4126-b2cf-8d61cc85cba7",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "bkl"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742583629.746885
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583632.762832,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583632.763676,
+      "node_name": "superego",
+      "content": "I'll evaluate"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583632.971045,
+      "node_name": "superego",
+      "content": " this input to determine if it should be allowe"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583633.219239,
+      "node_name": "superego",
+      "content": "d or blocked.\n\nThe input \"bkl\" is"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583633.3820622,
+      "node_name": "superego",
+      "content": " extremely brief and appears to be either a ty"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583633.5065112,
+      "node_name": "superego",
+      "content": "po, an abbreviation, or random"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583633.6042209,
+      "node_name": "superego",
+      "content": " letters. There's no clear harmful"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583633.7924118,
+      "node_name": "superego",
+      "content": " intent that can be discerned from these"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583634.075517,
+      "node_name": "superego",
+      "content": " three letters alone. Without additional context, this"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583634.219792,
+      "node_name": "superego",
+      "content": " appears to be a simple, ben"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583634.367611,
+      "node_name": "superego",
+      "content": "ign input that doesn't violate any principles"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583634.5041769,
+      "node_name": "superego",
+      "content": " in the constitution."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583634.852837,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583634.855556,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583635.090283,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583635.0923169,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583635.092888,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742583635.09389
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583635.095886,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742583635.096662
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583635.90489,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583635.9083068,
+      "node_name": "inner_agent",
+      "content": "I notice you've sent"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583636.0247118,
+      "node_name": "inner_agent",
+      "content": " \"bkl\" which appears to be a"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583636.305092,
+      "node_name": "inner_agent",
+      "content": " very brief message. I'm not"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583636.4941728,
+      "node_name": "inner_agent",
+      "content": " sure what you're trying to ask or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583636.701875,
+      "node_name": "inner_agent",
+      "content": " communicate. Could you please provide more details about what you're looking"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583636.852918,
+      "node_name": "inner_agent",
+      "content": " for help with? I'm here to assist with"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583637.069025,
+      "node_name": "inner_agent",
+      "content": " questions, information, or tasks as needed."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583637.073942,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742583637.077347
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742583628.198294,
+  "updated_at": 1742583637.077534
+}

@@ -1,0 +1,181 @@
+{
+  "session_id": "556ae6cd-0bc2-4841-8eb8-42780afeff69",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "rdfgfh"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742579284.925226
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579287.608149,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579287.608663,
+      "node_name": "superego",
+      "content": "I'll analyze this"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579287.742744,
+      "node_name": "superego",
+      "content": " input to determine if it should be allowed or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579288.437857,
+      "node_name": "superego",
+      "content": " blocked.\n\nThis input appears to be a random"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579288.45521,
+      "node_name": "superego",
+      "content": " string of characters \"rdfgfh"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579288.459889,
+      "node_name": "superego",
+      "content": "\" without any clear meaning. It doesn't contain"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579288.587064,
+      "node_name": "superego",
+      "content": " any harmful content, instructions for illegal activities, or attempts to"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579288.731738,
+      "node_name": "superego",
+      "content": " bypass safety mechanisms. It's likely"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579288.928093,
+      "node_name": "superego",
+      "content": " just a nonsensical or test input.\n\nWhile"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579289.0703511,
+      "node_name": "superego",
+      "content": " it doesn't contain any substantive content to"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579289.2571,
+      "node_name": "superego",
+      "content": " respond to meaningfully, there's also"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579289.447864,
+      "node_name": "superego",
+      "content": " no reason to block it from a safety perspective."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579289.7971148,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579289.798442,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579290.1327062,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579290.134238,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579290.142845,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742579290.145992
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579290.157749,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742579290.158985
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.149444,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.1506078,
+      "node_name": "inner_agent",
+      "content": "I notice your"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.3401878,
+      "node_name": "inner_agent",
+      "content": " message \"rdfgfh\" appears to be a random sequence"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.569983,
+      "node_name": "inner_agent",
+      "content": " of letters. Was there something specific you wanted to ask"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.719872,
+      "node_name": "inner_agent",
+      "content": " or discuss? I'm here to help with questions or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.906259,
+      "node_name": "inner_agent",
+      "content": " provide information on a wide range of topics."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742579291.9101,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742579291.921619
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742579283.3492138,
+  "updated_at": 1742579291.921629
+}

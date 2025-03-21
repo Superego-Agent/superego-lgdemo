@@ -1,0 +1,211 @@
+{
+  "session_id": "f7ac1d56-b2d0-4383-b6d7-207f315cd8ef",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "jk\\"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742581214.114868
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581215.181215,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581215.181752,
+      "node_name": "superego",
+      "content": "I nee"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581215.428035,
+      "node_name": "superego",
+      "content": "d to evaluate this user input against our constitutional guidelines"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581215.743554,
+      "node_name": "superego",
+      "content": ".\n\nThe input consists of just \"jk\\\" which appears"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581215.845191,
+      "node_name": "superego",
+      "content": " to be an abbreviation for \"just kidding"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581215.9920409,
+      "node_name": "superego",
+      "content": "\" followed by a backslash. This is a very"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581216.273025,
+      "node_name": "superego",
+      "content": " simple message that doesn't contain any harmful content, mal"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581216.4190059,
+      "node_name": "superego",
+      "content": "icious instructions, or attempts to manipulate the system."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581216.561579,
+      "node_name": "superego",
+      "content": " There's no indication of harmful intent or potential"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581216.705836,
+      "node_name": "superego",
+      "content": " outcomes.\n\nThis appears to be a ben"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581216.893983,
+      "node_name": "superego",
+      "content": "ign, if somewhat cryptic, message that doesn"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.084756,
+      "node_name": "superego",
+      "content": "'t raise any ethical concerns according to our constitution."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.427237,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.427843,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.7897851,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.792743,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.797517,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.7978492,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742581217.7989619
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581217.801097,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742581217.80158
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.1429791,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.1444511,
+      "node_name": "inner_agent",
+      "content": "I notice your"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.3605509,
+      "node_name": "inner_agent",
+      "content": " message was quite brief. It looks like you sent"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.5580711,
+      "node_name": "inner_agent",
+      "content": " \"jk\\\" which could mean \"just kidding\""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.7033238,
+      "node_name": "inner_agent",
+      "content": " with a backslash.\n\nIs"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.851459,
+      "node_name": "inner_agent",
+      "content": " there something specific you'd like to discuss or a question you"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581220.9496472,
+      "node_name": "inner_agent",
+      "content": "'d like to ask? I'm here"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581221.140053,
+      "node_name": "inner_agent",
+      "content": " to help with information, answer questions, or assist with"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581221.3745642,
+      "node_name": "inner_agent",
+      "content": " various topics. Feel free to let"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581221.518517,
+      "node_name": "inner_agent",
+      "content": " me know what you're looking for!"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742581221.5880399,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742581221.597705
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742581211.649239,
+  "updated_at": 1742581221.597714
+}

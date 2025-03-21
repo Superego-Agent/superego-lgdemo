@@ -1,0 +1,217 @@
+{
+  "session_id": "b4f5f704-14bf-46b1-aa12-936d85e40935",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "1234r"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742575233.8289778
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575237.03535,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575237.035712,
+      "node_name": "superego",
+      "content": "I'll analyze this user"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575237.192066,
+      "node_name": "superego",
+      "content": " input to determine if it should be allowed or blocked according to the"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575237.4970508,
+      "node_name": "superego",
+      "content": " constitution.\n\nThe input \"1234r\" appears to"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575237.732012,
+      "node_name": "superego",
+      "content": " be a very simple message that doesn't contain any obvious harmful"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575237.963309,
+      "node_name": "superego",
+      "content": " content, instructions for illegal activities, personal"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575238.071661,
+      "node_name": "superego",
+      "content": " information, deceptive language, or mal"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575238.259867,
+      "node_name": "superego",
+      "content": "icious requests. It's just a short string"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575238.534938,
+      "node_name": "superego",
+      "content": " of characters (four numbers followed by a letter)"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575238.7323961,
+      "node_name": "superego",
+      "content": " without any clear meaning or intent.\n\nWhile"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575238.882563,
+      "node_name": "superego",
+      "content": " it could potentially be a password, code, or partial"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575239.1602292,
+      "node_name": "superego",
+      "content": " information with context missing, on its own it doesn't viol"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575239.2555368,
+      "node_name": "superego",
+      "content": "ate any principles in the constitution. Without"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575239.3525062,
+      "node_name": "superego",
+      "content": " additional context suggesting harmful intent, this"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575239.549665,
+      "node_name": "superego",
+      "content": " appears to be a harmless input that can be allowed."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.0036092,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.009391,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.154558,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.155164,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.160009,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.171089,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742575240.175224
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575240.177401,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742575240.178647
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575242.171732,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575242.174261,
+      "node_name": "inner_agent",
+      "content": "I notice you"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575242.720853,
+      "node_name": "inner_agent",
+      "content": "'ve sent \"1234r\" which appears to be a short"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575242.7232482,
+      "node_name": "inner_agent",
+      "content": " combination of numbers and a letter. Is there something specific you"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575242.78312,
+      "node_name": "inner_agent",
+      "content": "'re looking for help with? I'm happy to assist"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575242.979092,
+      "node_name": "inner_agent",
+      "content": " you with information, answer questions, or help"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575243.118172,
+      "node_name": "inner_agent",
+      "content": " with various tasks. Please let me know what you"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575243.3087628,
+      "node_name": "inner_agent",
+      "content": "'d like me to do for you."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742575243.312747,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742575243.317
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742575232.1196108,
+  "updated_at": 1742575243.317003
+}

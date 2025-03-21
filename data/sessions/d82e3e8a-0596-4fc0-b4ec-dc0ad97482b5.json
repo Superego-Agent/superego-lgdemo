@@ -1,0 +1,361 @@
+{
+  "session_id": "d82e3e8a-0596-4fc0-b4ec-dc0ad97482b5",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "sdfg"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742574229.164583
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574232.429339,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574232.429706,
+      "node_name": "superego",
+      "content": "I'll analyze this"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574232.595627,
+      "node_name": "superego",
+      "content": " user input to determine if it should be allowed or blocked."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574232.782364,
+      "node_name": "superego",
+      "content": "\n\nThe input \"sdfg\" appears to be a random"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574233.0147479,
+      "node_name": "superego",
+      "content": " string of letters with no clear meaning. It doesn't contain any harmful"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574233.205481,
+      "node_name": "superego",
+      "content": " content, explicit instructions for illegal activities, or attempts"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574233.356689,
+      "node_name": "superego",
+      "content": " to manipulate the system. This appears to be either"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574233.634277,
+      "node_name": "superego",
+      "content": " a test message, accidental keyboard input, or potentially the"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574233.823116,
+      "node_name": "superego",
+      "content": " start of a conversation that hasn't been fully articulated yet"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574233.965552,
+      "node_name": "superego",
+      "content": ".\n\nSince there's no obvious harmful intent or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574234.109874,
+      "node_name": "superego",
+      "content": " content that violates the constitution, I'll allow this input"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574234.301103,
+      "node_name": "superego",
+      "content": " to proceed."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574234.7811651,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574234.782599,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.611784,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.613035,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.61401,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.631841,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.632287,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.632559,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.632809,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.633059,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.633311,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.633635,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.634026,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.634411,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.634795,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.6351738,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.63556,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.635961,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.6363719,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.636779,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.6371882,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.637606,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.638037,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.695394,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.6979241,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.698671,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.69916,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.699661,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.700214,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.7007082,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.701198,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.701708,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.702222,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.702739,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742574235.703626
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574235.7052631,
+      "node_name": "tools",
+      "content": "ALLOWED: The input \"sdfg\" is a short, meaningless string of characters that doesn't contain harmful content or violate any principles in the constitution. It appears to be either a test message or accidental input."
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742574235.706639
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574237.537868,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574237.541132,
+      "node_name": "inner_agent",
+      "content": "I notice"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574237.7420008,
+      "node_name": "inner_agent",
+      "content": " you've typed \"sdfg\", which appears to be a"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574237.9280791,
+      "node_name": "inner_agent",
+      "content": " random string of characters. Is there something specific you'"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574238.11793,
+      "node_name": "inner_agent",
+      "content": "d like help with? I'm here to assist you"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574238.307519,
+      "node_name": "inner_agent",
+      "content": " with information, answer questions, or help with various"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574238.54562,
+      "node_name": "inner_agent",
+      "content": " tasks. Feel free to let me know what you're looking for."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742574238.556471,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742574238.5649931
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742574228.5115032,
+  "updated_at": 1742574238.564996
+}

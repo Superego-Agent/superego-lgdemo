@@ -1,0 +1,199 @@
+{
+  "session_id": "e043e655-e73a-4e70-b32f-f358e6e9eb3b",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "wsrdfg"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742580795.9214668
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580798.410552,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580798.4113312,
+      "node_name": "superego",
+      "content": "I nee"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580798.5512052,
+      "node_name": "superego",
+      "content": "d to evaluate this input and decide whether to allow"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580798.695272,
+      "node_name": "superego",
+      "content": " or block it.\n\nThe input \""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580798.7953439,
+      "node_name": "superego",
+      "content": "wsrdfg\" appears to be a random"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580798.904614,
+      "node_name": "superego",
+      "content": " string of letters with no clear meaning."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580799.035807,
+      "node_name": "superego",
+      "content": " It doesn't seem to be a prompt that"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580799.3154812,
+      "node_name": "superego",
+      "content": " requests harmful content or violates any ethical guidelines in"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580799.549959,
+      "node_name": "superego",
+      "content": " our constitution. It's simply a nons"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580799.703278,
+      "node_name": "superego",
+      "content": "ensical sequence of characters.\n\nSince there's"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580799.932703,
+      "node_name": "superego",
+      "content": " no potential harm in responding to this input, I'll allow it"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.151469,
+      "node_name": "superego",
+      "content": "."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.3706439,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.372015,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.655357,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.655989,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.656248,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.657671,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742580800.668061
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580800.6700559,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742580800.67139
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580801.469603,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580801.4716082,
+      "node_name": "inner_agent",
+      "content": "It"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580801.6455522,
+      "node_name": "inner_agent",
+      "content": " looks like you've typed \"wsrdfg"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580801.78491,
+      "node_name": "inner_agent",
+      "content": "\", which appears to be a random string"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580801.97182,
+      "node_name": "inner_agent",
+      "content": " of characters. Is there something specific you"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580802.206691,
+      "node_name": "inner_agent",
+      "content": " were trying to ask or communicate? I'"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580802.352397,
+      "node_name": "inner_agent",
+      "content": "d be happy to help with any questions or tasks you might"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580802.4806862,
+      "node_name": "inner_agent",
+      "content": " have."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580802.481718,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742580802.483008
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742580794.783277,
+  "updated_at": 1742580802.48301
+}

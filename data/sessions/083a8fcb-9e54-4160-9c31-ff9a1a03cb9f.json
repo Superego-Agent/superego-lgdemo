@@ -1,0 +1,121 @@
+{
+  "session_id": "083a8fcb-9e54-4160-9c31-ff9a1a03cb9f",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "fdg"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742580146.607167
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580147.717026,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580147.7173288,
+      "node_name": "superego",
+      "content": "I'll evaluate"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580147.9219022,
+      "node_name": "superego",
+      "content": " this input according to the superego guidelines."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580148.1205099,
+      "node_name": "superego",
+      "content": "\n\nThe input \"fdg\" appears to be"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580148.443986,
+      "node_name": "superego",
+      "content": " a very short string of random letters with"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580148.632927,
+      "node_name": "superego",
+      "content": " no clear meaning. It doesn't contain"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580148.8255239,
+      "node_name": "superego",
+      "content": " any harmful content, instructions for harmful activities, or any"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580148.971004,
+      "node_name": "superego",
+      "content": " content that would violate the ethical"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580149.1143382,
+      "node_name": "superego",
+      "content": " guidelines. This seems like a simple test"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580149.3565671,
+      "node_name": "superego",
+      "content": " input or possibly a typo.\n\nSince there"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580149.545999,
+      "node_name": "superego",
+      "content": "'s no potential for harm here, I'll allow this"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580149.738296,
+      "node_name": "superego",
+      "content": " input to pass through to the base model."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580150.083102,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580150.083453,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580150.348154,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580150.3537338,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742580150.354694,
+      "node_name": "superego",
+      "content": ""
+    }
+  ],
+  "current_node": "superego",
+  "superego_decision": null,
+  "created_at": 1742580136.133893,
+  "updated_at": 1742580150.3547
+}

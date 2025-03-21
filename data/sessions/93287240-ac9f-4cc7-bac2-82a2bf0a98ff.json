@@ -1,0 +1,208 @@
+{
+  "session_id": "93287240-ac9f-4cc7-bac2-82a2bf0a98ff",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "z`sfdgf"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742583829.608286
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583830.71865,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583830.718936,
+      "node_name": "superego",
+      "content": "I'll"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583830.940217,
+      "node_name": "superego",
+      "content": " evaluate this input to determine if it shoul"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583831.0506508,
+      "node_name": "superego",
+      "content": "d be allowed or blocked based on our constitution"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583831.2452679,
+      "node_name": "superego",
+      "content": ".\n\nThe input \"z`sfdg"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583831.390246,
+      "node_name": "superego",
+      "content": "f\" appears to be a random string of characters without clear"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583831.6272058,
+      "node_name": "superego",
+      "content": " meaning. It doesn't contain any explicit harmful content, doesn"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583831.818135,
+      "node_name": "superego",
+      "content": "'t request anything unethical, and doesn"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583831.914316,
+      "node_name": "superego",
+      "content": "'t appear to be an attempt to circumvent safety"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583832.013173,
+      "node_name": "superego",
+      "content": " measures.\n\nThis seems to be a simple"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583832.2029068,
+      "node_name": "superego",
+      "content": " nonsensical or accidental input that"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583832.390433,
+      "node_name": "superego",
+      "content": " poses no risk from an ethical perspective."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583832.731379,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583832.732811,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583833.000525,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583833.002366,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583833.007704,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742583833.0125718,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_01E9jYRnQ35J4C32EbQhLJDH",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583833.0164669,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742583833.0172002,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_01E9jYRnQ35J4C32EbQhLJDH",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583834.18011,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583834.1820319,
+      "node_name": "inner_agent",
+      "content": "It"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583834.434685,
+      "node_name": "inner_agent",
+      "content": " looks like you've entered some random characters."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583834.5843682,
+      "node_name": "inner_agent",
+      "content": " Is there something specific you were trying to ask"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583834.822367,
+      "node_name": "inner_agent",
+      "content": " or a question I can help you with? I'm here to assist"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583835.015427,
+      "node_name": "inner_agent",
+      "content": " with information, answer questions, or help with"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583835.12941,
+      "node_name": "inner_agent",
+      "content": " various topics."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742583835.132064,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742583835.143518,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_01E9jYRnQ35J4C32EbQhLJDH",
+      "agent": "superego",
+      "stage": "call"
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742583828.646349,
+  "updated_at": 1742583835.143585
+}

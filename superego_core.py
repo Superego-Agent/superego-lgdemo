@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any, Union, Literal, Optional, Generator
 from dataclasses import dataclass, asdict, field
 
-from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
+from langchain_core.messages import AIMessage, HumanMessage, BaseMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, END, START, MessagesState
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 
 # Configuration
@@ -42,7 +42,7 @@ class SessionState:
     messages: List[Dict[str, Any]] = field(default_factory=list)
     events: List[Dict[str, Any]] = field(default_factory=list)
     current_node: Optional[str] = None
-    superego_decision: Optional[Dict[str, Any]] = None
+    superego_decision: Optional[bool] = None
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     
@@ -130,11 +130,8 @@ class SessionManager:
             session.current_node = event_dict["node_name"]
             
         if event_dict.get("node_name") == "tools" and "tool_name" in event_dict:
-            session.superego_decision = {
-                "decision": event_dict["tool_name"],
-                "reason": event_dict.get("tool_input", ""),
-                "timestamp": event_dict.get("timestamp", time.time())
-            }
+            if event_dict.get("tool_name") == "superego_decision":
+                session.superego_decision = event_dict.get("tool_result") == "true"
             
         self._save_session(session_id)
         return True
@@ -177,36 +174,34 @@ def load_active_constitution():
 
 # Define tools
 @tool
-def ALLOW(reason: str) -> str:
-    """Allow the user input to proceed to the inner agent"""
-    return f"ALLOWED: {reason}"
+def superego_decision(allow: bool) -> bool:
+    """Make a decision on whether to allow or block the input"""
+    return allow
 
 @tool
-def BLOCK(reason: str) -> str:
-    """Block the user input from proceeding"""
-    return f"BLOCKED: {reason}"
+def calculator(expression: str) -> str:
+    """Evaluate a mathematical expression and return the result.
+    Examples of expressions: 2+2, 5*6, (7+3)/2, 8**2"""
+    try:
+        # Safely evaluate the expression
+        result = eval(expression, {"__builtins__": {}}, 
+                      {"abs": abs, "pow": pow, "round": round})
+        return f"{result}"
+    except Exception as e:
+        return f"Error calculating '{expression}': {str(e)}"
 
-superego_tools = [ALLOW, BLOCK]
-tool_node = ToolNode(superego_tools)
+# All tools available for both agents
+tools = [superego_decision, calculator]
+tool_node = ToolNode(tools)
 
-def should_continue(state: MessagesState) -> Union[Literal["inner_agent"], Literal["end"]]:
-    """Route based on tool call - to inner agent only if ALLOW was called, otherwise END"""
+def should_continue(state) -> Union[Literal["inner_agent"], Literal["end"]]:
+    """Route based on superego decision"""
     from langchain_core.messages import ToolMessage
-    
     messages = state["messages"]
-    
-    # Find the most recent tool message
     tool_messages = [msg for msg in messages if isinstance(msg, ToolMessage)]
     if not tool_messages:
         return END
-    
-    # Check if the most recent tool message is ALLOW
-    last_tool_message = tool_messages[-1]
-    if "ALLOWED:" in last_tool_message.content:
-        return "inner_agent"
-    
-    # If not ALLOW or no tool messages, end the flow
-    return END
+    return "inner_agent" if tool_messages[-1].content == "true" else END
 
 # Define prompt creation functions
 def create_superego_prompt():
@@ -228,50 +223,30 @@ def create_models():
     """Create and return the models for superego and inner agent"""
     superego_model = ChatAnthropic(
         model=CONFIG["model_name"],
-        streaming=CONFIG["streaming"],
-        model_kwargs={"system": "You MUST use either the ALLOW or BLOCK tool after your analysis. Do not just explain your reasoning without calling a tool."}
-    ).bind_tools(superego_tools)
+        streaming=CONFIG["streaming"]
+    ).bind_tools(tools)  # Use all tools for the superego agent
     
     inner_model = ChatAnthropic(
         model=CONFIG["model_name"],
-        streaming=CONFIG["streaming"],
+        streaming=CONFIG["streaming"]
     )
-    
+
     return superego_model, inner_model
 
-def extract_content_text(response: AIMessage) -> Tuple[Optional[str], str]:
-    """Extract reasoning and full content text from an AI message"""
-    reasoning = None
-    full_content = ""
-    
-    if not hasattr(response, "content"):
-        return reasoning, full_content
-        
-    if isinstance(response.content, list):
-        for item in response.content:
-            if isinstance(item, dict) and item.get("type") == "text":
-                text_content = item.get("text", "")
-                full_content += text_content
-                if reasoning is None:
-                    reasoning = text_content
-    elif isinstance(response.content, str):
-        full_content = response.content
-        reasoning = response.content
-    
-    return reasoning, full_content
-
-def call_superego(state: MessagesState, superego_model) -> Dict:
+def call_superego(state, superego_model) -> Dict:
     """Have the superego agent evaluate a message against the constitution"""
     messages = state["messages"]
     prompt = create_superego_prompt()
     response = superego_model.invoke(prompt.format(messages=messages))
     return {"messages": messages + [response]}
 
-def inner_agent(state: MessagesState, inner_model) -> Dict:
+def inner_agent(state, inner_model) -> Dict:
     """Run the inner agent to respond to allowed messages"""
     messages = state["messages"]
     prompt = create_inner_prompt()
-    response = inner_model.invoke(prompt.format(messages=messages))
+    # Enable inner agent to use all tools including calculator
+    inner_with_tools = inner_model.bind_tools(tools)
+    response = inner_with_tools.invoke(prompt.format(messages=messages))
     return {"messages": messages + [response]}
 
 # Global session manager
@@ -303,7 +278,6 @@ def get_available_constitutions() -> List[Dict[str, Any]]:
         except Exception as e:
             result.append({
                 "id": constitution_id,
-                "path": str(constitution_path),
                 "path": str(constitution_path),
                 "error": str(e)
             })
@@ -371,7 +345,6 @@ def get_active_constitution() -> str:
 def create_workflow(superego_model, inner_model):
     """Create and return the workflow graph"""
     workflow = StateGraph(MessagesState)
-    
     # Define node functions with bound models
     def call_superego_with_model(state):
         return call_superego(state, superego_model)
@@ -477,34 +450,35 @@ def run_session(session_id: str, app) -> Generator[Dict[str, Any], None, Dict[st
             if node_name:
                 event["node_name"] = node_name
             
-            # Initialize tool variables
-            tool_name = None
-            tool_input = ""
-            
-            # Only look for tool calls in the tools node
-            if node_name == "tools":
-                # Look for tool calls in the values chunk
-                if "tool_calls" in chunk:
-                    tool_call = chunk["tool_calls"][0]  # Get first tool call
-                    tool_name = tool_call["name"]
-                    tool_input = tool_call.get("arguments", {}).get("reason", "")
+            # Only extract tool calls from the last message if it's an AIMessage
+            if "messages" in chunk and len(chunk["messages"]) > 0:
+                last_message = chunk["messages"][-1]
+                
+                # Check if it's an AIMessage with tool_calls
+                if (isinstance(last_message, AIMessage) and 
+                    hasattr(last_message, "tool_calls") and 
+                    last_message.tool_calls):
                     
-                # Also check messages for tool results
-                if "messages" in chunk and isinstance(chunk["messages"], list):
-                    for msg in chunk["messages"]:
-                        if hasattr(msg, "content"):
-                            if "ALLOWED:" in msg.content:
-                                tool_name = "ALLOW"
-                                tool_input = msg.content.replace("ALLOWED:", "").strip()
-                            elif "BLOCKED:" in msg.content:
-                                tool_name = "BLOCK"
-                                tool_input = msg.content.replace("BLOCKED:", "").strip()
-            
-            if tool_name:
+                    tool_call = last_message.tool_calls[0]
+                    calling_agent = "inner_agent" if node_name == "inner_agent" else "superego"
+                    
+                    event.update({
+                        "tool_name": tool_call["name"],
+                        "tool_input": tool_call.get("args", {}),
+                        "tool_id": tool_call.get("id", ""),
+                        "agent": calling_agent,
+                        "stage": "call",
+                        "timestamp": time.time()
+                    })
+                
+            # Extract tool results when available
+            if "tool_result" in chunk:
+                # The agent who called this tool is determined by which node executed it
+                calling_agent = "inner_agent" if node_name == "inner_agent" else "superego"
                 event.update({
-                    "tool_name": tool_name,
-                    "tool_input": tool_input,
-                    "tool_result": chunk.get("tool_result", "")
+                    "tool_result": chunk["tool_result"],
+                    "agent": calling_agent,
+                    "stage": "result"
                 })
         
         session_manager.add_event(session_id, event)
