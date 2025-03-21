@@ -47,150 +47,116 @@ Should Continue? ─── Yes ──→ INNER AGENT → END
 """
     console.print(Panel(
         workflow_text,
-        title="[bold cyan]WORKFLOW VISUALIZATION[/bold cyan]",
+        title="[bold cyan]WORKFLOW[/bold cyan]",
         border_style="cyan",
         expand=False
     ))
 
 class MessageBox:
-    """A reusable component for rendering boxed messages in the CLI.
-    
-    This class encapsulates the creation, content management, and closing of
-    message boxes with consistent styling, eliminating code duplication.
-    """
+    """A streamlined component for rendering boxed messages in the CLI."""
     BOX_WIDTH = 75
     BOX_TOP = "╭" + "─" * (BOX_WIDTH - 2) + "╮"
     BOX_BOTTOM = "╰" + "─" * (BOX_WIDTH - 2) + "╯"
     
     def __init__(self, console, title=None, title_style=None):
-        """
-        Args:
-            console: Rich console instance for output
-            title: Optional title for the message box
-            title_style: Rich text style for the title
-        """
         self.console = console
         self.title = title
         self.title_style = title_style
-        self.content_buffer = ""
-        self.is_open = False
     
-    def open(self, add_newline=True):
-        """Open a new message box with styled title"""
-        if self.is_open:
-            return
-            
+    def render_box(self, content="", add_newline=True):
+        """Render a complete message box with optional title and content"""
         if add_newline:
             print("\n")
             
         if self.title:
-            # Create centered title with styling
             title_display = f" [{self.title_style}]{self.title}[/{self.title_style}] "
             padding = "─" * ((self.BOX_WIDTH - len(self.title) - 4) // 2)
             header = f"╭{padding}{title_display}{padding}╮"
-            # Ensure the header is exactly BOX_WIDTH chars by adjusting right padding
             if len(Text.from_markup(header).plain) < self.BOX_WIDTH:
                 header = header[:-1] + "─╮"
             self.console.print(header)
         else:
             self.console.print(self.BOX_TOP)
             
-        self.is_open = True
-    
-    def add_content(self, content, end="\n"):
-        """Add content to the message box"""
-        if not self.is_open:
-            self.open()
-            
-        self.content_buffer += content
-        print(content, end=end, flush=True)
-    
-    def add_labeled_content(self, label, content, label_style="bold"):
-        """Add content with a styled label"""
-        if not self.is_open:
-            self.open()
-            
-        self.console.print(f"  [{label_style}]{label}:[/{label_style}] {content}")
-    
-    def close(self, add_newline=True):
-        """Close the message box"""
-        if not self.is_open:
-            return
+        if content:
+            print(content, flush=True)
             
         self.console.print(self.BOX_BOTTOM)
         if add_newline:
             print()
-            
-        self.is_open = False
-        return self.content_buffer
+    
+    def render_labeled_content(self, label, content, label_style="bold"):
+        """Render content with a styled label"""
+        self.console.print(f"  [{label_style}]{label}:[/{label_style}] {content}")
 
 class MessageRenderer:
-    """Manages rendering of different message types using the MessageBox abstraction"""
+    """Manages rendering of different message types"""
     def __init__(self):
         self.reset()
         
     def reset(self):
-        self.superego_buffer = ""
-        self.inner_buffer = ""
-        self.message_count = 0
-        self.current_box = None
-    
-    def end_current_panel(self):
-        if self.current_box and self.current_box.is_open:
-            self.current_box.close()
-            self.current_box = None
-            
+        """Reset renderer state between messages"""
+        self.current_node = None
+        self.current_content = ""
+        
     def render_agent_message(self, node_name, content):
-        if node_name == "superego":
-            if self.current_box and self.current_box.title != "Superego":
-                self.end_current_panel()
-                
-            if not self.current_box or not self.current_box.is_open:
-                self.current_box = MessageBox(console, "Superego", "yellow bold")
-                self.current_box.open()
-                self.message_count += 1
-                
-            self.superego_buffer += content
-            self.current_box.add_content(content, end="")
+        # If switching to a different agent, render current content first
+        if self.current_node != node_name and self.current_content:
+            self._render_current_content()
             
-        elif node_name == "inner_agent":
-            if self.current_box and self.current_box.title != "Claude":
-                self.end_current_panel()
-                
-            if not self.current_box or not self.current_box.is_open:
-                self.current_box = MessageBox(console, "Claude", "green bold")
-                self.current_box.open()
-                self.message_count += 1
-                
-            self.inner_buffer += content
-            self.current_box.add_content(content, end="")
+        self.current_node = node_name
+        self.current_content += content
     
+    def _render_current_content(self):
+        """Render accumulated content for current node"""
+        if not self.current_content:
+            return
+            
+        title = "Superego" if self.current_node == "superego" else "Claude"
+        style = "yellow bold" if self.current_node == "superego" else "green bold"
+        
+        box = MessageBox(console, title, style)
+        box.render_box(self.current_content, add_newline=True)
+        
+        self.current_content = ""
+        
     def render_tool_call(self, node_name, tool_name, tool_input="", tool_result=""):
-        self.end_current_panel()
+        # Render any pending agent message first
+        if self.current_content:
+            self._render_current_content()
         
         agent_name = "Superego" if node_name == "tools" else "Claude"
         agent_color = "yellow" if agent_name == "Superego" else "green"
         
-        tool_box = MessageBox(console, "Tool Call", "magenta bold")
-        tool_box.open()
+        box = MessageBox(console, "Tool Call", "magenta bold")
+        content = [
+            f"  [{agent_color}]{agent_name}[/{agent_color}] called: [bold magenta]{tool_name}[/bold magenta]"
+        ]
         
-        # Add agent and tool information
-        tool_box.add_content(f"  [{agent_color}]{agent_name}[/{agent_color}] called: [bold magenta]{tool_name}[/bold magenta]")
-        
-        # Add input and result if available
         if tool_input:
-            tool_box.add_labeled_content("Input", tool_input)
+            content.append(f"  [bold]Input:[/bold] {tool_input}")
         if tool_result:
-            tool_box.add_labeled_content("Result", tool_result)
+            content.append(f"  [bold]Result:[/bold] {tool_result}")
             
-        tool_box.close()
+        box.render_box("\n".join(content))
+    
+    def end_current_panel(self):
+        """Render any remaining content"""
+        if self.current_content:
+            self._render_current_content()
 
 def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> None:
     stream_type = event.get("stream_type")
     node_name = event.get("node_name")
     
     if stream_type == "messages" and "content" in event:
-        renderer.render_agent_message(node_name, event["content"])
+        content = event["content"]
+        if content and not content.isspace():
+            # Check if this is the end of a complete message
+            is_end = event.get("end_of_message", False)
+            if is_end and not content.endswith('\n'):
+                content += '\n'
+            renderer.render_agent_message(node_name, content)
     
     elif stream_type == "values":
         # Show routing info only in debug mode

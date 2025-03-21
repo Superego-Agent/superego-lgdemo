@@ -1,0 +1,19 @@
+{
+  "session_id": "099492cf-5da6-4fad-b5e0-f35dcbca9d11",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": ""
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742569427.962622
+    }
+  ],
+  "current_node": null,
+  "superego_decision": null,
+  "created_at": 1742569426.69418,
+  "updated_at": 1742569427.962625
+}
