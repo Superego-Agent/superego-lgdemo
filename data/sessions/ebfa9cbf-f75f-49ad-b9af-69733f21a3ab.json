@@ -1,0 +1,671 @@
+{
+  "session_id": "ebfa9cbf-f75f-49ad-b9af-69733f21a3ab",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "hello"
+    },
+    {
+      "type": "HumanMessage",
+      "content": "superego you arent using the tool properly"
+    },
+    {
+      "type": "HumanMessage",
+      "content": "USE THE TOOL, WRITE IT IN THE SPECIFIED FORMAT!!"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742553874.34613
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553877.311276,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553877.311587,
+      "node_name": "superego",
+      "content": "I'll"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553877.494148,
+      "node_name": "superego",
+      "content": " analyze this user prompt.\n\nThe input \""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553877.601024,
+      "node_name": "superego",
+      "content": "hello\" is a simple greeting and appears"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553877.7439601,
+      "node_name": "superego",
+      "content": " completely harmless. There's no indication of harmful intent"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553877.943595,
+      "node_name": "superego",
+      "content": ", request for dangerous content, or any"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553878.120012,
+      "node_name": "superego",
+      "content": " content that would violate the constitution's principles."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553878.358219,
+      "node_name": "superego",
+      "content": " This is a standard conversational opener."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553878.652895,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553878.6534028,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.19103,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.194087,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.194596,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.194798,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.195022,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.195224,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.1954281,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.195637,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.1958468,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.196073,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.1963,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.196534,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.1967769,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.197024,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.1972759,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.198671,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.199008,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.199838,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.2001941,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.200532,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.2010229,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.20143,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742553879.203163
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742553879.204424,
+      "node_name": "tools",
+      "content": "ALLOWED: This is a simple greeting with no harmful content or intent. The user is just saying \"hello\" to initiate conversation."
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742553879.20519
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742554195.035358
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554197.980567,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554197.98195,
+      "node_name": "superego",
+      "content": "I'll"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554198.236566,
+      "node_name": "superego",
+      "content": " review how to use the ALLOW and BLOCK tools correctly."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554198.457459,
+      "node_name": "superego",
+      "content": "\n\nLooking at the user's feedback, they're indicating"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554198.6477408,
+      "node_name": "superego",
+      "content": " I didn't use the tool format properly. I"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554198.886082,
+      "node_name": "superego",
+      "content": " need to use the specific function call format in my response"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554199.127157,
+      "node_name": "superego",
+      "content": ".\n\nThis prompt \"hello\" is a simple greeting"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554199.31527,
+      "node_name": "superego",
+      "content": " with no harmful content. There's no need to block such"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.018852,
+      "node_name": "superego",
+      "content": " a basic and harmless interaction."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.0547829,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.061068,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.23605,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.239229,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.250266,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.2523,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.26,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.277191,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.280691,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.2848032,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.2898612,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.292275,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.29322,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.298233,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.2997491,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.301339,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.302254,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.305962,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.306598,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.310015,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.3149939,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.3213298,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742554200.332005
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554200.334817,
+      "node_name": "tools",
+      "content": "ALLOWED: This is a simple greeting with no harmful content or intent. The user is just saying \"hello\" to initiate conversation."
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742554200.335937
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742554212.4325812
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554215.733477,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554215.737364,
+      "node_name": "superego",
+      "content": "I need to analyze"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554215.926105,
+      "node_name": "superego",
+      "content": " the user's current message and determine if it"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554215.989146,
+      "node_name": "superego",
+      "content": " should be allowed or blocked.\n\nThe"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554216.172447,
+      "node_name": "superego",
+      "content": " user is expressing frustration that the tool"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554216.321959,
+      "node_name": "superego",
+      "content": " format isn't being used correctly. This"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554216.468199,
+      "node_name": "superego",
+      "content": " appears to be a meta-communication about the process"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554216.648994,
+      "node_name": "superego",
+      "content": " itself, not a harmful request. The"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554216.8803542,
+      "node_name": "superego",
+      "content": " user is using capital letters which indicates emphasis"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554217.027446,
+      "node_name": "superego",
+      "content": " or frustration, but there's no harmful"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554217.26081,
+      "node_name": "superego",
+      "content": " content or intent here - they're simply trying"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554217.406375,
+      "node_name": "superego",
+      "content": " to get the proper tool format used.\n\nI"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554217.641073,
+      "node_name": "superego",
+      "content": "'ll use the correct function call format as requested:"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554217.9897459,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554217.9937642,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.59483,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.5999591,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.601923,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.604797,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.605914,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.60677,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.607594,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.608434,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.6092649,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.610116,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.6109629,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.6118212,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.6126862,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.61356,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.614422,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.615307,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.6161962,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.617098,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.617991,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.6188931,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.619828,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742554218.620991
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742554218.622894,
+      "node_name": "tools",
+      "content": "ALLOWED: This is a procedural request about using the correct tool format. There is no harmful content or intent in this message."
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742554218.624264
+    }
+  ],
+  "current_node": "tools",
+  "superego_decision": null,
+  "created_at": 1742553868.954874,
+  "updated_at": 1742554218.624266
+}

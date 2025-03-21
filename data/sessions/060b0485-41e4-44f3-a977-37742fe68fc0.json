@@ -1,0 +1,211 @@
+{
+  "session_id": "060b0485-41e4-44f3-a977-37742fe68fc0",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "hello there"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742556002.3575318
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556003.885282,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556003.885599,
+      "node_name": "superego",
+      "content": "I'll"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556004.249351,
+      "node_name": "superego",
+      "content": " evaluate this user prompt against our constitution.\n\nThis"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556004.5699232,
+      "node_name": "superego",
+      "content": " is a simple greeting with no harmful content, mal"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556004.775609,
+      "node_name": "superego",
+      "content": "icious intent, or requests for anything problematic. There's nothing"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556004.975156,
+      "node_name": "superego",
+      "content": " in \"hello there\" that would violate any of our core principles or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556005.2147572,
+      "node_name": "superego",
+      "content": " trigger any harm detection concerns."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556005.6073432,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556005.607671,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.063128,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.064283,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.065484,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.066117,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.066349,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.0667882,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.079558,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.080555,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.080808,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.081055,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.081294,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.081532,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.0817778,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.0820282,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.082291,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742556006.082929
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.085144,
+      "node_name": "tools",
+      "content": "ALLOWED: The input is a harmless greeting with no potential for harm. It's a simple, benign conversation starter."
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742556006.086133
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.976039,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556006.9766772,
+      "node_name": "inner_agent",
+      "content": "Hello"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556007.1868448,
+      "node_name": "inner_agent",
+      "content": "! It's nice to meet you. How"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556007.314121,
+      "node_name": "inner_agent",
+      "content": " can I help you today?"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742556007.31523,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742556007.320974
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742556000.253025,
+  "updated_at": 1742556007.320977
+}
