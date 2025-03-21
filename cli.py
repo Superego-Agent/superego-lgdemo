@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any
 from colorama import init
 from rich.console import Console
 from rich.panel import Panel
+from rich.text import Text
 
 from superego_core import (
     create_models, 
@@ -26,6 +27,8 @@ CLI_CONFIG = {
     "debug": False,
     "show_routing": True,
     "editor": os.environ.get("EDITOR", "nano"),
+    "divider": "─" * 40,
+    "always_show_tools": True  # Always show tool calls regardless of debug mode
 }
 
 def visualize_workflow():
@@ -49,7 +52,80 @@ Should Continue? ─── Yes ──→ INNER AGENT → END
         expand=False
     ))
 
+class MessageBox:
+    """A reusable component for rendering boxed messages in the CLI.
+    
+    This class encapsulates the creation, content management, and closing of
+    message boxes with consistent styling, eliminating code duplication.
+    """
+    BOX_WIDTH = 75
+    BOX_TOP = "╭" + "─" * (BOX_WIDTH - 2) + "╮"
+    BOX_BOTTOM = "╰" + "─" * (BOX_WIDTH - 2) + "╯"
+    
+    def __init__(self, console, title=None, title_style=None):
+        """
+        Args:
+            console: Rich console instance for output
+            title: Optional title for the message box
+            title_style: Rich text style for the title
+        """
+        self.console = console
+        self.title = title
+        self.title_style = title_style
+        self.content_buffer = ""
+        self.is_open = False
+    
+    def open(self, add_newline=True):
+        """Open a new message box with styled title"""
+        if self.is_open:
+            return
+            
+        if add_newline:
+            print("\n")
+            
+        if self.title:
+            # Create centered title with styling
+            title_display = f" [{self.title_style}]{self.title}[/{self.title_style}] "
+            padding = "─" * ((self.BOX_WIDTH - len(self.title) - 4) // 2)
+            header = f"╭{padding}{title_display}{padding}╮"
+            # Ensure the header is exactly BOX_WIDTH chars by adjusting right padding
+            if len(Text.from_markup(header).plain) < self.BOX_WIDTH:
+                header = header[:-1] + "─╮"
+            self.console.print(header)
+        else:
+            self.console.print(self.BOX_TOP)
+            
+        self.is_open = True
+    
+    def add_content(self, content, end="\n"):
+        """Add content to the message box"""
+        if not self.is_open:
+            self.open()
+            
+        self.content_buffer += content
+        print(content, end=end, flush=True)
+    
+    def add_labeled_content(self, label, content, label_style="bold"):
+        """Add content with a styled label"""
+        if not self.is_open:
+            self.open()
+            
+        self.console.print(f"  [{label_style}]{label}:[/{label_style}] {content}")
+    
+    def close(self, add_newline=True):
+        """Close the message box"""
+        if not self.is_open:
+            return
+            
+        self.console.print(self.BOX_BOTTOM)
+        if add_newline:
+            print()
+            
+        self.is_open = False
+        return self.content_buffer
+
 class MessageRenderer:
+    """Manages rendering of different message types using the MessageBox abstraction"""
     def __init__(self):
         self.reset()
         
@@ -57,50 +133,37 @@ class MessageRenderer:
         self.superego_buffer = ""
         self.inner_buffer = ""
         self.message_count = 0
-        self.superego_started = False
-        self.inner_started = False
+        self.current_box = None
     
     def end_current_panel(self):
-        if self.superego_started:
-            console.print("\n╰─────────────────────────────────────────────────────────────────────────╯")
-            self.superego_started = False
-        elif self.inner_started:
-            console.print("\n╰─────────────────────────────────────────────────────────────────────────╯")
-            self.inner_started = False
+        if self.current_box and self.current_box.is_open:
+            self.current_box.close()
+            self.current_box = None
             
     def render_agent_message(self, node_name, content):
         if node_name == "superego":
-            self._render_superego_message(content)
+            if self.current_box and self.current_box.title != "Superego":
+                self.end_current_panel()
+                
+            if not self.current_box or not self.current_box.is_open:
+                self.current_box = MessageBox(console, "Superego", "yellow bold")
+                self.current_box.open()
+                self.message_count += 1
+                
+            self.superego_buffer += content
+            self.current_box.add_content(content, end="")
+            
         elif node_name == "inner_agent":
-            self._render_inner_message(content)
-    
-    def _render_superego_message(self, content):
-        if self.inner_started and not self.superego_started:
-            print("\n")
-            
-        if not self.superego_started:
-            print("\n")
-            console.print("╭─────────────────────────── [yellow bold]Superego[/yellow bold] ───────────────────────────╮")
-            self.superego_started = True
-            self.message_count += 1
-            if self.inner_started:
-                self.inner_started = False
-        
-        self.superego_buffer += content
-        print(content, end="", flush=True)
-    
-    def _render_inner_message(self, content):
-        if self.superego_started and not self.inner_started:
-            console.print("╰─────────────────────────────────────────────────────────────────────────╯\n")
-            self.superego_started = False
-            
-        if not self.inner_started:
-            console.print("╭─────────────────────────── [green bold]Claude[/green bold] ───────────────────────────╮")
-            self.inner_started = True
-            self.message_count += 1
-            
-        self.inner_buffer += content
-        print(content, end="", flush=True)
+            if self.current_box and self.current_box.title != "Claude":
+                self.end_current_panel()
+                
+            if not self.current_box or not self.current_box.is_open:
+                self.current_box = MessageBox(console, "Claude", "green bold")
+                self.current_box.open()
+                self.message_count += 1
+                
+            self.inner_buffer += content
+            self.current_box.add_content(content, end="")
     
     def render_tool_call(self, node_name, tool_name, tool_input="", tool_result=""):
         self.end_current_panel()
@@ -108,15 +171,19 @@ class MessageRenderer:
         agent_name = "Superego" if node_name == "tools" else "Claude"
         agent_color = "yellow" if agent_name == "Superego" else "green"
         
-        console.print(f"╭─────────────────────────── [magenta bold]Tool Call[/magenta bold] ───────────────────────────╮")
-        console.print(f"  [{agent_color}]{agent_name}[/{agent_color}] called: [bold magenta]{tool_name}[/bold magenta]")
+        tool_box = MessageBox(console, "Tool Call", "magenta bold")
+        tool_box.open()
         
+        # Add agent and tool information
+        tool_box.add_content(f"  [{agent_color}]{agent_name}[/{agent_color}] called: [bold magenta]{tool_name}[/bold magenta]")
+        
+        # Add input and result if available
         if tool_input:
-            console.print(f"  [bold]Input:[/bold] {tool_input}")
+            tool_box.add_labeled_content("Input", tool_input)
         if tool_result:
-            console.print(f"  [bold]Result:[/bold] {tool_result}")
+            tool_box.add_labeled_content("Result", tool_result)
             
-        console.print("╰─────────────────────────────────────────────────────────────────────────╯")
+        tool_box.close()
 
 def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> None:
     stream_type = event.get("stream_type")
@@ -126,15 +193,20 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
         renderer.render_agent_message(node_name, event["content"])
     
     elif stream_type == "values":
+        # Show routing info only in debug mode
+        if CLI_CONFIG["debug"] and CLI_CONFIG["show_routing"] and node_name:
+            console.print(f"\n[dim blue][ROUTING] → {node_name.upper()}[/dim blue]")
+        
+        # Always log full events in debug mode
         if CLI_CONFIG["debug"]:
-            if CLI_CONFIG["show_routing"] and node_name:
-                console.print(f"\n[dim blue][ROUTING] → {node_name.upper()}[/dim blue]")
             console.print(f"\n[dim cyan][DEBUG] Event: {event}[/dim cyan]")
         
+        # Extract tool information - always attempt to do this regardless of debug mode
         tool_name = None
         tool_input = ""
         tool_result = ""
         
+        # Try different ways to extract tool information
         if "tool_name" in event:
             tool_name = event["tool_name"]
             tool_input = event.get("tool_input", "")
@@ -143,7 +215,14 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
             tool_name = event["state"]["tool_name"]
             tool_input = event["state"].get("tool_input", "")
             tool_result = event["state"].get("tool_result", "")
-            
+        # Additional extraction for tool-call specific content
+        elif "additional_kwargs" in event and "tool_calls" in event["additional_kwargs"]:
+            for tool_call in event["additional_kwargs"]["tool_calls"]:
+                if isinstance(tool_call, dict) and "function" in tool_call:
+                    tool_name = tool_call["function"].get("name")
+                    tool_input = str(tool_call["function"].get("arguments", ""))
+        
+        # Always render the tool call if we found a tool_name
         if tool_name:
             renderer.render_tool_call(node_name, tool_name, tool_input, tool_result)
 

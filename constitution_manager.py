@@ -4,7 +4,6 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
-# Import the core constitution functions from superego_core
 from superego_core import CONFIG
 
 class ConstitutionManager:
@@ -168,25 +167,3 @@ class ConstitutionManager:
 
 # Create a global instance for easy access
 constitution_manager = ConstitutionManager()
-
-# Legacy function wrappers for backward compatibility
-# These will help transition existing code without breaking everything at once
-
-def get_available_constitutions() -> List[Dict[str, Any]]:
-    return constitution_manager.get_available_constitutions()
-
-def get_constitution_content(constitution_id: str) -> Optional[str]:
-    return constitution_manager.get_constitution_content(constitution_id)
-
-def save_constitution(constitution_id: str, content: str) -> bool:
-    return constitution_manager.save_constitution(constitution_id, content)
-
-def delete_constitution(constitution_id: str) -> bool:
-    return constitution_manager.delete_constitution(constitution_id)
-
-def get_active_constitution() -> str:
-    return constitution_manager.get_active_constitution()
-
-def set_active_constitution(constitution_id: str) -> bool:
-    success, _ = constitution_manager.set_active_constitution(constitution_id)
-    return success

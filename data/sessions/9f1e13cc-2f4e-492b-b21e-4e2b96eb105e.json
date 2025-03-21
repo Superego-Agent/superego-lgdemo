@@ -1,0 +1,14 @@
+{
+  "session_id": "9f1e13cc-2f4e-492b-b21e-4e2b96eb105e",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "hoinkke]"
+    }
+  ],
+  "events": [],
+  "current_node": null,
+  "superego_decision": null,
+  "created_at": 1742565306.992907,
+  "updated_at": 1742565309.911139
+}
