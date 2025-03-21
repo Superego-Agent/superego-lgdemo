@@ -207,11 +207,14 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
         tool_input = ""
         tool_result = event.get("tool_result", "")
         agent = event.get("agent", "")
+        stage = event.get("stage", "")
         
         # Format tool input nicely
         if isinstance(event.get("tool_input"), dict):
             if "allow" in event.get("tool_input", {}):
                 tool_input = f"allow: {event.get('tool_input', {}).get('allow', '')}"
+            elif "expression" in event.get("tool_input", {}):
+                tool_input = f"expression: {event.get('tool_input', {}).get('expression', '')}"
             else:
                 tool_input = json.dumps(event.get("tool_input", {}), indent=2)
         else:
@@ -225,8 +228,11 @@ def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> Non
             elif node_name == "inner_tools" or node_name == "inner_agent":
                 agent = "inner_agent"
         
-        # Finally render the tool information with all metadata
-        renderer.render_tool_call(node_name, tool_name, tool_input, tool_result, agent)
+        # Only render tool result if we have one or if this is a call stage
+        # This prevents duplicate tool boxes for the same tool
+        if tool_result or stage != "result":
+            # Finally render the tool information with all metadata
+            renderer.render_tool_call(node_name, tool_name, tool_input, tool_result, agent)
         return  # Exit early once we've handled a tool
         
     # Handle regular message events

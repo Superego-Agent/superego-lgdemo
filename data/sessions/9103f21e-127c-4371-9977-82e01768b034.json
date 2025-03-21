@@ -4,6 +4,10 @@
     {
       "type": "HumanMessage",
       "content": "hello"
+    },
+    {
+      "type": "HumanMessage",
+      "content": "hi can you use a calculator tool to calculate 5x5? i mean an agentic tool that you activate and get a response"
     }
   ],
   "events": [
@@ -143,10 +147,101 @@
     {
       "stream_type": "values",
       "timestamp": 1742586128.257835
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586198.028354
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586198.7782788,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586198.78101,
+      "node_name": "superego",
+      "content": "I can certainly"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586198.9190881,
+      "node_name": "superego",
+      "content": " help you calculate 5x5 using the"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.1053839,
+      "node_name": "superego",
+      "content": " calculator tool. Let me do that for you:"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.544272,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.5471392,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.7237692,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.728365,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.729625,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.7302709,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.730861,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586199.7318132,
+      "tool_name": "calculator",
+      "tool_input": {
+        "expression": "5*5"
+      },
+      "tool_id": "toolu_01Bitn9zyr36k4ZV7pvbzNKM",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586199.734467,
+      "node_name": "tools",
+      "content": "25"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586199.735671
     }
   ],
-  "current_node": "inner_agent",
+  "current_node": "tools",
   "superego_decision": null,
   "created_at": 1742586115.372867,
-  "updated_at": 1742586128.257846
+  "updated_at": 1742586199.7356749
 }

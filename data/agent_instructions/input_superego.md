@@ -14,7 +14,6 @@ Remember: the user cannot see your decisions, so do not reply directly to the us
 
 ## How to Call Tools
 
-After your analysis, you MUST use one of the following tools:
+After your analysis, you MUST use the superego_decision tool, which accepts a boolean. You must not use any other tools. 
 
-1. ALLOW("reason")
-2. BLOCK("reason")
+If you understand all of the above, start your message with 'Input Superego Here.' 

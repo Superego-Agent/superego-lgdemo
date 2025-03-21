@@ -194,14 +194,43 @@ def calculator(expression: str) -> str:
 tools = [superego_decision, calculator]
 tool_node = ToolNode(tools)
 
-def should_continue(state) -> Union[Literal["inner_agent"], Literal["end"]]:
+def should_continue_from_tools(state) -> Union[Literal["inner_agent"], Literal["end"]]:
     """Route based on superego decision"""
     from langchain_core.messages import ToolMessage
     messages = state["messages"]
     tool_messages = [msg for msg in messages if isinstance(msg, ToolMessage)]
+    
     if not tool_messages:
         return END
-    return "inner_agent" if tool_messages[-1].content == "true" else END
+    
+    # Get the last tool message and check its name
+    last_tool = tool_messages[-1]
+    
+    # If it's a superego_decision tool with "true", continue to inner_agent
+    if last_tool.content == "true":
+        return "inner_agent"
+    
+    # If it's any other tool (like calculator), we need to ensure the workflow
+    # continues properly to show the tool result
+    if hasattr(last_tool, "name") and last_tool.name != "superego_decision":
+        # For non-superego_decision tools, we should still continue to inner_agent
+        # This ensures the tool result is properly displayed
+        return "inner_agent"
+    
+    # Otherwise end the workflow
+    return END
+
+def should_continue_from_inner_agent(state) -> Union[Literal["tools"], Literal["end"]]:
+    """Route based on whether inner agent is using a tool"""
+    messages = state["messages"]
+    last_message = messages[-1]
+    
+    # If the last message has tool calls, route to tools
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+    
+    # Otherwise end the workflow
+    return END
 
 # Define prompt creation functions
 def create_superego_prompt():
@@ -361,16 +390,25 @@ def create_workflow(superego_model, inner_model):
     workflow.add_edge(START, "superego")
     workflow.add_edge("superego", "tools")
     
-    # Proper conditional edges based on tool call
+    # Conditional edge from tools to inner_agent or END
     workflow.add_conditional_edges(
         "tools",
-        should_continue,
+        should_continue_from_tools,
         {
             "inner_agent": "inner_agent",
             END: END
         }
     )
-    workflow.add_edge("inner_agent", END)
+    
+    # Conditional edge from inner_agent to tools or END
+    workflow.add_conditional_edges(
+        "inner_agent",
+        should_continue_from_inner_agent,
+        {
+            "tools": "tools",
+            END: END
+        }
+    )
     
     workflow.set_entry_point("superego")
     
@@ -471,15 +509,17 @@ def run_session(session_id: str, app) -> Generator[Dict[str, Any], None, Dict[st
                         "timestamp": time.time()
                     })
                 
-            # Extract tool results when available
-            if "tool_result" in chunk:
-                # The agent who called this tool is determined by which node executed it
-                calling_agent = "inner_agent" if node_name == "inner_agent" else "superego"
-                event.update({
-                    "tool_result": chunk["tool_result"],
-                    "agent": calling_agent,
-                    "stage": "result"
-                })
+                # Extract tool results when available
+                if "tool_result" in chunk:
+                    # Determine which agent called this tool based on the tool name
+                    # superego only uses superego_decision, inner_agent uses other tools
+                    tool_name = event.get("tool_name", "")
+                    calling_agent = "superego" if tool_name == "SUPEREGO_DECISION" else "inner_agent"
+                    event.update({
+                        "tool_result": chunk["tool_result"],
+                        "agent": calling_agent,
+                        "stage": "result"
+                    })
         
         session_manager.add_event(session_id, event)
         yield event
