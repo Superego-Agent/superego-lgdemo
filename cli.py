@@ -125,7 +125,7 @@ class MessageRenderer:
                 border_reset = "[/]"
                 box_bottom = f"{border_color}╰{'─' * (MessageBox.BOX_WIDTH - 2)}╯{border_reset}"
                 console.print(box_bottom)
-                print("\n")  # Extra newline after box
+                print()  # Single newline after box
             
             # Print top border and title for new box
             self.current_node = node_name
@@ -156,7 +156,7 @@ class MessageRenderer:
             border_reset = "[/]"
             box_bottom = f"{border_color}╰{'─' * (MessageBox.BOX_WIDTH - 2)}╯{border_reset}"
             console.print(box_bottom)
-            print("\n")  # Extra newline after box
+            print()  # Single newline after box
             self.current_node = None
         
     def render_tool_call(self, node_name, tool_name, tool_input="", tool_result="", agent=None):
@@ -176,7 +176,7 @@ class MessageRenderer:
         if len(Text.from_markup(header).plain) < MessageBox.BOX_WIDTH:
             header = f"{border_color}╭{padding}{title_display}{padding}─╮{border_reset}"
         
-        print("\n")  # Extra newline before box
+        print()  # Single newline before box
         console.print(header)
         
         # Print content
@@ -190,7 +190,7 @@ class MessageRenderer:
         # Print bottom border
         box_bottom = f"{border_color}╰{'─' * (MessageBox.BOX_WIDTH - 2)}╯{border_reset}"
         console.print(box_bottom)
-        print("\n")  # Extra newline after box
+        print()  # Single newline after box
 
 def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> None:
     stream_type = event.get("stream_type")
@@ -281,7 +281,7 @@ def chat_loop(
         user_input = input()
         if user_input.lower() in ["exit", "quit"]:
             console.print("[cyan]\Exiting Flow.[/cyan]")
-h            break
+            break
             
         add_user_message(session_id, user_input)
         

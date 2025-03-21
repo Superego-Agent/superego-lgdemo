@@ -1,0 +1,276 @@
+{
+  "session_id": "7e96ab20-4c93-4ba4-a2e7-cda34d6fa751",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": ""
+    },
+    {
+      "type": "HumanMessage",
+      "content": "dfg"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742586073.778666
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586074.807019,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586074.8077388,
+      "node_name": "superego",
+      "content": "I'll help"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586075.224552,
+      "node_name": "superego",
+      "content": " you with your request. However, I notice there's no"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586075.446549,
+      "node_name": "superego",
+      "content": " specific request or question in your message. You"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586075.573676,
+      "node_name": "superego",
+      "content": "'ve sent what appears to be system instructions for"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586075.754209,
+      "node_name": "superego",
+      "content": " a \"superego agent\" that evaluates prom"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586075.8598242,
+      "node_name": "superego",
+      "content": "pts, but you haven't asked me to "
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586075.960472,
+      "node_name": "superego",
+      "content": "do anything specific.\n\nWould you like to:"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586076.1542451,
+      "node_name": "superego",
+      "content": "\n1. Ask a question or make a specific request?\n2."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586076.408316,
+      "node_name": "superego",
+      "content": " Provide a prompt that you'd like evaluated using the superego framework"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586076.510932,
+      "node_name": "superego",
+      "content": " described?\n3. Discuss something else relate"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586076.70106,
+      "node_name": "superego",
+      "content": "d to these instructions?\n\nPlease let me know how I can"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586076.731103,
+      "node_name": "superego",
+      "content": " assist you."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586076.7335382,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586076.746929
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586076.74986
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586080.74161
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586081.5813172,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586081.582418,
+      "node_name": "superego",
+      "content": "I notice your"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586081.7587981,
+      "node_name": "superego",
+      "content": " input is just \"dfg\", which appears"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586081.904143,
+      "node_name": "superego",
+      "content": " to be a random string of letters rather than a"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.092512,
+      "node_name": "superego",
+      "content": " clear question or request. "
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.441043,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.4425201,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.891793,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.89552,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.8961012,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.8966122,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.897116,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586082.898004,
+      "tool_name": "superego_decision",
+      "tool_input": {
+        "allow": true
+      },
+      "tool_id": "toolu_01J65v1VjHYrgqxFNpHBBDZs",
+      "agent": "superego",
+      "stage": "call"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586082.900745,
+      "node_name": "tools",
+      "content": "true"
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586082.901483
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.197937,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.198654,
+      "node_name": "inner_agent",
+      "content": "I notice your"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.3436348,
+      "node_name": "inner_agent",
+      "content": " message consists of just \"dfg\", which appears to"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.484951,
+      "node_name": "inner_agent",
+      "content": " be a random sequence of letters. Is"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.583192,
+      "node_name": "inner_agent",
+      "content": " there something specific you'd like help with?"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.7673962,
+      "node_name": "inner_agent",
+      "content": " I'm here to assist with questions, provide"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586084.9125628,
+      "node_name": "inner_agent",
+      "content": " information, or help with various tasks. Please"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586085.006735,
+      "node_name": "inner_agent",
+      "content": " let me know what you're looking for an"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586085.104105,
+      "node_name": "inner_agent",
+      "content": "d I'll do my best to help."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742586085.177305,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742586085.185714
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742586073.740202,
+  "updated_at": 1742586085.185735
+}
