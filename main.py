@@ -1,9 +1,9 @@
 """
 Main entry point for the Superego application.
-Maintains backward compatibility by calling the CLI.
+Maintains compatibility by calling the CLI app.
 """
 
-from cli import main
+from cli import app
 
 if __name__ == "__main__":
-    main()
+    app()

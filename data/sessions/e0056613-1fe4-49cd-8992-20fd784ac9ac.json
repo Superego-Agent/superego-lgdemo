@@ -1,0 +1,217 @@
+{
+  "session_id": "e0056613-1fe4-49cd-8992-20fd784ac9ac",
+  "messages": [
+    {
+      "type": "HumanMessage",
+      "content": "hello"
+    }
+  ],
+  "events": [
+    {
+      "stream_type": "values",
+      "timestamp": 1742559079.164311
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559080.8346071,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559080.835011,
+      "node_name": "superego",
+      "content": "I'll"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559080.9854279,
+      "node_name": "superego",
+      "content": " analyze this user input to determine if it's safe"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559081.173734,
+      "node_name": "superego",
+      "content": " and appropriate.\n\nThe input is a simple greeting (\"hello\")"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559081.411815,
+      "node_name": "superego",
+      "content": " that doesn't contain any harmful content, dangerous requests, private"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559081.651556,
+      "node_name": "superego",
+      "content": " information, or attempts to manipulate the system."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559081.982868,
+      "node_name": "superego",
+      "content": " This is a standard, benign conversation opener that doesn't require complex"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.124322,
+      "node_name": "superego",
+      "content": " analysis."
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.322685,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.323502,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.8293262,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.832201,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.8325639,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.832814,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.834408,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.8355331,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.8357718,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.836014,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.836246,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.836492,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.8367329,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.836977,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.83724,
+      "node_name": "superego",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742559082.8379142
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559082.8393862,
+      "node_name": "tools",
+      "content": "ALLOWED: The user input is a harmless greeting with no dangerous content or malicious intent."
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742559082.83995
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559083.709871,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559083.711404,
+      "node_name": "inner_agent",
+      "content": "Hello"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559083.878902,
+      "node_name": "inner_agent",
+      "content": "! How can I assist you today? I'm"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559084.067171,
+      "node_name": "inner_agent",
+      "content": " here to help with information, answer questions, or"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559084.260752,
+      "node_name": "inner_agent",
+      "content": " discuss topics you're interested in. What would you like to talk"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559084.306827,
+      "node_name": "inner_agent",
+      "content": " about?"
+    },
+    {
+      "stream_type": "messages",
+      "timestamp": 1742559084.309118,
+      "node_name": "inner_agent",
+      "content": ""
+    },
+    {
+      "stream_type": "values",
+      "timestamp": 1742559084.313457
+    }
+  ],
+  "current_node": "inner_agent",
+  "superego_decision": null,
+  "created_at": 1742559077.129089,
+  "updated_at": 1742559084.313459
+}
