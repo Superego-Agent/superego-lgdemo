@@ -1,0 +1,11 @@
+# Core dependencies
+typer
+colorama
+rich
+
+# Language models and workflows
+langchain_core
+langchain_anthropic
+langgraph
+
+# Add version constraints as needed for your specific requirements

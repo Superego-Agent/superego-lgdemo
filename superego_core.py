@@ -397,3 +397,7 @@ def process_tool_events(event: Dict[str, Any], chunk: Dict[str, Any], node_name:
             "agent": calling_agent,
             "stage": "result"
         })
+
+# Initialize models and graph for LangGraph Server
+superego_model, inner_model = create_models()
+graph = create_workflow(superego_model, inner_model)

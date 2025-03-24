@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "superego": "./superego_core.py:graph"
+  },
+  "env": ".env"
+}
