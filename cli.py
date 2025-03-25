@@ -6,7 +6,6 @@ from typing import Optional, Dict, Any
 from colorama import init
 from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
 
 from superego_core import (
     create_models, 
@@ -59,201 +58,78 @@ Should Continue? ─── Yes ──→ INNER_AGENT ────→ END
         expand=False
     ))
 
-class MessageBox:
-    """A streamlined component for rendering boxed messages in the CLI."""
-    BOX_WIDTH = 75
-    def __init__(self, console, title=None, title_style=None):
-        self.console = console
-        self.title = title
-        self.style = title_style.replace(" bold", "") if title_style else None
-    
-    def render_box(self, content="", add_newline=True):
-        """Render a complete message box with optional title and content"""
-        if add_newline:
-            print()
-            
-        # Create borders with color
-        border_color = f"[{self.style}]" if self.style else ""
-        border_reset = "[/]" if self.style else ""
-        box_top = f"{border_color}╭{'─' * (self.BOX_WIDTH - 2)}╮{border_reset}"
-        box_bottom = f"{border_color}╰{'─' * (self.BOX_WIDTH - 2)}╯{border_reset}"
-            
-        if self.title:
-            title_display = f" {self.title} "
-            padding = "─" * ((self.BOX_WIDTH - len(self.title) - 4) // 2)
-            header = f"{border_color}╭{padding}{title_display}{padding}╮{border_reset}"
-            if len(Text.from_markup(header).plain) < self.BOX_WIDTH:
-                header = f"{border_color}╭{padding}{title_display}{padding}─╮{border_reset}"
-            self.console.print(header)
-        else:
-            self.console.print(box_top)
-            
-        if content:
-            # Print content and ensure it ends with a newline
-            if not content.endswith('\n'):
-                content += '\n'
-            print(content, end='', flush=True)
-            
-            # Print bottom border
-            self.console.print(box_bottom)
-        if add_newline:
-            print()
-    
-    def render_labeled_content(self, label, content, label_style="bold"):
-        """Render content with a styled label"""
-        self.console.print(f"  [{label_style}]{label}:[/{label_style}] {content}")
+
+# Simplified color mapping
+NODE_COLORS = {
+    "superego": "yellow",
+    "inner_agent": "green",
+    "tools": "magenta",
+    "inner_tools": "magenta"
+}
 
 class MessageRenderer:
-    """Manages rendering of different message types"""
+    """Simplified message renderer following Langgraph example style"""
     def __init__(self):
-        self.reset()
-        
-    def reset(self):
-        """Reset renderer state between messages"""
         self.current_node = None
-        self.current_content = ""
-        
+
     def render_agent_message(self, node_name, content):
-        # If switching to a different agent, end current box
-        if self.current_node != node_name:
-            if self.current_node:
-                # Add newline before bottom border
-                print()
-                # Print bottom border for previous box
-                style = "yellow" if self.current_node == "superego" else "green"
-                border_color = f"[{style}]"
-                border_reset = "[/]"
-                box_bottom = f"{border_color}╰{'─' * (MessageBox.BOX_WIDTH - 2)}╯{border_reset}"
-                console.print(box_bottom)
-                print()  # Single newline after box
-            
-            # Print top border and title for new box
+        """Render agent message with custom header"""
+        if node_name != self.current_node:
+            # New node - print header
+            if node_name in NODE_COLORS:
+                color = NODE_COLORS[node_name]
+                console.print(f"\n[{color}]-------- {node_name.title()}:[/{color}]")
             self.current_node = node_name
-            title = "Superego" if node_name == "superego" else "inner_agent"
-            style = "yellow" if node_name == "superego" else "green"
-            border_color = f"[{style}]"
-            border_reset = "[/]"
             
-            title_display = f" {title} "
-            padding = "─" * ((MessageBox.BOX_WIDTH - len(title) - 4) // 2)
-            header = f"{border_color}╭{padding}{title_display}{padding}╮{border_reset}"
-            if len(Text.from_markup(header).plain) < MessageBox.BOX_WIDTH:
-                header = f"{border_color}╭{padding}{title_display}{padding}─╮{border_reset}"
-            
-            console.print(header)
-            print()  # Newline after top border
-        
-        # Print content immediately
+        # Stream content with flush
         print(content, end='', flush=True)
     
-    def end_current_panel(self):
-        """End the current message box if one is open"""
-        if self.current_node:
-            # Add newline before bottom border
-            print()
-            style = "yellow" if self.current_node == "superego" else "green"
-            border_color = f"[{style}]"
-            border_reset = "[/]"
-            box_bottom = f"{border_color}╰{'─' * (MessageBox.BOX_WIDTH - 2)}╯{border_reset}"
-            console.print(box_bottom)
-            print()  # Single newline after box
-            self.current_node = None
-        
     def render_tool_call(self, node_name, tool_name, tool_input="", tool_result="", agent=None):
-        # End any current message box
-        if self.current_node:
-            self.end_current_panel()
+        """Render tool call with tool-specific formatting"""
+        agent = agent or node_name
         
-        # Print tool box with magenta borders
-        border_color = "[magenta]"
-        border_reset = "[/]"
-        
-        # Print top border with title
-        agent_prefix = f"{agent} " if agent else ""
-        title_display = f" {agent_prefix}Tool "
-        padding = "─" * ((MessageBox.BOX_WIDTH - len(title_display) - 2) // 2)
-        header = f"{border_color}╭{padding}{title_display}{padding}╮{border_reset}"
-        if len(Text.from_markup(header).plain) < MessageBox.BOX_WIDTH:
-            header = f"{border_color}╭{padding}{title_display}{padding}─╮{border_reset}"
-        
-        print()  # Single newline before box
-        console.print(header)
-        
-        # Print content
-        print()  # Newline after top border
-        print(f"  {tool_name}")
+        # Show tool call inline with agent message
         if tool_input:
-            print(f"  Input: {tool_input}")
-        if tool_result:
-            print(f"  Result: {tool_result}")
-        
-        # Print bottom border
-        box_bottom = f"{border_color}╰{'─' * (MessageBox.BOX_WIDTH - 2)}╯{border_reset}"
-        console.print(box_bottom)
-        print()  # Single newline after box
+            console.print(f"\n[dim]Calling tool: {tool_name}[/dim]")
+            console.print(f"[dim]Input: {tool_input}[/dim]")
 
 def render_stream_event(event: Dict[str, Any], renderer: MessageRenderer) -> None:
     stream_type = event.get("stream_type")
     node_name = event.get("node_name")
     
-    # Always log full events in debug mode 
+    # Debug logging
     if CLI_CONFIG["debug"]:
         console.print(f"\n[dim cyan][DEBUG] Event: {event}[/dim cyan]")
     
-    # Handle tool events first (highest priority)
-    # Tools can come from both messages and values streams
+    # Handle tool events
     if "tool_name" in event:
         tool_name = event["tool_name"].upper()
-        tool_input = ""
+        tool_input = event.get("tool_input", "")
         tool_result = event.get("tool_result", "")
-        agent = event.get("agent", "")
-        stage = event.get("stage", "")
+        agent = event.get("agent", node_name)  # Default to node_name if agent not specified
         
-        # Format tool input nicely
-        if isinstance(event.get("tool_input"), dict):
-            if "allow" in event.get("tool_input", {}):
-                tool_input = f"allow: {event.get('tool_input', {}).get('allow', '')}"
-            elif "expression" in event.get("tool_input", {}):
-                tool_input = f"expression: {event.get('tool_input', {}).get('expression', '')}"
-            else:
-                tool_input = json.dumps(event.get("tool_input", {}), indent=2)
-        else:
-            tool_input = str(event.get("tool_input", ""))
+        # Format tool input if it's a dict
+        if isinstance(tool_input, dict):
+            tool_input = json.dumps(tool_input, indent=2)
         
-        # Always show which agent called the tool
-        if not agent:
-            # If metadata is missing, try to infer from node name
-            if node_name == "tools":
-                agent = "superego"
-            elif node_name == "inner_tools" or node_name == "inner_agent":
-                agent = "inner_agent"
+        renderer.render_tool_call(node_name, tool_name, tool_input, tool_result, agent)
+        return
         
-        # Only render tool result if we have one or if this is a call stage
-        # This prevents duplicate tool boxes for the same tool
-        if tool_result or stage != "result":
-            # Finally render the tool information with all metadata
-            renderer.render_tool_call(node_name, tool_name, tool_input, tool_result, agent)
-        return  # Exit early once we've handled a tool
-        
-    # Handle regular message events
+    # Handle message events
     if stream_type == "messages" and "content" in event:
         content = event["content"]
         if content and not content.isspace():
-            # Skip tool messages as they're handled separately
             if node_name == "tools" and content == "true":
-                return
+                return  # Skip tool messages
                 
-            # Check if this is the end of a complete message
-            is_end = event.get("end_of_message", False)
-            if is_end and not content.endswith('\n'):
+            if event.get("end_of_message", False):
                 content += '\n'
             
             renderer.render_agent_message(node_name, content)
     
-    elif stream_type == "values":
-        # Show routing info only in debug mode
-        if CLI_CONFIG["debug"] and CLI_CONFIG["show_routing"] and node_name:
-            console.print(f"\n[dim blue][ROUTING] → {node_name.upper()}[/dim blue]")
+    # Show routing info in debug mode
+    elif stream_type == "values" and CLI_CONFIG["debug"] and CLI_CONFIG["show_routing"] and node_name:
+        console.print(f"\n[dim blue][ROUTING] → {node_name.upper()}[/dim blue]")
 
 @app.command("chat")
 def chat_loop(
@@ -281,12 +157,11 @@ def chat_loop(
     renderer = MessageRenderer()
     
     while True:
-        renderer.reset()
         
-        console.print("[bold blue]User:[/bold blue]", end=" ")
+        console.print("\n\n[bold blue]User:[/bold blue]", end=" ")
         user_input = input()
         if user_input.lower() in ["exit", "quit"]:
-            console.print("[cyan]\Exiting Flow.[/cyan]")
+            console.print("[cyan]Exiting Flow.[/cyan]")
             break
             
         add_user_message(session_id, user_input)
@@ -296,8 +171,6 @@ def chat_loop(
         
         for event in run_session(session_id, app):
             render_stream_event(event, renderer)
-        
-        renderer.end_current_panel()
         
         if CLI_CONFIG["debug"] and CLI_CONFIG["show_routing"]:
             console.print("[dim blue][ROUTING] → END OF WORKFLOW[/dim blue]")
