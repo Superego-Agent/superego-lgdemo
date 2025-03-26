@@ -123,6 +123,20 @@ def display_constitutions_table():
     console.print(table)
     console.print(f"* Active constitution: [cyan]{active_id}[/cyan]" if active_id else "[yellow]No active constitution set.[/yellow]")
 
+# --- Command Help Display ---
+def display_help_commands():
+    help_panel = Panel(
+        "[bold cyan]Available Commands:[/bold cyan]\n"
+        "- [bold]/help[/bold] see these commands again.\n"
+        "- [bold]/history[/bold] to view past conversation turns.\n"
+        "- [bold]/new[/bold] to start a new chat thread.\n"
+        "- [bold]/constitutions[/bold] to manage constitutions.\n"
+        "- [bold]/quit[/bold] or [bold]/exit[/bold] to return to your terminal.",
+        border_style="cyan",
+        expand=False
+    )
+    console.print(help_panel)
+
 # --- Helper to Load Constitution Content ---
 def _load_active_constitution() -> str:
     content = ""
@@ -146,10 +160,10 @@ def main():
     console.print("Initialization complete.", style="green")
 
     console.print(Panel("[bold cyan]SUPEREGO CHAT SYSTEM[/bold cyan]", border_style="cyan", expand=False))
-    console.print("- Type '/history' to view history.")
-    console.print("- Type '/new' to start a new chat thread.")
-    console.print("- Type '/constitutions' to manage constitutions.")
-    console.print("- Type '/quit' or '/exit' to exit.")
+    display_help_commands()
+    
+    # Display available constitutions at startup
+    display_constitutions_table()
 
     thread_id = str(uuid.uuid4())
     console.print(f"\nStarting new chat thread: [cyan]{thread_id}[/cyan]")
@@ -165,6 +179,9 @@ def main():
 
             # --- Command Handling ---
             if user_input.lower() in ['/quit', '/exit']: break
+            if user_input.lower() == '/help':
+                display_help_commands()
+                continue
             if user_input.lower() == '/history':
                 display_history(thread_id, graph_app)
                 continue
