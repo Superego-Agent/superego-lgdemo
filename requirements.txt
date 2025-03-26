@@ -7,5 +7,6 @@ rich
 langchain_core
 langchain_anthropic
 langgraph
+aiosqlite 
 
 # Add version constraints as needed for your specific requirements
