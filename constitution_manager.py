@@ -1,36 +1,49 @@
+# constitution_manager.py
 import os
 import tempfile
 import subprocess
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Union
+import re
 
 from config import CONFIG
+from utils import shout_if_fails
+
+# Disallowed characters in constitution IDs
+DISALLOWED_ID_CHARS = "+[] ," # Banning '+' for composition, '[] ,' for compare lists
 
 class ConstitutionManager:
     """Core manager for constitutions with no UI dependencies."""
-    
+
     def __init__(self, constitutions_dir: str = CONFIG["constitutions_dir"]):
         self.constitutions_dir = Path(constitutions_dir)
         self.constitutions_dir.mkdir(parents=True, exist_ok=True)
         self.default_editor = os.environ.get("EDITOR", "nano")
-        
+
+    def _is_valid_id(self, constitution_id: str) -> bool:
+        """Check if the constitution ID is valid."""
+        if not constitution_id or any(char in constitution_id for char in DISALLOWED_ID_CHARS):
+            return False
+        # Basic filesystem path safety (simplified)
+        return not ("/" in constitution_id or "\\" in constitution_id or ".." in constitution_id)
+
     def get_available_constitutions(self) -> List[Dict[str, Any]]:
         """List all available constitutions with metadata."""
         result = []
-        
+
         for constitution_path in self.constitutions_dir.glob("*.md"):
-            # Get the file name without extension as the constitution ID
             constitution_id = constitution_path.stem
-            
-            # Read first line to extract title (assumes first line is a markdown title)
+            if not self._is_valid_id(constitution_id):
+                continue # Skip invalid IDs
+
             try:
-                with open(constitution_path, 'r') as f:
+                with open(constitution_path, 'r', encoding='utf-8') as f:
                     first_line = f.readline().strip()
-                    title = first_line.replace('#', '').strip()
-                    
-                    # Get file size and last modified time
+                    # Try to extract title from first line (e.g., "# My Title")
+                    title_match = re.match(r"^#+\s*(.*)", first_line)
+                    title = title_match.group(1).strip() if title_match else constitution_id
+
                     stats = constitution_path.stat()
-                    
                     result.append({
                         "id": constitution_id,
                         "title": title,
@@ -39,131 +52,120 @@ class ConstitutionManager:
                         "last_modified": stats.st_mtime
                     })
             except Exception as e:
-                # If there's an error reading the file, still include it with minimal info
                 result.append({
                     "id": constitution_id,
-                    "title": constitution_id,
+                    "title": f"{constitution_id} (Error)",
                     "path": str(constitution_path),
                     "error": str(e)
                 })
-        
-        # Sort by title
-        result.sort(key=lambda x: x["title"])
+
+        result.sort(key=lambda x: x["id"])
         return result
 
     def get_constitution_content(self, constitution_id: str) -> Optional[str]:
-        """Get the content of a specific constitution."""
+        """Get the content of a single specific constitution."""
+        if not self._is_valid_id(constitution_id):
+            return None
         constitution_path = self.constitutions_dir / f"{constitution_id}.md"
-        
+
         if not constitution_path.exists():
             return None
-            
+
         try:
-            with open(constitution_path, 'r') as f:
+            with open(constitution_path, 'r', encoding='utf-8') as f:
                 return f.read()
         except Exception:
             return None
 
+    @shout_if_fails
+    def get_combined_constitution_content(self, constitution_ids: List[str]) -> Tuple[str, List[str]]:
+        """
+        Gets and concatenates content from multiple constitutions.
+        Returns the combined content and a list of the IDs successfully loaded.
+        """
+        combined_content = ""
+        loaded_ids = []
+        separator = "\n\n---\n\n" # Separator between combined constitutions
+
+        for const_id in constitution_ids:
+            content = self.get_constitution_content(const_id)
+            if content is not None:
+                if combined_content: # Add separator if not the first constitution
+                    combined_content += separator
+                combined_content += f"## Constitution Section: {const_id}\n\n{content}"
+                loaded_ids.append(const_id)
+            else:
+                # Optionally log or signal that a constitution couldn't be loaded
+                print(f"[yellow]Warning: Constitution '{const_id}' not found or couldn't be loaded.[/yellow]")
+                pass
+
+        return combined_content, loaded_ids
+
+
     def save_constitution(self, constitution_id: str, content: str) -> bool:
         """Save a constitution (create new or update existing)."""
+        if not self._is_valid_id(constitution_id):
+             print(f"[red]Error: Invalid constitution ID '{constitution_id}'. Cannot contain: {DISALLOWED_ID_CHARS}[/red]")
+             return False
         constitution_path = self.constitutions_dir / f"{constitution_id}.md"
-        
+
         try:
-            with open(constitution_path, 'w') as f:
+            with open(constitution_path, 'w', encoding='utf-8') as f:
                 f.write(content)
             return True
-        except Exception:
+        except Exception as e:
+            print(f"[red]Error saving constitution '{constitution_id}': {e}[/red]")
             return False
 
     def delete_constitution(self, constitution_id: str) -> bool:
         """Delete a constitution."""
-        # Don't allow deleting default constitution
-        if constitution_id == "default":
-            return False
-            
+        if not self._is_valid_id(constitution_id):
+             return False # Should not happen if called from CLI which validates
+
         constitution_path = self.constitutions_dir / f"{constitution_id}.md"
-        
+
         if not constitution_path.exists():
             return False
-            
+
         try:
             constitution_path.unlink()
             return True
-        except Exception:
+        except Exception as e:
+            print(f"[red]Error deleting constitution '{constitution_id}': {e}[/red]")
             return False
 
-    def get_active_constitution(self) -> str:
-        """Get the currently active constitution ID."""
-        constitution_path = Path(CONFIG["file_paths"]["constitution"])
-        return constitution_path.stem
-
-    def set_active_constitution(self, constitution_id: str) -> Tuple[bool, str]:
-        """Set the active constitution for the application."""
-        constitution_path = self.constitutions_dir / f"{constitution_id}.md"
-        
-        if not constitution_path.exists():
-            return False, f"Constitution '{constitution_id}' not found"
-            
-        # Update the config
-        CONFIG["file_paths"]["constitution"] = str(constitution_path)
-        
-        # Force reload of instructions in superego_core
-        from superego_core import reload_instructions
-        reload_instructions()
-        
-        return True, f"Switched to constitution: {constitution_id}"
-
-    def edit_in_temp_file(self, content: str, suffix: str = ".md", editor: str = None) -> str:
-        """Edit content in a temporary file using the system editor."""
+    @shout_if_fails
+    def edit_in_temp_file(self, content: str, suffix: str = ".md", editor: str = None) -> Optional[str]:
+        """Edit content in a temporary file using the system editor. Returns updated content or None if edit failed/aborted."""
         if editor is None:
             editor = self.default_editor
-            
-        with tempfile.NamedTemporaryFile(suffix=suffix, mode="w+", delete=False) as temp:
-            temp.write(content)
-            temp_filename = temp.name
-        
+
         try:
+            with tempfile.NamedTemporaryFile(suffix=suffix, mode="w+", delete=False, encoding='utf-8') as temp:
+                temp.write(content)
+                temp_filename = temp.name
+
             # Open the editor with the temp file
-            subprocess.run([editor, temp_filename], check=True)
-            
+            result = subprocess.run([editor, temp_filename]) # Let potential errors propagate
+
+            if result.returncode != 0:
+                 print(f"[yellow]Editor exited with code {result.returncode}. Assuming no changes.[/yellow]")
+                 return None # Indicate no changes or aborted edit
+
             # Read the updated content
-            with open(temp_filename, "r") as temp:
-                return temp.read()
+            with open(temp_filename, "r", encoding='utf-8') as temp:
+                updated_content = temp.read()
+
+            # Only return content if it actually changed
+            return updated_content if updated_content != content else None
+
         finally:
             # Clean up the temp file
-            os.unlink(temp_filename)
-
-    def format_constitutions_table(self, active_id: str = None) -> str:
-        """Format a list of constitutions as a text table."""
-        constitutions = self.get_available_constitutions()
-        if not constitutions:
-            return "No constitutions found."
-        
-        # Calculate column widths
-        id_width = max(len("ID"), max(len(c["id"]) for c in constitutions))
-        title_width = max(len("TITLE"), max(len(c["title"]) for c in constitutions))
-        
-        # Format header
-        result = []
-        header = f"| {'ID':<{id_width}} | {'TITLE':<{title_width}} |"
-        divider = f"|{'-' * (id_width + 2)}|{'-' * (title_width + 2)}|"
-        
-        result.append(divider)
-        result.append(header)
-        result.append(divider)
-        
-        # Format rows
-        for constitution in constitutions:
-            # Mark active constitution with an asterisk
-            marker = "* " if constitution["id"] == active_id else "  "
-            row = f"|{marker}{constitution['id']:<{id_width-2}} | {constitution['title']:<{title_width}} |"
-            result.append(row)
-        
-        result.append(divider)
-        if active_id:
-            result.append(f"* Current active constitution: {active_id}")
-        
-        return "\n".join(result)
+            if 'temp_filename' in locals() and os.path.exists(temp_filename):
+                try:
+                    os.unlink(temp_filename)
+                except Exception as e:
+                    print(f"[yellow]Warning: Failed to delete temp file {temp_filename}: {e}[/yellow]")
 
 # Create a global instance for easy access
 constitution_manager = ConstitutionManager()

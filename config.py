@@ -1,3 +1,4 @@
+# config.py
 """
 Configuration module for the Superego system.
 This module contains configuration settings used across the application.
@@ -10,9 +11,7 @@ CONFIG = {
     "file_paths": {
         "superego_instructions": "data/agent_instructions/input_superego.md",
         "inner_agent_instructions": "data/agent_instructions/inner_agent_default.md",
-        "constitution": "data/constitutions/default.md",
     },
-    "active_constitution": "default",
     "streaming": True,
     "sessions_dir": "data/sessions",
     "constitutions_dir": "data/constitutions"
