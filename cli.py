@@ -1,4 +1,4 @@
-# superego-lgdemo/cli.py (v4 - Integrates provided constitution_cli.py)
+# superego-lgdemo/cli.py (v4 - Integrates provided constitution_cli.py & Configurable Constitution)
 import sys
 import json
 import datetime # Added for timestamp formatting
@@ -13,6 +13,7 @@ from rich.markup import escape
 from rich.table import Table # For constitutions
 
 # Assuming superego_core is structured correctly and graph is exposed
+# Ensure the graph imported here is the one created by the modified create_workflow
 from superego_core import graph, get_or_create_session, get_all_sessions, get_message_history, SessionState, session_manager
 from config import CONFIG
 
@@ -42,45 +43,46 @@ DEFAULT_NODE_COLOR = "cyan"
 USER_COLOR = "blue" # Used for user prompt prefix
 TOOL_RESULT_COLOR = "magenta" # Used for tool result panel border
 
-# --- History Display (Panels per message - unchanged) ---
+# --- History Display (Panels per message) ---
 def display_history(session_id: str):
     """Displays the message history for the session using Rich Panels."""
     console.print("\n--- Chat History ---", style="bold blue")
     try:
+        # Assuming get_message_history correctly fetches from the checkpointer
         messages: List[BaseMessage] = get_message_history(session_id)
         history_renderables = []
         if not messages:
-            # console.print("No messages yet.") # Let Group handle empty
             history_renderables.append("[dim]No messages yet.[/dim]")
         else:
             for msg in messages:
                 if isinstance(msg, HumanMessage):
-                     # History shows user input without panel for consistency now
                      history_renderables.append(f"[{USER_COLOR} bold]User:[/ {USER_COLOR} bold] {escape(msg.content)}")
                 elif isinstance(msg, (AIMessage, AIMessageChunk)):
                     title = "AI"
-                    node_name = getattr(msg, 'name', None)
-                    if node_name and node_name != "tools":
-                        title = node_name.replace("_"," ").title()
+                    node_name = getattr(msg, 'name', None) # Use name if available (set by checkpointer?)
+                    if node_name and node_name != "tools": # Don't title panels "Tools"
+                         title = node_name.replace("_"," ").title()
 
-                    color = NODE_COLORS.get(node_name, NODE_COLORS.get("inner_agent"))
+                    color = NODE_COLORS.get(node_name, NODE_COLORS.get("inner_agent")) # Default to inner_agent color
 
                     content_str = ""
                     tool_calls_str = ""
-                    # Simplified content extraction for history display
                     if isinstance(msg.content, str):
                          content_str = msg.content
-                    elif isinstance(msg.content, list):
+                    elif isinstance(msg.content, list): # Handle potential list content (e.g., from tool use blocks)
                          for item in msg.content:
                              if isinstance(item, dict):
                                  if item.get("type") == "text":
                                      content_str += item.get("text", "")
-                                 # We don't show full tool calls in history for brevity, just indicate they happened
-                    if msg.tool_calls:
+                    # Check for tool_calls attribute (common for AIMessage)
+                    if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                         tool_calls_str = "\n[dim](Tool used)[/dim]"
+                    # Check for tool_call_chunks attribute (common for AIMessageChunk)
+                    elif hasattr(msg, 'tool_call_chunks') and msg.tool_call_chunks:
                          tool_calls_str = "\n[dim](Tool used)[/dim]"
 
                     full_content = escape(content_str.strip()) + tool_calls_str
-                    if full_content:
+                    if full_content: # Only add panel if there's content
                          history_renderables.append(Panel(full_content, title=f">>> {title}", border_style=color, expand=False))
 
                 elif isinstance(msg, ToolMessage):
@@ -133,8 +135,9 @@ def display_constitutions_table():
 def select_session() -> str:
     """Allows user to select an existing session or create a new one, showing constitutions."""
     # Display Constitutions First
-    display_constitutions_table()
-    console.print() # Add spacing
+    if constitution_cli_available:
+        display_constitutions_table()
+        console.print() # Add spacing
 
     # Session Selection Logic
     sessions = get_all_sessions()
@@ -171,28 +174,29 @@ def main():
 
     session_id = select_session()
 
-    # --- Selecting Constitution for the Session ---
     active_constitution_id = None
+    constitution_content = "" 
     if constitution_manager:
         active_constitution_id = constitution_manager.get_active_constitution()
-        console.print(f"Using active constitution: [cyan]{active_constitution_id}[/cyan]")
-        # Potentially prompt user to select a constitution here if desired
-        # selected_constitution_id = typer.prompt(f"Enter constitution ID to use (default: {active_constitution_id})", default=active_constitution_id)
-        # if selected_constitution_id != active_constitution_id:
-        #    success, msg = constitution_manager.set_active_constitution(selected_constitution_id) # This might affect global state - consider graph config instead
-        #    if success: active_constitution_id = selected_constitution_id
-        #    else: console.print(f"[red]Failed to set constitution: {msg}[/red]")
+        if active_constitution_id:
+             console.print(f"Using active constitution for this session: [cyan]{active_constitution_id}[/cyan]")
+             constitution_content = constitution_manager.get_constitution_content(active_constitution_id)
+             if not constitution_content:
+                 console.print(f"[yellow]Warning: Could not load content for constitution '{active_constitution_id}'. Superego will use default instructions only.[/yellow]")
+                 constitution_content = ""
+        else:
+             console.print("[yellow]No active constitution set in manager. Superego will use default instructions only.[/yellow]")
+    else:
+        console.print("[yellow]Constitution manager not available. Superego will use default instructions only.[/yellow]")
 
-    # Graph configuration
-    config = {"configurable": {"thread_id": session_id}}
-    # How to pass the selected constitution to the graph depends on your graph's design.
-    # Option 1: Pass ID via config (if graph supports it)
-    # if active_constitution_id:
-    #    config["configurable"]["constitution_id"] = active_constitution_id
-    # Option 2: Graph reads from constitution_manager directly (simplest if manager holds global state)
-    # Option 3: Load content and pass via config (might be large)
-    # content = constitution_manager.get_constitution_content(active_constitution_id)
-    # if content: config["configurable"]["constitution_content"] = content
+    # --- MODIFIED: Graph configuration - add loaded constitution content ---
+    config = {
+        "configurable": {
+            "thread_id": session_id,
+            "constitution": constitution_content  # Pass the loaded string content
+        }
+    }
+    # --- End Modifications for Constitution Config ---
 
 
     while True:
@@ -209,30 +213,36 @@ def main():
                 display_history(session_id)
                 continue
             if user_input.lower() == '/constitutions' and constitution_cli_available:
-                # Call the interactive menu from constitution_cli.py
                 console.print("[cyan]Entering Constitution Management...[/cyan]")
                 interactive_menu() # Call the imported function
                 console.print("[cyan]Exiting Constitution Management. Returning to chat.[/cyan]")
-                # Re-display active constitution in case it changed
+                # Reload constitution content in case the active one changed
                 if constitution_manager:
                      active_constitution_id = constitution_manager.get_active_constitution()
-                     console.print(f"Active constitution is now: [cyan]{active_constitution_id}[/cyan]")
+                     if active_constitution_id:
+                         console.print(f"Active constitution is now: [cyan]{active_constitution_id}[/cyan]")
+                         constitution_content = constitution_manager.get_constitution_content(active_constitution_id) or ""
+                         # Update config for subsequent calls in this session
+                         config["configurable"]["constitution"] = constitution_content
+                     else:
+                         console.print("[yellow]No active constitution set after management.[/yellow]")
+                         config["configurable"]["constitution"] = ""
                 continue # Go back to prompt user input in main chat
 
             # --- State for the current turn ---
-            turn_components: List[Union[Panel, str]] = [] # Holds Panel objects mainly
-            current_panel_refs: Dict[str, Panel] = {} # Store references to active agent panels {node_name: panel_object}
-            current_panel_contents: Dict[str, str] = {} # Store raw content string {node_name: content_string}
+            turn_components: List[Union[Panel, str]] = []
+            current_panel_refs: Dict[str, Panel] = {}
+            current_panel_contents: Dict[str, str] = {}
             pending_tool_input: Dict[str, Dict[str, str]] = {}
             processed_tool_call_ids = set()
-            current_node_name = None # Track the active node name
+            current_node_name = None
             last_component_added = "start"
 
-            # User input is NOT added as a panel anymore
+            # User input is not added as a panel
 
             stream = graph.stream(
                 {"messages": [HumanMessage(content=user_input)]},
-                config=config,
+                config=config, # Pass the config containing thread_id and constitution
                 stream_mode="messages"
             )
 
@@ -242,104 +252,140 @@ def main():
 
                 for chunk_tuple in stream:
                     stream_finished = True
-                    message_chunk: BaseMessage = chunk_tuple[0]
-                    metadata: Dict[str, Any] = chunk_tuple[1] if len(chunk_tuple) > 1 else {}
+                    # Handle potential variations in stream output format
+                    if isinstance(chunk_tuple, list) and len(chunk_tuple) > 0:
+                         message_chunk: BaseMessage = chunk_tuple[0]
+                         metadata: Dict[str, Any] = chunk_tuple[1] if len(chunk_tuple) > 1 else {}
+                    elif isinstance(chunk_tuple, BaseMessage): # Simpler format?
+                         message_chunk = chunk_tuple
+                         metadata = {} # No metadata in this format
+                    else:
+                         console.print(f"\n[red]Unexpected stream format: {type(chunk_tuple)}[/red]")
+                         continue # Skip this chunk
+
+                    # Extract node name from metadata if available
                     node_name = metadata.get("langgraph_node")
                     new_content_added = False # Flag to trigger refresh
 
                     try:
+                        # --- AI Message / Chunk ---
                         if isinstance(message_chunk, (AIMessage, AIMessageChunk)):
-                            if isinstance(message_chunk.content, list):
-                                for item in message_chunk.content:
-                                    if isinstance(item, dict):
-                                        item_type = item.get("type")
+                            content_list = []
+                            # Handle both string and list content types robustly
+                            if isinstance(message_chunk.content, str):
+                                content_list.append({"type": "text", "text": message_chunk.content})
+                            elif isinstance(message_chunk.content, list):
+                                content_list = message_chunk.content # Assume it's already in the correct format
 
-                                        # --- Text Content ---
-                                        if item_type == "text":
-                                            text_content = item.get("text", "")
-                                            if text_content and node_name and node_name != "tools":
-                                                color = NODE_COLORS.get(node_name, DEFAULT_NODE_COLOR)
-                                                title = f">>> {node_name.replace('_', ' ').title()}"
+                            for item in content_list:
+                                if isinstance(item, dict):
+                                    item_type = item.get("type")
 
-                                                if node_name not in current_panel_refs or last_component_added != "agent" or current_node_name != node_name:
-                                                    # New agent panel needed
-                                                    current_node_name = node_name
-                                                    current_panel_contents[node_name] = escape(text_content)
-                                                    new_panel = Panel(
-                                                        current_panel_contents[node_name],
-                                                        title=title,
-                                                        border_style=color,
-                                                        expand=False
-                                                    )
-                                                    current_panel_refs[node_name] = new_panel
-                                                    turn_components.append(new_panel)
-                                                    last_component_added = "agent"
-                                                else:
-                                                    # Append to existing agent panel
-                                                    current_panel_contents[node_name] += escape(text_content)
-                                                    # Try updating the renderable content directly
-                                                    panel_ref = current_panel_refs.get(node_name)
-                                                    if panel_ref:
-                                                         panel_ref.renderable = current_panel_contents[node_name]
+                                    # --- Text Content ---
+                                    if item_type == "text":
+                                        text_content = item.get("text", "")
+                                        # Use node_name from metadata if available, else try AIMessage.name
+                                        current_processing_node = node_name or getattr(message_chunk, 'name', None)
 
-                                                new_content_added = True
+                                        if text_content and current_processing_node and current_processing_node != "tools":
+                                            color = NODE_COLORS.get(current_processing_node, DEFAULT_NODE_COLOR)
+                                            title = f">>> {current_processing_node.replace('_', ' ').title()}"
 
-                                        # --- Tool Call Info ---
-                                        elif item_type == "tool_use":
-                                            # (Tool call accumulation logic remains the same)
-                                            tool_call_id = item.get("id")
-                                            tool_name = item.get("name")
-                                            if tool_call_id and tool_name:
-                                                if tool_call_id not in pending_tool_input:
-                                                    pending_tool_input[tool_call_id] = {"name": tool_name, "input_str": "", "agent": node_name or current_node_name}
-                                                if "partial_json" in item:
-                                                    pending_tool_input[tool_call_id]["input_str"] += item["partial_json"]
+                                            if current_processing_node not in current_panel_refs or last_component_added != "agent" or current_node_name != current_processing_node:
+                                                # New agent panel needed
+                                                current_node_name = current_processing_node
+                                                current_panel_contents[current_node_name] = escape(text_content)
+                                                new_panel = Panel(
+                                                    current_panel_contents[current_node_name],
+                                                    title=title,
+                                                    border_style=color,
+                                                    expand=False
+                                                )
+                                                current_panel_refs[current_node_name] = new_panel
+                                                turn_components.append(new_panel)
+                                                last_component_added = "agent"
+                                            else:
+                                                # Append to existing agent panel
+                                                current_panel_contents[current_node_name] += escape(text_content)
+                                                panel_ref = current_panel_refs.get(current_node_name)
+                                                if panel_ref:
+                                                    panel_ref.renderable = current_panel_contents[current_node_name]
 
-                                                current_input_str = pending_tool_input[tool_call_id]["input_str"]
-                                                is_complete = False; formatted_input = ""
-                                                try:
-                                                    parsed_input = json.loads(current_input_str)
-                                                    formatted_input = json.dumps(parsed_input)
-                                                    is_complete = True
-                                                except json.JSONDecodeError: pass
+                                            new_content_added = True
 
-                                                if is_complete and tool_call_id not in processed_tool_call_ids:
-                                                    agent_name = pending_tool_input[tool_call_id]["agent"]
-                                                    agent_display = agent_name.replace('_', ' ').title() if agent_name else "Agent"
-                                                    tool_display_name = escape(tool_name)
-                                                    input_display = escape(formatted_input)
-                                                    tool_call_info = f"\n[dim]{agent_display} used {tool_display_name} tool. Input: {input_display}[/dim]"
+                                    # --- Tool Call Info (from AIMessageChunk) ---
+                                    elif item_type == "tool_call_chunk":
+                                        tool_call_id = item.get("id")
+                                        tool_name = item.get("name")
+                                        tool_args_chunk = item.get("args") # This is a string chunk
 
-                                                    # Append to the content string and update the Panel ref
-                                                    last_agent_node = agent_name or current_node_name
-                                                    if last_agent_node and last_agent_node in current_panel_contents:
-                                                         current_panel_contents[last_agent_node] += tool_call_info
-                                                         panel_ref = current_panel_refs.get(last_agent_node)
-                                                         if panel_ref:
-                                                             panel_ref.renderable = current_panel_contents[last_agent_node]
-                                                         last_component_added = "tool_call"
-                                                         new_content_added = True
+                                        if tool_call_id and tool_name:
+                                            # Determine the agent calling the tool
+                                            calling_agent = node_name or getattr(message_chunk, 'name', current_node_name)
 
-                                                    processed_tool_call_ids.add(tool_call_id)
+                                            if tool_call_id not in pending_tool_input:
+                                                pending_tool_input[tool_call_id] = {"name": tool_name, "input_str": "", "agent": calling_agent}
 
-                            elif isinstance(message_chunk.content, str): # Fallback simple string content
-                                text_content = message_chunk.content.strip()
-                                if text_content and node_name and node_name != "tools":
-                                    color = NODE_COLORS.get(node_name, DEFAULT_NODE_COLOR)
-                                    title = f">>> {node_name.replace('_', ' ').title()}"
-                                    if node_name not in current_panel_refs or last_component_added != "agent" or current_node_name != node_name:
-                                        current_node_name = node_name
-                                        current_panel_contents[node_name] = escape(text_content)
-                                        new_panel = Panel(current_panel_contents[node_name], title=title, border_style=color, expand=False)
-                                        current_panel_refs[node_name] = new_panel
-                                        turn_components.append(new_panel)
-                                        last_component_added = "agent"
-                                    else:
-                                        current_panel_contents[node_name] += escape(text_content)
-                                        panel_ref = current_panel_refs.get(node_name)
-                                        if panel_ref:
-                                             panel_ref.renderable = current_panel_contents[node_name]
-                                    new_content_added = True
+                                            if tool_args_chunk:
+                                                pending_tool_input[tool_call_id]["input_str"] += tool_args_chunk
+
+                                            # Check if the accumulated input is complete JSON
+                                            current_input_str = pending_tool_input[tool_call_id]["input_str"]
+                                            is_complete = False; formatted_input = ""
+                                            try:
+                                                parsed_input = json.loads(current_input_str)
+                                                formatted_input = json.dumps(parsed_input) # Use compact dumps for display
+                                                is_complete = True
+                                            except json.JSONDecodeError: pass
+
+                                            # If complete JSON AND not yet processed, append info to the agent panel
+                                            if is_complete and tool_call_id not in processed_tool_call_ids:
+                                                agent_name = pending_tool_input[tool_call_id]["agent"]
+                                                agent_display = agent_name.replace('_', ' ').title() if agent_name else "Agent"
+                                                tool_display_name = escape(tool_name)
+                                                input_display = escape(formatted_input)
+                                                tool_call_info = f"\n[dim]{agent_display} used {tool_display_name} tool. Input: {input_display}[/dim]"
+
+                                                # Append to the content string of the calling agent's panel
+                                                if agent_name and agent_name in current_panel_contents:
+                                                     current_panel_contents[agent_name] += tool_call_info
+                                                     panel_ref = current_panel_refs.get(agent_name)
+                                                     if panel_ref:
+                                                         panel_ref.renderable = current_panel_contents[agent_name]
+                                                     last_component_added = "tool_call" # Mark that a tool call was added
+                                                     new_content_added = True
+
+                                                processed_tool_call_ids.add(tool_call_id) # Mark as processed
+
+                            # Also handle tool_calls attribute if present (often on final AIMessage)
+                            if hasattr(message_chunk, 'tool_calls') and message_chunk.tool_calls:
+                                 for tool_call in message_chunk.tool_calls:
+                                     tool_call_id = tool_call.get("id")
+                                     tool_name = tool_call.get("name")
+                                     tool_args = tool_call.get("args") # Usually a dict here
+
+                                     if tool_call_id and tool_name and tool_args is not None and tool_call_id not in processed_tool_call_ids:
+                                         # Determine the agent calling the tool
+                                         calling_agent = node_name or getattr(message_chunk, 'name', current_node_name)
+                                         agent_display = calling_agent.replace('_', ' ').title() if calling_agent else "Agent"
+                                         tool_display_name = escape(tool_name)
+                                         try: # Ensure args are displayed as JSON string
+                                             input_display = escape(json.dumps(tool_args))
+                                         except TypeError:
+                                             input_display = escape(str(tool_args)) # Fallback
+
+                                         tool_call_info = f"\n[dim]{agent_display} used {tool_display_name} tool. Input: {input_display}[/dim]"
+
+                                         if calling_agent and calling_agent in current_panel_contents:
+                                              current_panel_contents[calling_agent] += tool_call_info
+                                              panel_ref = current_panel_refs.get(calling_agent)
+                                              if panel_ref:
+                                                  panel_ref.renderable = current_panel_contents[calling_agent]
+                                              last_component_added = "tool_call"
+                                              new_content_added = True
+
+                                         processed_tool_call_ids.add(tool_call_id)
+
 
                         # --- Tool Result (ToolMessage) ---
                         elif isinstance(message_chunk, ToolMessage):
@@ -348,22 +394,24 @@ def main():
                              result_panel = Panel(tool_content, title=f"<<< Tool Result ({tool_name})", border_style=TOOL_RESULT_COLOR, expand=False)
                              turn_components.append(result_panel)
                              last_component_added = "tool_result"
-                             current_node_name = "tools"
+                             current_node_name = "tools" # Assume tool results come from the 'tools' node conceptually
                              new_content_added = True
 
                     except Exception as e:
                          console.print(f"\n[bold red]Error processing chunk:[/bold red] {escape(str(e))}",)
+                         # import traceback; traceback.print_exc() # Uncomment for debugging
 
                     # --- Update Live Display ---
                     if new_content_added:
-                        live.update(Group(*turn_components), refresh=True) # Force refresh
+                        live.update(Group(*turn_components), refresh=True)
 
-
-            # Final update/cleanup outside loop might not be needed if refresh=True works
+            # Handle cases where the stream might not yield anything
             if not stream_finished:
-                 # Add message if no stream chunks were received
-                 turn_components.append("[yellow]No response received from AI.[/yellow]")
-                 live.update(Group(*turn_components), refresh=True)
+                 turn_components.append("[yellow]No response received from AI for this input.[/yellow]")
+                 if not turn_components: 
+                      console.print("[yellow]No response received from AI for this input.[/yellow]")
+                 else:
+                      live.update(Group(*turn_components), refresh=True)
 
 
         except KeyboardInterrupt:
@@ -371,7 +419,7 @@ def main():
             break
         except Exception as e:
             console.print(f"\n[bold red]An error occurred:[/bold red] {escape(str(e))}")
-            # import traceback; traceback.print_exc()
+            # import traceback; traceback.print_exc() # Uncomment for debugging full traceback
 
 if __name__ == "__main__":
     main()

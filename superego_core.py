@@ -196,9 +196,19 @@ def create_models():
     return superego_model, inner_model
 
 # --- Graph Node Functions ---
-def call_superego(state: MessagesState, superego_model) -> Dict[str, List[BaseMessage]]:
+def call_superego(state: MessagesState, config: dict, superego_model) -> Dict[str, List[BaseMessage]]:
     messages = state["messages"]
-    prompt = create_superego_prompt()
+
+    constitution = config.get("configurable", {}).get("constitution", "") # Safely get constitution
+    if not constitution:
+         print("Warning: No constitution found in config for superego node.")
+
+    superego_instructions = load_superego_instructions()
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", f"{superego_instructions}\n\n{constitution}"), # Combine instructions and constitution
+        MessagesPlaceholder(variable_name="messages")
+    ])
+
     formatted_prompt = prompt.invoke({"messages": messages})
     response = superego_model.invoke(formatted_prompt)
     return {"messages": [response]}
@@ -217,9 +227,10 @@ session_manager = SessionManager()
 def create_workflow(superego_model, inner_model):
     workflow = StateGraph(MessagesState)
 
-    workflow.add_node("superego", lambda state: call_superego(state, superego_model))
+    workflow.add_node("superego", lambda state, config: call_superego(state, config, superego_model))
+
     workflow.add_node("tools", tool_node)
-    workflow.add_node("inner_agent", lambda state: inner_agent(state, inner_model))
+    workflow.add_node("inner_agent", lambda state: inner_agent(state, inner_model)) # No change needed if inner_agent doesn't need config yet
 
     workflow.add_edge(START, "superego")
     workflow.add_edge("superego", "tools") # Superego always calls its tool
