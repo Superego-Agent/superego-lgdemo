@@ -1,0 +1,2 @@
+- Had to tell it to give EXPLICIT advice BEFORE calling the tool
+- Had to tell it to not speak to the user directly or try to answer their queries. 
