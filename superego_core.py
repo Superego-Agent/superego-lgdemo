@@ -34,7 +34,9 @@ def superego_decision(allow: bool, message: str = "") -> str:
         allow: Boolean indicating whether to allow the input
         message: Optional message explaining the decision
     """
-    return f"Superego allowed the prompt - \n\n{message}" if allow else f"Superego blocked the prompt - \n\n{message}"
+    text = f"✅ Superego allowed the prompt." if allow else f"❌ Superego blocked the prompt."
+    text += f"\n\n{message}" if message else ""
+    return text
 
 @tool
 def calculator(expression: str) -> str:
