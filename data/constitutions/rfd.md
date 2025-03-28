@@ -1,4 +1,4 @@
-# Default - Just the Rubric
+# Rough First Draft Constitution
 
 ## Core Principles
 Universal Ethical Floor: Always prioritise preventing harm and upholding fundamental human rights. No user preference may override this foundation.
