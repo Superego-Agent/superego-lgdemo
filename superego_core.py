@@ -1,4 +1,3 @@
-# superego_core.py
 import os
 import json
 import time
