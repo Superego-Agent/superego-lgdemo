@@ -27,9 +27,14 @@ def load_superego_instructions():
         return f.read()
 
 @tool
-def superego_decision(allow: bool) -> bool:
-    """Make a decision on whether to allow or block the input."""
-    return allow
+def superego_decision(allow: bool, message: str = "") -> str:
+    """Make a decision on whether to allow or block the input.
+    
+    Args:
+        allow: Boolean indicating whether to allow the input
+        message: Optional message explaining the decision
+    """
+    return f"Superego allowed the prompt - \n\n{message}" if allow else f"Superego blocked the prompt - \n\n{message}"
 
 @tool
 def calculator(expression: str) -> str:
@@ -56,11 +61,11 @@ def should_continue_from_tools(state: MessagesState) -> Union[Literal["inner_age
 
     if last_message.name == "superego_decision":
         try:
-            # Ensure content is treated as string for comparison
-            allow_decision = str(last_message.content).strip().lower() == "true"
+            # Check if the content starts with "Superego allowed the prompt"
+            allow_decision = "Superego allowed the prompt" in str(last_message.content)
             return "inner_agent" if allow_decision else END
         except Exception:
-             print(f"[yellow]Warning: Superego decision tool returned non-boolean parseable content: {last_message.content}[/yellow]")
+             print(f"[yellow]Warning: Superego decision tool returned unexpected content: {last_message.content}[/yellow]")
              return END
     else:
         # Any other tool result proceeds to inner_agent
