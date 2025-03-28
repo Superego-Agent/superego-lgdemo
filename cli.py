@@ -40,6 +40,7 @@ class CliState:
     """Holds the current CLI state."""
     graph_app: Any
     checkpointer: BaseCheckpointSaver # Use BaseCheckpointSaver for type hint
+    inner_agent_app: Any  # The inner agent only app
     thread_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     current_constitution_content: str = ""
     current_constitution_ids: List[str] = field(default_factory=lambda: ["none"])
@@ -373,11 +374,11 @@ def run_main_loop():
     state = None
     try:
         superego_model, inner_model = create_models()
-        graph_app, checkpointer = create_workflow(superego_model=superego_model, inner_model=inner_model)
+        graph_app, checkpointer, inner_agent_app = create_workflow(superego_model=superego_model, inner_model=inner_model)
     except Exception as e: print_as("error", f"Initialization failed: {e}"); traceback.print_exc(); sys.exit(1)
 
     try:
-        state = CliState(graph_app=graph_app, checkpointer=checkpointer) # Store instance
+        state = CliState(graph_app=graph_app, checkpointer=checkpointer, inner_agent_app=inner_agent_app) # Store instance
         typer_click_group = typer.main.get_command(cli_app)
         _update_active_constitutions(state, "none", silent=True)
         display_startup_info(state)
@@ -415,10 +416,26 @@ def run_main_loop():
                         # Let errors propagate from here in demo mode
                         run_graph_and_display_live(console, state, content_for_run, messages, title)
 
+                    # Add inner agent only run (without superego)
+                    state.thread_id = f"{original_thread_id}_compare_{compare_run_uuid}_inner_only"
+                    title = f"Compare Run (Inner Agent Only): [cyan]No Superego[/cyan]"
+                    print_as("highlight", f"\n--- {title} ---")
+                    
+                    # Temporarily swap the graph app to use inner agent only
+                    original_app = state.graph_app
+                    state.graph_app = state.inner_agent_app
+                    
+                    # Run with empty constitution content (not used by inner agent)
+                    run_graph_and_display_live(console, state, "", messages)
+                    
+                    # Restore original app
+                    state.graph_app = original_app
+                    
+                    # Restore original state
                     state.thread_id = original_thread_id
-                    state.compare_mode_active = False; state.compare_constitution_sets = []
-                    _update_active_constitutions(state, CONSTITUTION_SEPARATOR.join(original_const_ids), silent=True)
-                    print_as("highlight", f"Compare finished. Restored constitution: {CONSTITUTION_SEPARATOR.join(state.current_constitution_ids)}")
+                    # Compare mode remains active until /compare_off is used
+                    _update_active_constitutions(state, CONSTITUTION_SEPARATOR.join(original_const_ids), silent=True) # Restore original constitution for next non-compare prompt
+                    print_as("highlight", f"Compare finished. Mode remains active. Use /compare_off to disable.")
 
                 else:
                     # Let errors propagate from here in demo mode

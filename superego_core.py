@@ -108,12 +108,17 @@ def call_superego(state: MessagesState, config: dict, superego_model) -> Dict[st
     response.name = "superego" 
     return {"messages": [response]}
 
+def run_inner_agent_only(state: MessagesState, inner_model) -> Dict[str, List[BaseMessage]]:
+    """Run only the inner agent without superego oversight."""
+    return default_inner_agent_node(state, inner_model)
+
 @shout_if_fails
-def create_workflow(superego_model, inner_model) -> Tuple[Annotated[Any, "CompiledGraph"], SqliteSaver]:
-    """Creates the graph, checkpointer, and returns the compiled app and checkpointer instance."""
+def create_workflow(superego_model, inner_model) -> Tuple[Annotated[Any, "CompiledGraph"], SqliteSaver, Annotated[Any, "CompiledGraph"]]:
+    """Creates the graph, checkpointer, and returns the compiled app, checkpointer instance, and inner-agent-only app."""
     tools = [superego_decision, calculator]
     tool_node = ToolNode(tools)
 
+    # Main workflow with superego
     workflow = StateGraph(MessagesState)
 
     workflow.add_node("superego", lambda state, config: call_superego(state, config, superego_model))
@@ -125,15 +130,26 @@ def create_workflow(superego_model, inner_model) -> Tuple[Annotated[Any, "Compil
     workflow.add_conditional_edges("tools", should_continue_from_tools, {"inner_agent": "inner_agent", END: END})
     workflow.add_conditional_edges("inner_agent", should_continue_from_inner_agent, {"tools": "tools", END: END})
 
+    # Inner agent only workflow (subgraph 2)
+    inner_workflow = StateGraph(MessagesState)
+    inner_workflow.add_node("inner_agent", lambda state: default_inner_agent_node(state, inner_model))
+    inner_workflow.add_node("tools", tool_node)
+    
+    inner_workflow.add_edge(START, "inner_agent")
+    inner_workflow.add_conditional_edges("inner_agent", should_continue_from_inner_agent, {"tools": "tools", END: END})
+    inner_workflow.add_conditional_edges("tools", lambda state: "inner_agent", {"inner_agent": "inner_agent"})
+
+    # Setup database connection for checkpointing
     db_path = CONFIG.get("sessions_dir", "data/sessions") + "/conversations.db"
     db_dir = os.path.dirname(db_path)
     if db_dir: os.makedirs(db_dir, exist_ok=True)
 
     conn = sqlite3.connect(db_path, check_same_thread=False)
-
     checkpointer = SqliteSaver(conn=conn)
 
+    # Compile both workflows
     app = workflow.compile(checkpointer=checkpointer)
+    inner_app = inner_workflow.compile(checkpointer=checkpointer)
 
     def signal_handler(sig, frame):
         print('\\nSignal received, exiting.')
@@ -142,4 +158,4 @@ def create_workflow(superego_model, inner_model) -> Tuple[Annotated[Any, "Compil
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    return app, checkpointer
+    return app, checkpointer, inner_app

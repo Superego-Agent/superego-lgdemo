@@ -33,7 +33,6 @@ def get_available_constitutions() -> Dict[str, Dict[str, Any]]:
                 title_match = re.match(r"^#+\s*(.*)", first_line)
                 description = title_match.group(1).strip() if title_match else f"'{constitution_id}'"
         except Exception:
-            # Fallback if file read fails unexpectedly (though shout_if_fails might catch it earlier)
             description = f"[red]Error reading {constitution_path.name}[/red]"
 
         result[constitution_id] = {
@@ -48,7 +47,7 @@ def get_constitution_content(constitution_id: str) -> Optional[str]:
     if constitution_id == "none":
         return ""
     if not _is_valid_id_format(constitution_id):
-        return None # Invalid format cannot exist
+        return None 
     constitution_path = CONSTITUTIONS_DIR / f"{constitution_id}.md"
     try:
         with open(constitution_path, 'r', encoding='utf-8') as f:
