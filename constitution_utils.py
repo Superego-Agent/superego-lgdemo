@@ -1,10 +1,7 @@
-# constitution_utils.py
 import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
-
-# Assuming config.py and utils.py (with shout_if_fails) exist in the same dir
 from config import CONFIG
 from utils import shout_if_fails
 
@@ -21,7 +18,7 @@ def _is_valid_id_format(constitution_id: str) -> bool:
            and not ("/" in constitution_id or "\\" in constitution_id or ".." in constitution_id)
 
 
-@shout_if_fails # Let decorator handle unexpected I/O errors
+@shout_if_fails 
 def get_available_constitutions() -> Dict[str, Dict[str, Any]]:
     """Lists available constitutions found in the constitutions directory."""
     result = {"none": {"filename": "[i]N/A[/i]", "description": "[i]No constitution.[/i]"}}
@@ -30,7 +27,6 @@ def get_available_constitutions() -> Dict[str, Dict[str, Any]]:
         if not _is_valid_id_format(constitution_id) or constitution_id == "none":
             continue
 
-        # Minimal read to get description from first line (if any)
         try:
             with open(constitution_path, 'r', encoding='utf-8') as f:
                 first_line = f.readline().strip()
@@ -70,17 +66,14 @@ def get_combined_constitution_content(constitution_ids: List[str]) -> Tuple[str,
     combined_content = ""
     loaded_ids = []
     separator = "\n\n---\n\n"
-    # Use set for unique IDs, ignore format check here assuming validated input
     unique_ids = sorted(list(set(id for id in constitution_ids if id)))
 
     for const_id in unique_ids:
         content = get_constitution_content(const_id)
-        if content is not None: # Content exists and was read
+        if content is not None:
             if combined_content:
                 combined_content += separator
-            # Add simple header for clarity when combining multiple
-            combined_content += f"## Constitution Section: {const_id}\n\n{content}"
+            combined_content += content
             loaded_ids.append(const_id)
 
-    # Return 'none' convention if no valid content was loaded
     return (combined_content, loaded_ids) if loaded_ids else ("", ["none"])
