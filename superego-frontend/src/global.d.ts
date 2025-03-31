@@ -1,142 +1,74 @@
 // src/global.d.ts
 
 declare global {
-/** Represents a single constitution available for selection. */
-interface ConstitutionItem {
-    id: string; // e.g., 'kantian_deontological'
-    name: string; // e.g., 'Kantian Deontological'
-    description?: string; // Optional description
-    // content?: string; // Full content likely not needed in frontend list
-}
+    /** Represents a single constitution available for selection. */
+    interface ConstitutionItem { id: string; name: string; description?: string; }
+    /** Represents a chat thread in the list. */
+    interface ThreadItem { thread_id: string; title?: string; updated_at?: string; }
 
-/** Represents a chat thread in the list. */
-interface ThreadItem {
-    thread_id: string;
-    // Add other potential fields like title, last_updated, etc. if the API provides them
-    title?: string; // Example: A short title or first message snippet
-    updated_at?: string; // Example: ISO timestamp
-}
+    /** Base structure for messages */
+    interface BaseMessage {
+        id: string; // Unique ID for the message/event sequence
+        sender: 'human' | 'ai' | 'tool_result' | 'system';
+        content: string | Array<{type: string, text?: string}> | any; // Should primarily resolve to string for AI/Human display
+        node?: string | null;
+        set_id?: string | null;
+        timestamp: number;
+    }
 
-/** Base structure for messages in history or live chat */
-interface BaseMessage {
-    id: string; // Unique ID for the message/event sequence
-    sender: 'human' | 'ai' | 'tool' | 'system';
-    content: string; // Primary text content
-    node?: string | null; // LangGraph node origin for AI/tool messages
-    set_id?: string | null; // For compare mode tracking
-    timestamp: number; // To ensure ordering
-}
+    /** Tool call structure stored within AIMessage */
+    interface ToolCall {
+        // id might be temporary during streaming if not sent initially
+        id: string;
+        name: string;
+        // args accumulate as string fragments until valid JSON is formed (or stream ends)
+        args: string;
+    }
 
-/** Specific structure for AI message chunks (potentially merged) */
-interface AIMessage extends BaseMessage {
-    sender: 'ai';
-}
+    /** AI message - Includes optional structured tool_calls */
+    interface AIMessage extends BaseMessage {
+        sender: 'ai';
+        tool_calls?: ToolCall[]; // Optional array for structured tool calls
+    }
 
-/** Specific structure for Human messages */
-interface HumanMessage extends BaseMessage {
-    sender: 'human';
-}
+    /** Human messages */
+    interface HumanMessage extends BaseMessage {
+        sender: 'human';
+    }
 
-/** Specific structure for System/Error messages */
-interface SystemMessage extends BaseMessage {
-    sender: 'system';
-    isError?: boolean;
-}
+    /** System/Error messages */
+    interface SystemMessage extends BaseMessage {
+        sender: 'system';
+        isError?: boolean;
+    }
 
-/** Specific structure for Tool Call messages */
-interface ToolCallMessage extends BaseMessage {
-    sender: 'tool';
-    content: string; // e.g., "Calling tool: tool_name"
-    tool_name: string;
-    tool_args?: any; // Arguments passed to the tool
-    status: 'started' | 'pending' | 'completed' | 'error'; // Track status
-    result?: string | null; // Result when completed/error
-    is_error?: boolean; // If the tool execution resulted in an error
-}
+    /** Tool Result messages */
+    interface ToolResultMessage extends BaseMessage {
+        sender: 'tool_result';
+        content: string; // Result content
+        tool_name: string;
+        is_error: boolean;
+        // Corresponds to the tool call that produced this result - ID might be useful if available
+        tool_call_id?: string | null;
+    }
 
-/** Represents a message in the frontend chat display. */
-type MessageType = HumanMessage | AIMessage | ToolCallMessage | SystemMessage;
+    /** Represents a message in the frontend chat display. */
+    type MessageType = HumanMessage | AIMessage | ToolResultMessage | SystemMessage;
 
 
-/** Structure for the response of fetching thread history. */
-interface HistoryResponse {
-    thread_id: string;
-    messages: MessageType[]; // Array of past messages
-}
-
-/** Structure for the response of creating a new thread. */
-interface NewThreadResponse {
-    thread_id: string;
-}
-
-/** Structure matches the backend SSEEventData Pydantic model [cite: 1] */
-interface SSEEventData {
-    type: "chunk" | "tool_call" | "tool_result" | "error" | "end";
-    node?: string | null; // Node where event originated
-    data: any; // Specific data depends on the event type
-    set_id?: string | null; // For compare mode tracking
-}
-
-// --- Data structures within SSEEventData.data ---
-interface SSEChunkData {
-    // For type="chunk", data is just: string (text chunk)
-}
-interface SSEToolCallData {
-    // For type="tool_call" [cite: 1]
-    name: string;
-    args: any; // Simplified in backend example [cite: 1]
-}
-interface SSEToolResultData {
-    // For type="tool_result" [cite: 1]
-    tool_name: string;
-    result: string;
-    is_error: boolean;
-}
-interface SSEEndData {
-    // For type="end" [cite: 1]
-    thread_id: string;
-}
-interface SSEErrorData {
-    // For type="error", data is just: string (error message) [cite: 1]
-}
-
-/** Represents a set of constitutions for comparison mode. */
-interface CompareSet {
-    id: string; // Unique ID for this set (e.g., 'set1', 'set2')
-    constitution_ids: string[]; // List of selected constitution IDs
-    // Optional: Add a name field if users can name sets
-    name?: string;
-}
-
-/** Represents the different operational modes of the UI. */
-type AppMode = 'chat' | 'use' | 'compare';
-
-/** Input structure for chat messages to the API */
-interface StreamRunInput {
-    type: "human";
-    content: string;
-}
-
-/** Request structure for the /api/runs/stream endpoint */
-interface StreamRunRequest {
-    thread_id?: string | null;
-    input?: StreamRunInput;
-    constitution_ids?: string[]; // Defaults to ["none"] in backend
-}
-
-/** Structure for a single comparison set in compare mode */
-interface CompareRunSet {
-    id: string; // Frontend generated ID
-    constitution_ids: string[];
-}
-
-/** Request structure for the /api/runs/compare/stream endpoint */
-interface CompareRunRequest {
-    input: StreamRunInput;
-    constitution_sets: CompareRunSet[];
-}
+    // --- Other interfaces ---
+    interface HistoryResponse { thread_id: string; messages: MessageType[]; }
+    interface NewThreadResponse { thread_id: string; }
+    interface SSEEventData { type: "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end"; node?: string | null; data: any; set_id?: string | null; }
+    interface SSEToolCallChunkData { id?: string | null; name?: string | null; args?: string | null; } // Ensure ID is sent from backend
+    interface SSEToolResultData { tool_name: string; result: string; is_error: boolean; tool_call_id?: string | null; } // Add optional tool_call_id
+    interface SSEEndData { thread_id: string; }
+    interface CompareSet { id: string; constitution_ids: string[]; name?: string; }
+    type AppMode = 'chat' | 'use' | 'compare';
+    interface StreamRunInput { type: "human"; content: string; }
+    interface StreamRunRequest { thread_id?: string | null; input?: StreamRunInput; constitution_ids?: string[]; }
+    // CompareRunSet defined above
+    interface CompareRunRequest { input: StreamRunInput; constitution_sets: CompareSet[]; }
 
 }
-
-// Ensures this file is treated as a module.
-export { };
+export { }; // Ensures this file is treated as a module.

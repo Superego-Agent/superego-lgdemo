@@ -45,7 +45,18 @@
 		height: 100%; /* Needed for flex layout */
         overflow: hidden; /* Prevent content spill */
         background-color: #f9f9f9;
+        width: 100%; /* Ensure it takes full width */
+        position: relative; /* For absolute positioning if needed */
 	}
+	
+	/* Mobile styles */
+    @media (max-width: 768px) {
+        .chat-interface {
+            /* When sidebar is on top in mobile view, take remaining height */
+            flex: 1;
+            min-height: 0; /* Allow shrinking */
+        }
+    }
 
 	.error-banner {
 		background-color: #f8d7da;
@@ -63,7 +74,15 @@
         display: flex;
         flex-direction: column;
         gap: 15px;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 	}
+	
+	/* Mobile styles */
+    @media (max-width: 768px) {
+        .messages-container {
+            padding: 10px;
+        }
+    }
 
     .empty-chat {
         text-align: center;

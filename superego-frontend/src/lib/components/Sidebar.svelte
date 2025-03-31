@@ -111,7 +111,40 @@
 		border-right: 1px solid #ddd;
         height: 100%;
         overflow-y: auto;
+        flex-shrink: 0; /* Prevent sidebar from shrinking */
 	}
+	
+	/* Mobile styles */
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 100%;
+            height: auto;
+            min-height: 60px;
+            max-height: 40vh;
+            border-right: none;
+            border-bottom: 1px solid #ddd;
+            padding: 10px;
+        }
+        
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        
+        .threads-section {
+            margin-bottom: 15px;
+        }
+        
+        .thread-list {
+            max-height: 120px;
+        }
+        
+        .mode-switcher,
+        .mode-options {
+            padding-top: 10px;
+            margin-bottom: 10px;
+        }
+    }
 
     h2 {
         text-align: center;

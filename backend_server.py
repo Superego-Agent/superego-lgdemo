@@ -73,7 +73,28 @@ app.add_middleware(
 )
 
 # --- Pydantic Models ---
-# (Keep existing models: ConstitutionItem, ThreadItem, HistoryMessage, HistoryResponse, NewThreadResponse)
+class ConstitutionItem(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+
+class ThreadItem(BaseModel):
+    thread_id: str
+    title: str
+
+class HistoryMessage(BaseModel):
+    id: str
+    sender: str  # "user", "ai", "system", "tool"
+    content: str
+    timestamp: Optional[int] = None
+    node: Optional[str] = None
+    set_id: Optional[str] = None  # For compare mode
+
+class HistoryResponse(BaseModel):
+    messages: List[HistoryMessage]
+
+class NewThreadResponse(BaseModel):
+    thread_id: str
 
 class StreamRunInput(BaseModel):
     type: Literal["human"]
@@ -192,7 +213,138 @@ async def stream_events(
 
 
 # --- API Endpoints ---
-# (Keep existing endpoints: /api/constitutions, /api/threads, /api/threads/{thread_id}/history)
+
+# Endpoint to get available constitutions
+@app.get("/api/constitutions")
+async def get_constitutions_endpoint():
+    """Returns the list of available constitutions."""
+    try:
+        constitutions = get_available_constitutions()
+        return constitutions
+    except Exception as e:
+        print(f"Error retrieving constitutions: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve constitutions: {str(e)}")
+
+# Endpoint to get available threads
+@app.get("/api/threads")
+async def get_threads_endpoint():
+    """Returns the list of available threads."""
+    try:
+        if not checkpointer:
+            raise HTTPException(status_code=500, detail="Checkpointer not initialized")
+        
+        # Get list of thread IDs from the checkpointer
+        # SqliteSaver doesn't have list_checkpoints, but we can access the DB directly
+        thread_ids = []
+        try:
+            # Using SQLite's native query to get keys from the checkpointer DB
+            if hasattr(checkpointer, 'conn') and checkpointer.conn:
+                cursor = checkpointer.conn.cursor()
+                cursor.execute("SELECT key FROM kv") 
+                thread_ids = [row[0] for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error querying checkpoints: {e}")
+        
+        # Format the response
+        threads = [
+            {
+                "thread_id": thread_id,
+                "title": f"Chat {i+1}"  # Simple title for now
+            }
+            for i, thread_id in enumerate(thread_ids)
+        ]
+        
+        return threads
+    except Exception as e:
+        print(f"Error retrieving threads: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve threads: {str(e)}")
+
+# Endpoint to get history for a specific thread
+@app.get("/api/threads/{thread_id}/history")
+async def get_thread_history_endpoint(thread_id: str = FastApiPath(...)):
+    """Returns the chat history for a specific thread."""
+    try:
+        if not checkpointer:
+            raise HTTPException(status_code=500, detail="Checkpointer not initialized")
+        
+        # Try to load the checkpoint data
+        try:
+            checkpoint = checkpointer.get(thread_id)
+            if not checkpoint:
+                raise HTTPException(status_code=404, detail=f"Thread {thread_id} not found")
+            
+            # Extract messages from the checkpoint state
+            # Note: Adjust this based on the actual structure of your checkpoint data
+            messages_data = []
+            state = checkpoint.get("values", {})
+            
+            # Extract messages based on your state structure
+            if "messages" in state:
+                for msg in state["messages"]:
+                    # Convert each message to a suitable format
+                    if hasattr(msg, "to_dict"):
+                        msg_dict = msg.to_dict()
+                    elif isinstance(msg, dict):
+                        msg_dict = msg
+                    else:
+                        msg_dict = {"content": str(msg), "type": "unknown"}
+                    
+                    # Map LangChain message types to frontend types
+                    sender = "system"
+                    if msg_dict.get("type") == "human":
+                        sender = "user"
+                    elif msg_dict.get("type") == "ai":
+                        sender = "ai"
+                    elif msg_dict.get("type") == "tool":
+                        sender = "tool"
+                    
+                    messages_data.append({
+                        "id": f"{thread_id}-{len(messages_data)}",
+                        "sender": sender,
+                        "content": msg_dict.get("content", ""),
+                        "timestamp": msg_dict.get("timestamp", 0)
+                    })
+            
+            return {"messages": messages_data}
+            
+        except Exception as e:
+            print(f"Error loading checkpoint for {thread_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to load thread history: {str(e)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error retrieving history for thread {thread_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve thread history: {str(e)}")
+
+# Endpoint to create a new thread
+@app.post("/api/threads")
+async def create_thread_endpoint():
+    """Creates a new empty thread and returns its ID."""
+    try:
+        if not checkpointer:
+            raise HTTPException(status_code=500, detail="Checkpointer not initialized")
+        
+        # Generate a new thread ID
+        new_thread_id = str(uuid.uuid4())
+        
+        # Create an empty initial state for this thread
+        # The actual messages will be added when the user sends the first message
+        initial_state = {"messages": []}
+        
+        # Save the empty state as a checkpoint
+        try:
+            checkpointer.put(new_thread_id, {"values": initial_state})
+        except Exception as e:
+            print(f"Error creating new thread checkpoint: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to create new thread: {str(e)}")
+        
+        return {"thread_id": new_thread_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating new thread: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create new thread: {str(e)}")
 
 @app.post("/api/runs/stream")
 async def run_stream_endpoint(request: StreamRunRequest):
