@@ -111,6 +111,30 @@ interface CompareSet {
 /** Represents the different operational modes of the UI. */
 type AppMode = 'chat' | 'use' | 'compare';
 
+/** Input structure for chat messages to the API */
+interface StreamRunInput {
+    type: "human";
+    content: string;
+}
+
+/** Request structure for the /api/runs/stream endpoint */
+interface StreamRunRequest {
+    thread_id?: string | null;
+    input?: StreamRunInput;
+    constitution_ids?: string[]; // Defaults to ["none"] in backend
+}
+
+/** Structure for a single comparison set in compare mode */
+interface CompareRunSet {
+    id: string; // Frontend generated ID
+    constitution_ids: string[];
+}
+
+/** Request structure for the /api/runs/compare/stream endpoint */
+interface CompareRunRequest {
+    input: StreamRunInput;
+    constitution_sets: CompareRunSet[];
+}
 
 }
 
