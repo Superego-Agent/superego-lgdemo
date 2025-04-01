@@ -19,16 +19,25 @@
 </script>
 
 <main class="app-layout">
-	<Sidebar />
-	<ChatInterface />
-	<div class="theme-toggle-container">
-		<ThemeToggle />
+	<div class="app-header">
+		<h1 class="app-title">
+			<span class="logo-text">Superego</span>
+			<span class="subtitle">Demo</span>
+		</h1>
+		<div class="theme-toggle-container">
+			<ThemeToggle />
+		</div>
+	</div>
+	<div class="app-content">
+		<Sidebar />
+		<ChatInterface />
 	</div>
 </main>
 
 <style>
 	.app-layout {
 		display: flex;
+		flex-direction: column;
 		height: 100%;
 		width: 100%;
 		position: absolute;
@@ -38,6 +47,46 @@
 		bottom: 0;
 		overflow: hidden; /* Prevent layout issues */
 		background-color: var(--bg-primary);
+	}
+	
+	.app-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px 16px;
+		background-color: var(--bg-elevated);
+		border-bottom: 1px solid var(--input-border);
+		height: 50px;
+		flex-shrink: 0;
+	}
+	
+	.app-content {
+		display: flex;
+		flex: 1;
+		overflow: hidden;
+	}
+	
+	.app-title {
+		margin: 0;
+		display: flex;
+		align-items: center; /* Changed to horizontal alignment */
+		font-size: 1em; /* Make the entire title smaller */
+	}
+	
+	.logo-text {
+		background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		font-size: 1em; /* Reduced from 1.4em */
+		font-weight: bold;
+	}
+	
+	.subtitle {
+		margin-left: 8px; /* Add space between Superego and Demo */
+		font-size: 0.9em;
+		color: var(--text-secondary);
+		font-weight: normal;
 	}
 
     :global(body) {
@@ -72,16 +121,12 @@
     }
 
 	.theme-toggle-container {
-		position: fixed;
-		top: 12px;
-		right: 12px;
-		z-index: 100;
+		margin-left: auto;
 	}
 	
 	@media (max-width: 768px) {
-		.theme-toggle-container {
-			top: 8px;
-			right: 8px;
+		.app-content {
+			flex-direction: column;
 		}
 	}
 </style>

@@ -1,19 +1,15 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { fade, slide, fly } from 'svelte/transition';
+	import { onMount } from 'svelte'; // Removed duplicate import
+	import { slide, fly } from 'svelte/transition'; // Removed fade as it wasn't used after mode removal
 	import {
-		currentMode,
-		availableConstitutions,
-		activeConstitutionIds,
-		compareSets,
+		availableConstitutions, // Keep for potential future use? Or remove if definitely not needed? Let's keep for now.
 		availableThreads,
         currentThreadId,
         messages,
         isLoading,
 	} from '../stores';
 	import { fetchConstitutions, fetchThreads, createNewThread, fetchHistory } from '../api';
-    import ConstitutionDropdown from './ConstitutionDropdown.svelte'; // Placeholder
-    import CompareInterface from './CompareInterface.svelte'; // Placeholder
+    // Removed ConstitutionDropdown and CompareInterface imports
 
     onMount(async () => {
         // Fetch initial data for sidebar
@@ -29,7 +25,7 @@
             currentThreadId.set(newThread.thread_id);
             messages.set([]); // Clear messages
             availableThreads.set(await fetchThreads()); // Refresh thread list
-            currentMode.set('chat'); // Reset mode
+            // Removed currentMode.set('chat');
         } catch (error) {
             console.error("Failed to create new chat:", error);
             // Show error to user?
@@ -52,28 +48,18 @@
 </script>
 
 <div class="sidebar">
-	<h2>
-		<span class="logo-text" in:slide={{ delay: 100, duration: 500 }}>Superego</span>
-		<span class="subtitle">Demo</span>
-	</h2>
-
     <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading}>
         {#if $isLoading && !$currentThreadId} 
 			<div class="button-spinner"></div>
 		{:else} 
 			<span class="btn-icon">+</span>
-			<span>New Chat</span>
 		{/if}
     </button>
 
     <div class="sidebar-section threads-section">
-        <h4><span class="section-icon">📜</span> History</h4>
         <ul class="thread-list">
             {#each $availableThreads as thread, i (thread.thread_id)}
-                <li 
-                    class:active={thread.thread_id === $currentThreadId}
-                    in:fly={{ y: 10, delay: i * 50, duration: 200 }}
-                >
+                <li class:active={thread.thread_id === $currentThreadId}>
                     <button on:click={() => loadThread(thread.thread_id)} disabled={$isLoading}>
                         {thread.title || thread.thread_id.substring(0, 8)}
                     </button>
@@ -84,34 +70,7 @@
         </ul>
     </div>
 
-
-	<div class="sidebar-section mode-switcher">
-        <h4><span class="section-icon">🔄</span> Mode</h4>
-		<label class="mode-option" class:selected={$currentMode === 'chat'}>
-			<input type="radio" bind:group={$currentMode} value="chat" /> 
-			<span>Chat</span>
-		</label>
-		<label class="mode-option" class:selected={$currentMode === 'use'}>
-			<input type="radio" bind:group={$currentMode} value="use" /> 
-			<span>Use Constitution(s)</span>
-		</label>
-		<label class="mode-option" class:selected={$currentMode === 'compare'}>
-			<input type="radio" bind:group={$currentMode} value="compare" /> 
-			<span>Compare Constitutions</span>
-		</label>
-	</div>
-
-	<div class="sidebar-section mode-options">
-		{#if $currentMode === 'use'}
-			<h4><span class="section-icon">📋</span> Active Constitution(s)</h4>
-            <ConstitutionDropdown />
-		{:else if $currentMode === 'compare'}
-			<h4><span class="section-icon">⚖️</span> Comparison Sets</h4>
-            <CompareInterface />
-		{:else}
-            <p class="mode-info" in:fade={{ duration: 300 }}>Standard chat mode. AI will respond directly.</p>
-        {/if}
-	</div>
+    <!-- Mode Switcher and Mode Options sections removed -->
 
 </div>
 
@@ -179,48 +138,28 @@
         }
     }
 
-    h2 {
-        text-align: center;
-        margin-bottom: var(--space-lg);
-        color: var(--text-primary);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-    }
-	
-	.logo-text {
-		background: linear-gradient(135deg, var(--primary-light), var(--secondary));
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		font-size: 1.6em;
-		font-weight: bold;
-		letter-spacing: 1px;
-	}
-	
-	.subtitle {
-		font-size: 0.8em;
-		color: var(--text-secondary);
-		font-weight: normal;
-		margin-top: var(--space-xs);
-	}
+    /* Removed h2, .logo-text, and .subtitle styles as they're now in App.svelte */
 
     .new-chat-button {
-        width: 100%;
-        padding: var(--space-md);
-        margin-bottom: var(--space-md);
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        font-size: 1em;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-		gap: var(--space-sm);
+		/* Make it a smaller square button */
+		width: 40px; 
+		height: 40px;
+		padding: 0; /* Remove padding */
+		margin-bottom: var(--space-md);
+		background-color: var(--primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		font-size: 1em; /* Keep font size for icon */
+		transition: all 0.3s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		/* Removed gap */
 		box-shadow: var(--shadow-sm);
+		align-self: flex-end; /* Align to the right */
+		flex-shrink: 0; /* Prevent shrinking */
     }
     
     .new-chat-button:hover:not(:disabled) {
@@ -240,22 +179,25 @@
 		font-size: 1.2em;
 	}
 	
-	.sidebar-section {
+	.threads-section { /* Target the specific section */
 		border-top: 1px solid var(--input-border);
 		padding-top: var(--space-md);
+		flex-grow: 1; /* Allow this section to grow */
+		display: flex; /* Enable flex for children */
+		flex-direction: column; /* Stack children vertically */
+		min-height: 0; /* Prevent overflow issues in flex */
 	}
 
     .thread-list {
         list-style: none;
         padding: 0;
         margin: 0;
-        max-height: 200px; /* Limit height */
+		flex-grow: 1; /* Allow list to fill space in threads-section */
         overflow-y: auto;
-        border: 1px solid var(--input-border);
-        border-radius: var(--radius-md);
-        background-color: var(--bg-surface);
+        background-color: transparent;
 		scrollbar-width: thin;
-		scrollbar-color: var(--primary-light) var(--bg-surface);
+		scrollbar-color: var(--primary-light) transparent;
+        display: block;
     }
 	
 	.thread-list::-webkit-scrollbar {
@@ -263,7 +205,7 @@
 	}
 	
 	.thread-list::-webkit-scrollbar-track {
-		background: var(--bg-surface);
+		background: transparent;
 	}
 	
 	.thread-list::-webkit-scrollbar-thumb {
@@ -272,18 +214,25 @@
 	}
 	
     .thread-list li {
-        border-bottom: 1px solid var(--input-border);
+        /* Removed border-radius */
 		transition: all 0.2s ease;
+		/* Removed box-shadow */
+		overflow: hidden;
+		background-color: var(--bg-surface);
+        /* Removed margin-bottom */
+        display: block;
+        width: 100%;
+        border-bottom: 1px solid var(--input-border); /* Add subtle separation */
     }
-	
+    
     .thread-list li:last-child {
-        border-bottom: none;
+        border-bottom: none; /* Remove border from last item */
     }
-	
+    
     .thread-list li button {
         width: 100%;
         text-align: left;
-        padding: var(--space-sm) var(--space-md);
+        padding: 12px 16px; /* Slightly more padding for touch targets */
         background: none;
         border: none;
         cursor: pointer;
@@ -293,6 +242,8 @@
         overflow: hidden;
         text-overflow: ellipsis;
 		transition: all 0.2s ease;
+		position: relative;
+        display: block;
     }
 	
     .thread-list li button:hover:not(:disabled) {
@@ -305,7 +256,8 @@
     }
 	
     .thread-list li.active {
-		background-color: var(--primary-dark);
+		background-color: var(--primary);
+		/* Removed box-shadow */
     }
 	
 	.thread-list li.active button {
@@ -313,71 +265,20 @@
 		font-weight: bold;
 	}
 	
+	/* Removed the ::before element with the accent border */
+	
 	.empty-list {
-		padding: var(--space-md);
+		padding: 16px;
 		text-align: center;
 		color: var(--text-secondary);
 		font-style: italic;
-	}
-	
-	.section-icon {
-		margin-right: var(--space-xs);
-		font-size: 1.1em;
-	}
-
-	.mode-switcher {
-		margin-bottom: var(--space-md);
-	}
-	
-    .mode-option {
-        display: flex;
-        align-items: center;
-        margin-bottom: var(--space-sm);
-        cursor: pointer;
-		padding: var(--space-xs) var(--space-sm);
-		border-radius: var(--radius-sm);
-		transition: all 0.2s ease;
-    }
-	
-	.mode-option:hover {
-		background-color: var(--bg-surface);
-	}
-	
-	.mode-option.selected {
-		background-color: var(--bg-elevated);
-		box-shadow: var(--shadow-sm);
-	}
-	
-    .mode-option input {
-		margin-right: var(--space-sm);
-		accent-color: var(--primary-light);
-    }
-
-    .mode-options {
-        flex-grow: 1; /* Takes remaining space */
-    }
-	
-    .mode-options h4 { 
-		margin-bottom: var(--space-sm); 
+		background-color: transparent;
+		/* Removed border-radius */
+		/* Removed border-left */
+		margin: 0;
 	}
 
-    .mode-info {
-        font-size: 0.9em;
-        color: var(--text-secondary);
-        font-style: italic;
-		padding: var(--space-sm);
-		background-color: var(--bg-surface);
-		border-radius: var(--radius-md);
-		border-left: 3px solid var(--primary-light);
-    }
-
-    h4 { 
-		margin-top: 0; 
-		margin-bottom: var(--space-sm); 
-		color: var(--text-primary);
-		display: flex;
-		align-items: center;
-	}
+    /* Removed h4 styles since we removed the History heading */
 
     /* Spinner animation */
     .button-spinner {

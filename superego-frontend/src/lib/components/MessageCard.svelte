@@ -145,7 +145,7 @@
 		padding: var(--space-md); 
 		background-color: var(--ai-bg); 
 		border: 1px solid var(--input-border);
-		max-width: 90%; 
+		max-width: min(60ch, 90%); /* Limit width to 60ch or 90%, whichever is smaller */
 		position: relative; 
 		overflow-wrap: break-word; 
 		word-break: break-word; 
@@ -163,18 +163,20 @@
 		background-color: var(--human-bg); 
 		margin-left: auto; 
 		color: var(--text-primary);
+		/* Width remains flexible but capped at 60ch */
 	}
 	
 	.message-card.ai, .message-card.tool_result { 
 		background-color: var(--ai-bg); 
-		margin-right: auto; 
+		margin-right: auto;
+		/* Width remains flexible but capped at 60ch */
 	}
 	
 	.message-card.system { 
 		background-color: var(--system-bg); 
 		font-style: italic; 
 		color: var(--text-primary); 
-		max-width: 100%; 
+		max-width: 100%; /* System messages can still be full width */
 	}
 	
 	.message-card.system.error, .message-card.tool_result.error { 

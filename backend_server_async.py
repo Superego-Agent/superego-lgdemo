@@ -347,6 +347,7 @@ async def get_threads_endpoint():
         # We might need a more direct query if `list` isn't suitable.
 
         # Alternative: Direct DB query (assuming AsyncSqliteSaver)
+        # TODO: Add ORDER BY ts DESC if ts column is reliably populated and indexed for performance
         query = "SELECT DISTINCT thread_id FROM checkpoints ORDER BY thread_id DESC LIMIT 100;" # Get recent thread IDs
         conn = checkpointer.conn # Access underlying connection
         cursor = await conn.execute(query)
@@ -374,7 +375,8 @@ async def get_threads_endpoint():
         raise HTTPException(status_code=500, detail="Failed to list threads due to an unexpected error.")
 
 
-# Corrected history endpoint
+
+# History endpoint with corrected AIMessage list content handling
 @app.get("/api/threads/{thread_id}/history", response_model=HistoryResponse)
 async def get_thread_history_endpoint(thread_id: str = FastApiPath(...)):
     """Retrieves the message history for a given thread ID."""
@@ -409,50 +411,88 @@ async def get_thread_history_endpoint(thread_id: str = FastApiPath(...)):
                      print(f"Warning: Could not convert timestamp '{ts_value}' ({type(ts_value)}) to UNIX ms for thread {thread_id}: {ts_err}")
 
             for i, msg in enumerate(messages_from_state):
-                sender: Literal['human', 'ai', 'tool_result', 'system'] = "system" # Default
-                node = getattr(msg, 'name', None) # Get node if available (e.g., from AIMessage)
-                content = msg.content
+                # Initialize variables for each message
+                sender: Optional[Literal['human', 'ai', 'tool_result']] = None
+                node: Optional[str] = None
+                formatted_content: Optional[str] = None # Store final string content
                 tool_name: Optional[str] = None
                 is_error: Optional[bool] = None
 
-                # Determine sender and potentially extract/format content
-                if isinstance(msg, AIMessage):
-                     sender = "ai"
-                     # Format content and tool calls for display
-                     if tool_calls := getattr(msg, "tool_calls", None):
-                         # Simple text representation for history 'content' field:
-                         calls_str = "\n".join([
-                             f"-> Called Tool: {tc.get('name', 'N/A')}({json.dumps(tc.get('args', {}))})"
-                             for tc in tool_calls if isinstance(tc, dict)
-                         ])
-                         # Append tool call info to content string
-                         if isinstance(content, str): content += f"\n{calls_str}"
-                         else: content = str(content) + f"\n{calls_str}"
-                elif isinstance(msg, HumanMessage):
-                     sender = "human"
+                # --- Process based on message type ---
+                if isinstance(msg, HumanMessage):
+                    sender = "human"
+                    node = getattr(msg, 'name', None)
+                    # Use direct string conversion, handle None
+                    formatted_content = str(msg.content) if msg.content is not None else ""
+
+                elif isinstance(msg, AIMessage):
+                    sender = "ai"
+                    node = getattr(msg, 'name', 'ai')
+                    raw_content = msg.content
+                    content_str = "" # Initialize extracted text content
+
+                    # --- NEW: Handle list content specifically ---
+                    if isinstance(raw_content, list):
+                        # Extract text from dicts with type 'text' in the list
+                        for item in raw_content:
+                            if isinstance(item, dict) and item.get("type") == "text":
+                                content_str += item.get("text", "")
+                    elif isinstance(raw_content, str):
+                        # Handle simple string content directly
+                        content_str = raw_content
+                    elif raw_content is not None:
+                        # Fallback for other unexpected non-None types
+                        content_str = str(raw_content)
+                    # --- End new list handling ---
+
+                    # --- Format tool calls textually (from msg.tool_calls) ---
+                    tool_calls_str = ""
+                    # IMPORTANT: We look at msg.tool_calls here, NOT the 'tool_use' dict
+                    #            that might have been inside raw_content list.
+                    if tool_calls := getattr(msg, "tool_calls", None):
+                        tool_calls_str = "\n".join([
+                            f"-> Called Tool: {tc.get('name', 'N/A')}({json.dumps(tc.get('args', {}))})"
+                            for tc in tool_calls if isinstance(tc, dict)
+                        ])
+
+                    # --- Combine extracted content and tool calls ---
+                    if content_str and tool_calls_str:
+                        formatted_content = f"{content_str}\n{tool_calls_str}"
+                    elif content_str:
+                        formatted_content = content_str
+                    elif tool_calls_str: # Message might *only* have tool calls representation
+                        formatted_content = tool_calls_str
+                    else:
+                         formatted_content = "" # Neither text nor tool calls
+
                 elif isinstance(msg, ToolMessage):
-                     sender = "tool_result"
-                     node = "tools" # Associate with the tools node
-                     tool_name = getattr(msg, 'name', 'unknown_tool')
-                     is_error = isinstance(msg.content, Exception) # Check if tool produced an error
-                     # Ensure content is stringified for JSON response
-                     if not isinstance(content, str):
-                         try: content = json.dumps(content)
-                         except TypeError: content = str(content)
+                    sender = "tool_result"
+                    node = "tools"
+                    tool_name = getattr(msg, 'name', 'unknown_tool')
+                    is_error = isinstance(msg.content, Exception)
+                    # Stringify robustly
+                    if isinstance(msg.content, str):
+                        formatted_content = msg.content
+                    elif msg.content is None:
+                        formatted_content = "" # Represent None result as empty string
+                    else:
+                        try:
+                            formatted_content = json.dumps(msg.content)
+                        except TypeError:
+                            formatted_content = str(msg.content) # Fallback
 
-                # Calculate timestamp if possible
-                msg_timestamp = base_timestamp_ms + i if base_timestamp_ms is not None else None
-
-                history_messages.append(HistoryMessage(
-                    id=f"{thread_id}-{i}", # Simple unique ID for frontend keying
-                    sender=sender,
-                    content=content, # Content is now stringified/formatted
-                    timestamp=msg_timestamp,
-                    node=node,
-                    tool_name=tool_name,
-                    is_error=is_error,
-                    # set_id is not applicable for single thread history
-                ))
+                # --- Add message to history IF sender identified AND content is not None ---
+                if sender and formatted_content is not None:
+                    msg_timestamp = base_timestamp_ms + i if base_timestamp_ms is not None else None
+                    history_messages.append(HistoryMessage(
+                        id=f"{thread_id}-{i}",
+                        sender=sender,
+                        content=formatted_content, # Use the potentially empty string
+                        timestamp=msg_timestamp,
+                        node=node,
+                        tool_name=tool_name,
+                        is_error=is_error,
+                    ))
 
         return HistoryResponse(messages=history_messages)
 
@@ -491,19 +531,17 @@ async def run_stream_endpoint(request: StreamRunRequest):
             print(f"Continuing stream in thread: {thread_id}")
         except ValueError:
              print(f"Invalid thread_id format received: {thread_id}")
-             # Return an error response instead of streaming
-             # (Requires adjustments to return type or exception handling)
-             # For now, let stream_events handle potential checkpointer errors
-             pass # Or raise HTTPException(status_code=400, detail="Invalid thread ID format.")
+             # Return an error response instead of streaming?
+             # For now, we let stream_events potentially fail if checkpointer access fails later
+             # raise HTTPException(status_code=400, detail="Invalid thread ID format.") # Alternative
+             pass
 
 
     if request.input:
         input_messages = [HumanMessage(content=request.input.content)]
     else:
-        # Handle runs without initial input if necessary (e.g., resuming a state)
-        # Currently, stream_events expects input messages if provided
         print(f"Warning: Stream run requested for thread {thread_id} without initial input.")
-        # input_messages = [] # Or handle based on graph requirements
+        # input_messages = [] # Or handle based on graph requirements? Assume None is ok.
 
     # Return the SSE response stream
     return EventSourceResponse(stream_events(
