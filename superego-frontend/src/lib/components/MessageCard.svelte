@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
+	import { fade, fly, scale } from 'svelte/transition';
+	import { elasticOut } from 'svelte/easing';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	// Uses types from global.d.ts
@@ -64,22 +65,55 @@
 	// HTML Escaping helper
 	function escapeHtml(unsafe: string): string { if (!unsafe) return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
-	// Node colors definition
-	const nodeColors: Record<string, string> = { default: '#64748b', superego: '#ec4899', inner_agent: '#22c55e', tools: '#f97316', };
-
-	// Reactive style for border color
-	$: finalBorderStyle = (() => { let color = nodeColors.default; if (isError) return 'border-color: #ef4444;'; if (node && nodeColors[node]) { color = nodeColors[node]; } else if (sender === 'human') { color = 'transparent'; } else if (sender === 'system') { color = '#eab308'; } else if (sender === 'tool_result') { color = nodeColors['tools'] || nodeColors.default; } return `border-color: ${color};`; })();
+	// Node colors using CSS vars
+	$: finalBorderStyle = (() => {
+		if (isError) return 'border-color: var(--error);';
+		if (node === 'superego') return 'border-color: var(--node-superego);';
+		if (node === 'inner_agent') return 'border-color: var(--node-inner-agent);';
+		if (node === 'tools' || sender === 'tool_result') return 'border-color: var(--node-tools);';
+		if (sender === 'human') return 'border-color: var(--human-border);';
+		if (sender === 'system') return 'border-color: var(--system-border);';
+		return 'border-color: var(--node-default);';
+	})();
 
 	// Reactive style for title color
-	$: finalTitleColor = isError && sender !== 'tool_result' ? '#fecaca' : nodeColors[node || 'default'] ?? nodeColors.default;
+	$: finalTitleColor = (() => {
+		if (isError) return 'var(--error)';
+		if (node === 'superego') return 'var(--node-superego)';
+		if (node === 'inner_agent') return 'var(--node-inner-agent)';
+		if (node === 'tools' || sender === 'tool_result') return 'var(--node-tools)';
+		return 'var(--node-default)';
+	})();
 
+	// Entry animation setup
+	function getMessageAnimation(msgSender: string) {
+		if (msgSender === 'human') {
+			return {
+				y: -20,
+				x: 20,
+				duration: 300,
+				easing: elasticOut
+			};
+		} else {
+			return {
+				y: 20,
+				x: -20,
+				duration: 300,
+				easing: elasticOut
+			};
+		}
+	}
+
+	$: animProps = getMessageAnimation(sender);
 </script>
 
-<div class="message-card-wrapper" transition:fade|local={{ duration: 200 }}>
+<div class="message-card-wrapper" in:fly|local={animProps}>
 	<div class={cardClasses} style={finalBorderStyle}>
 		{#if title}
 			<div class="message-title" style:color={finalTitleColor}>
-				{titlePrefix} {title} {#if toolName && sender === 'tool_result'}({toolName}){/if}
+				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
+					{titlePrefix} {title} {#if toolName && sender === 'tool_result'}({toolName}){/if}
+				</span>
 			</div>
 		{/if}
 
@@ -90,8 +124,8 @@
 	   {#if sender === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
 		   <div class="tool-calls-separator"></div>
 		   <div class="tool-calls-section">
-			   {#each aiMessage.tool_calls as toolCall (toolCall.id || toolCall.name)}
-				   <div class="tool-call-item">
+			   {#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
+				   <div class="tool-call-item" in:fade|local={{delay: 100 + i * 50, duration: 200}}>
 					   <span class="tool-call-prefix">↳ Called {toolCall.name || 'Tool'}:</span>
 					   <pre class="tool-call-args">{formatToolArgs(toolCall.args)}</pre>
 				   </div>
@@ -106,21 +140,182 @@
 </div>
 
 <style>
-	/* Styles remain the same as the previous structured tool call version */
-	.message-card-wrapper { width: 100%; margin-bottom: 0.75rem; padding: 0 0.5rem; }
-	.message-card { border-radius: 0.5rem; padding: 0.75rem 1rem; background-color: var(--card-bg-color, #374151); border: 2px solid; max-width: 90%; position: relative; overflow-wrap: break-word; word-break: break-word; color: var(--content-text-color, #f3f4f6); }
-	.message-card.human { background-color: var(--human-bg-color, #1e40af); margin-left: auto; border-color: transparent; color: var(--human-text-color, #e5e7eb); }
-	.message-card.ai, .message-card.tool_result { background-color: var(--ai-bg-color, #4b5563); margin-right: auto; }
-	.message-card.system { background-color: var(--system-bg-color, #451a03); border-color: #eab308; font-style: italic; color: var(--system-text-color, #fef3c7); max-width: 100%; }
-	.message-card.system.error, .message-card.tool_result.error { background-color: var(--error-bg-color, #7f1d1d); border-color: #ef4444; color: var(--error-text-color, #fecaca); }
-	.message-title { font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; }
-	.message-content { font-size: 1rem; line-height: 1.6; white-space: pre-wrap; }
-	:global(.message-content p) { margin-bottom: 0.75em; } :global(.message-content ul), :global(.message-content ol) { margin-left: 1.5em; margin-bottom: 0.75em; } :global(.message-content li) { margin-bottom: 0.25em; } :global(.message-content pre) { background-color: #1f2937; padding: 0.75em; border-radius: 0.375rem; overflow-x: auto; font-family: monospace; font-size: 0.9em; margin-bottom: 0.75em; color: #d1d5db; white-space: pre; } :global(.message-content code:not(pre code)) { background-color: #1f2937; padding: 0.2em 0.4em; border-radius: 0.25rem; font-size: 0.9em; color: #e5e7eb; } :global(.message-content blockquote) { border-left: 3px solid #6b7280; padding-left: 1em; margin-left: 0; margin-right: 0; font-style: italic; color: #9ca3af; } :global(.message-content table) { width: auto; border-collapse: collapse; margin-bottom: 1em; } :global(.message-content th), :global(.message-content td) { border: 1px solid #4b5563; padding: 0.5em 0.75em; } :global(.message-content th) { background-color: #374151; } :global(.message-content a) { color: #60a5fa; text-decoration: underline; } :global(.message-content a:hover) { color: #93c5fd; }
+	.message-card-wrapper { 
+		width: 100%; 
+		margin-bottom: var(--space-md); 
+		padding: 0 var(--space-sm);
+	}
+	
+	.message-card { 
+		border-radius: var(--radius-lg);
+		padding: var(--space-md); 
+		background-color: var(--ai-bg); 
+		border-left: 4px solid; 
+		max-width: 90%; 
+		position: relative; 
+		overflow-wrap: break-word; 
+		word-break: break-word; 
+		color: var(--text-primary);
+		box-shadow: var(--shadow-md);
+		transition: all 0.2s ease;
+	}
+	
+	.message-card:hover {
+		box-shadow: var(--shadow-lg);
+	}
+	
+	.message-card.human { 
+		background-color: var(--human-bg); 
+		margin-left: auto; 
+		color: var(--text-primary);
+	}
+	
+	.message-card.ai, .message-card.tool_result { 
+		background-color: var(--ai-bg); 
+		margin-right: auto; 
+	}
+	
+	.message-card.system { 
+		background-color: var(--system-bg); 
+		border-color: var(--system-border); 
+		font-style: italic; 
+		color: var(--text-primary); 
+		max-width: 100%; 
+	}
+	
+	.message-card.system.error, .message-card.tool_result.error { 
+		background-color: var(--error-bg); 
+		border-color: var(--error); 
+		color: var(--text-primary); 
+	}
+	
+	.message-title { 
+		font-weight: 600; 
+		margin-bottom: var(--space-sm); 
+		font-size: 0.875rem;
+		display: flex;
+		align-items: center;
+	}
+	
+	.title-text {
+		display: inline-block;
+	}
+	
+	.message-content { 
+		font-size: 1rem; 
+		line-height: 1.6; 
+		white-space: pre-wrap; 
+	}
+	
+	:global(.message-content p) { 
+		margin-bottom: 0.75em; 
+	} 
+	
+	:global(.message-content ul), :global(.message-content ol) { 
+		margin-left: 1.5em; 
+		margin-bottom: 0.75em; 
+	} 
+	
+	:global(.message-content li) { 
+		margin-bottom: 0.25em; 
+	} 
+	
+	:global(.message-content pre) { 
+		background-color: var(--bg-elevated); 
+		padding: 0.75em; 
+		border-radius: var(--radius-sm); 
+		overflow-x: auto; 
+		font-family: 'Fira Code', 'Roboto Mono', monospace; 
+		font-size: 0.9em; 
+		margin-bottom: 0.75em; 
+		color: var(--text-primary); 
+		white-space: pre; 
+		border-left: 2px solid var(--primary-light);
+	} 
+	
+	:global(.message-content code:not(pre code)) { 
+		background-color: var(--bg-elevated); 
+		padding: 0.2em 0.4em; 
+		border-radius: var(--radius-sm); 
+		font-size: 0.9em; 
+		color: var(--secondary-light); 
+		font-family: 'Fira Code', 'Roboto Mono', monospace;
+	} 
+	
+	:global(.message-content blockquote) { 
+		border-left: 3px solid var(--primary-light); 
+		padding-left: 1em; 
+		margin-left: 0; 
+		margin-right: 0; 
+		font-style: italic; 
+		color: var(--text-secondary); 
+	} 
+	
+	:global(.message-content table) { 
+		width: auto; 
+		border-collapse: collapse; 
+		margin-bottom: 1em; 
+	} 
+	
+	:global(.message-content th), :global(.message-content td) { 
+		border: 1px solid var(--input-border); 
+		padding: 0.5em 0.75em; 
+	} 
+	
+	:global(.message-content th) { 
+		background-color: var(--bg-elevated); 
+	} 
+	
+	:global(.message-content a) { 
+		color: var(--secondary-light); 
+		text-decoration: underline; 
+		transition: color 0.2s ease;
+	} 
+	
+	:global(.message-content a:hover) { 
+		color: var(--secondary); 
+	}
+   
    /* Styles for appended tool calls section */
-   .tool-calls-separator { border-top: 1px dashed #6b7280; margin-top: 0.75rem; margin-bottom: 0.75rem; }
-   .tool-calls-section { font-size: 0.875rem; color: #d1d5db; }
-   .tool-call-item { margin-bottom: 0.5rem; }
-   .tool-call-prefix { font-style: italic; color: #9ca3af; margin-right: 0.5em; }
-   .tool-call-args { display: block; background-color: #1f2937; padding: 0.5em 0.75em; border-radius: 0.375rem; overflow-x: auto; font-family: monospace; font-size: 0.85em; color: #d1d5db; white-space: pre; margin-top: 0.25rem; }
-	.message-set-id { font-size: 0.75rem; color: #9ca3af; text-align: right; margin-top: 0.5rem; }
+   .tool-calls-separator { 
+		border-top: 1px dashed var(--input-border); 
+		margin-top: var(--space-md); 
+		margin-bottom: var(--space-md); 
+	}
+   
+   .tool-calls-section { 
+		font-size: 0.875rem; 
+		color: var(--text-secondary); 
+	}
+   
+   .tool-call-item { 
+		margin-bottom: var(--space-sm); 
+	}
+   
+   .tool-call-prefix { 
+		font-style: italic; 
+		color: var(--text-secondary); 
+		margin-right: 0.5em; 
+	}
+   
+   .tool-call-args { 
+		display: block; 
+		background-color: var(--bg-elevated); 
+		padding: var(--space-sm); 
+		border-radius: var(--radius-sm); 
+		overflow-x: auto; 
+		font-family: 'Fira Code', 'Roboto Mono', monospace; 
+		font-size: 0.85em; 
+		color: var(--text-primary); 
+		white-space: pre; 
+		margin-top: var(--space-xs);
+		border-left: 2px solid var(--node-tools);
+	}
+	
+	.message-set-id { 
+		font-size: 0.75rem; 
+		color: var(--text-secondary); 
+		text-align: right; 
+		margin-top: var(--space-sm); 
+	}
 </style>

@@ -3,6 +3,7 @@
 	import MessageCard from './MessageCard.svelte';
 	import ChatInput from './ChatInput.svelte';
 	import { afterUpdate } from 'svelte';
+	import { slide, fade } from 'svelte/transition';
 
 	let chatContainer: HTMLElement;
 
@@ -16,18 +17,26 @@
 
 <div class="chat-interface">
 	{#if $globalError}
-		<div class="error-banner">Error: {$globalError}</div>
+		<div class="error-banner" in:slide={{ duration: 300 }} out:slide={{ duration: 300 }}>
+			<div class="error-content">
+				<span class="error-icon">⚠️</span>
+				<span>Error: {$globalError}</span>
+			</div>
+		</div>
 	{/if}
 
 	<div class="messages-container" bind:this={chatContainer}>
 		{#each $messages as message (message.id)}
 			<MessageCard {message} />
 		{:else}
-			<p class="empty-chat">Send a message to start the conversation.</p>
+			<div class="empty-chat" in:fade={{ duration: 500 }}>
+				<div class="empty-chat-icon">💬</div>
+				<p>Send a message to start the conversation</p>
+			</div>
 		{/each}
 
 		{#if $isLoading}
-			<div class="loading-indicator">
+			<div class="loading-indicator" in:fade={{ duration: 200 }}>
 				<div class="spinner"></div>
 				<span>Thinking...</span>
 			</div>
@@ -44,7 +53,7 @@
 		flex-direction: column;
 		height: 100%; /* Needed for flex layout */
         overflow: hidden; /* Prevent content spill */
-        background-color: #f9f9f9;
+        background-color: var(--bg-primary);
         width: 100%; /* Ensure it takes full width */
         position: relative; /* For absolute positioning if needed */
 	}
@@ -59,54 +68,93 @@
     }
 
 	.error-banner {
-		background-color: #f8d7da;
-		color: #721c24;
-		padding: 10px 15px;
-		border-bottom: 1px solid #f5c6cb;
+		background-color: var(--error-bg);
+		color: var(--error);
+		padding: var(--space-md);
+		border-bottom: 1px solid var(--error);
 		text-align: center;
 		font-size: 0.9em;
+		box-shadow: var(--shadow-md);
+	}
+	
+	.error-content {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-sm);
+	}
+	
+	.error-icon {
+		font-size: 1.2em;
 	}
 
 	.messages-container {
 		flex-grow: 1;
 		overflow-y: auto;
-		padding: 20px;
+		padding: var(--space-lg);
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: var(--space-md);
         -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+		scrollbar-width: thin;
+		scrollbar-color: var(--primary-light) var(--bg-surface);
+	}
+	
+	.messages-container::-webkit-scrollbar {
+		width: 8px;
+	}
+	
+	.messages-container::-webkit-scrollbar-track {
+		background: var(--bg-surface);
+		border-radius: var(--radius-pill);
+	}
+	
+	.messages-container::-webkit-scrollbar-thumb {
+		background-color: var(--primary-light);
+		border-radius: var(--radius-pill);
 	}
 	
 	/* Mobile styles */
     @media (max-width: 768px) {
         .messages-container {
-            padding: 10px;
+            padding: var(--space-md) var(--space-sm);
         }
     }
 
     .empty-chat {
         text-align: center;
-        color: #888;
-        margin-top: 40px;
+        color: var(--text-secondary);
+        margin: auto;
         font-style: italic;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-md);
     }
+	
+	.empty-chat-icon {
+		font-size: 2.5em;
+		margin-bottom: var(--space-sm);
+		opacity: 0.7;
+	}
 
 	.loading-indicator {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 15px;
-		color: #555;
-        gap: 8px;
+		padding: var(--space-md);
+		color: var(--text-secondary);
+        gap: var(--space-sm);
         font-style: italic;
 	}
 
 	.spinner {
-		border: 3px solid #f3f3f3; /* Light grey */
-		border-top: 3px solid #555; /* Dark grey */
+		border: 3px solid rgba(255, 255, 255, 0.1);
+		border-top: 3px solid var(--secondary);
 		border-radius: 50%;
-		width: 16px;
-		height: 16px;
+		width: 20px;
+		height: 20px;
 		animation: spin 1s linear infinite;
 	}
 

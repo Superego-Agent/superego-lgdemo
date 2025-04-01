@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, slide, fly } from 'svelte/transition';
 	import {
 		currentMode,
 		availableConstitutions,
@@ -51,50 +52,64 @@
 </script>
 
 <div class="sidebar">
-	<h2>Superego Demo</h2>
+	<h2>
+		<span class="logo-text" in:slide={{ delay: 100, duration: 500 }}>Superego</span>
+		<span class="subtitle">Demo</span>
+	</h2>
 
     <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading}>
-        {#if $isLoading && !$currentThreadId} <div class="button-spinner"></div> {:else} + New Chat {/if}
+        {#if $isLoading && !$currentThreadId} 
+			<div class="button-spinner"></div>
+		{:else} 
+			<span class="btn-icon">+</span>
+			<span>New Chat</span>
+		{/if}
     </button>
 
-    <div class="threads-section">
-        <h4>History</h4>
+    <div class="sidebar-section threads-section">
+        <h4><span class="section-icon">📜</span> History</h4>
         <ul class="thread-list">
-            {#each $availableThreads as thread (thread.thread_id)}
-                <li class:active={thread.thread_id === $currentThreadId}>
+            {#each $availableThreads as thread, i (thread.thread_id)}
+                <li 
+                    class:active={thread.thread_id === $currentThreadId}
+                    in:fly={{ y: 10, delay: i * 50, duration: 200 }}
+                >
                     <button on:click={() => loadThread(thread.thread_id)} disabled={$isLoading}>
                         {thread.title || thread.thread_id.substring(0, 8)}
                     </button>
                 </li>
             {:else}
-                <li>No history yet.</li>
+                <li class="empty-list">No history yet.</li>
             {/each}
         </ul>
     </div>
 
 
-	<div class="mode-switcher">
-        <h4>Mode</h4>
-		<label>
-			<input type="radio" bind:group={$currentMode} value="chat" /> Chat
+	<div class="sidebar-section mode-switcher">
+        <h4><span class="section-icon">🔄</span> Mode</h4>
+		<label class="mode-option" class:selected={$currentMode === 'chat'}>
+			<input type="radio" bind:group={$currentMode} value="chat" /> 
+			<span>Chat</span>
 		</label>
-		<label>
-			<input type="radio" bind:group={$currentMode} value="use" /> Use Constitution(s)
+		<label class="mode-option" class:selected={$currentMode === 'use'}>
+			<input type="radio" bind:group={$currentMode} value="use" /> 
+			<span>Use Constitution(s)</span>
 		</label>
-		<label>
-			<input type="radio" bind:group={$currentMode} value="compare" /> Compare Constitutions
+		<label class="mode-option" class:selected={$currentMode === 'compare'}>
+			<input type="radio" bind:group={$currentMode} value="compare" /> 
+			<span>Compare Constitutions</span>
 		</label>
 	</div>
 
-	<div class="mode-options">
+	<div class="sidebar-section mode-options">
 		{#if $currentMode === 'use'}
-			<h4>Active Constitution(s)</h4>
+			<h4><span class="section-icon">📋</span> Active Constitution(s)</h4>
             <ConstitutionDropdown />
 		{:else if $currentMode === 'compare'}
-			<h4>Comparison Sets</h4>
+			<h4><span class="section-icon">⚖️</span> Comparison Sets</h4>
             <CompareInterface />
 		{:else}
-            <p class="mode-info">Standard chat mode.</p>
+            <p class="mode-info" in:fade={{ duration: 300 }}>Standard chat mode. AI will respond directly.</p>
         {/if}
 	</div>
 
@@ -102,16 +117,34 @@
 
 <style>
 	.sidebar {
-		width: 300px;
-		min-width: 250px; /* Prevent excessive shrinking */
-		background-color: #f0f0f0;
-		padding: 20px;
+		width: 320px;
+		min-width: 270px; /* Prevent excessive shrinking */
+		background-color: var(--bg-sidebar);
+		padding: var(--space-lg);
 		display: flex;
 		flex-direction: column;
-		border-right: 1px solid #ddd;
+		border-right: 1px solid var(--input-border);
         height: 100%;
         overflow-y: auto;
         flex-shrink: 0; /* Prevent sidebar from shrinking */
+		box-shadow: var(--shadow-lg);
+		color: var(--text-primary);
+		gap: var(--space-lg);
+		scrollbar-width: thin;
+		scrollbar-color: var(--primary-light) var(--bg-sidebar);
+	}
+	
+	.sidebar::-webkit-scrollbar {
+		width: 6px;
+	}
+	
+	.sidebar::-webkit-scrollbar-track {
+		background: var(--bg-sidebar);
+	}
+	
+	.sidebar::-webkit-scrollbar-thumb {
+		background-color: var(--primary-light);
+		border-radius: var(--radius-pill);
 	}
 	
 	/* Mobile styles */
@@ -122,62 +155,95 @@
             min-height: 60px;
             max-height: 40vh;
             border-right: none;
-            border-bottom: 1px solid #ddd;
-            padding: 10px;
+            border-bottom: 1px solid var(--input-border);
+            padding: var(--space-sm);
+			gap: var(--space-md);
         }
         
         h2 {
             font-size: 1.5em;
-            margin-bottom: 10px;
+            margin-bottom: var(--space-xs);
         }
         
         .threads-section {
-            margin-bottom: 15px;
+            margin-bottom: var(--space-sm);
         }
         
         .thread-list {
             max-height: 120px;
         }
         
-        .mode-switcher,
-        .mode-options {
-            padding-top: 10px;
-            margin-bottom: 10px;
+        .sidebar-section {
+            padding-top: var(--space-sm);
+            margin-bottom: var(--space-sm);
         }
     }
 
     h2 {
         text-align: center;
-        margin-bottom: 20px;
-        color: #333;
+        margin-bottom: var(--space-lg);
+        color: var(--text-primary);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
     }
+	
+	.logo-text {
+		background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		font-size: 1.6em;
+		font-weight: bold;
+		letter-spacing: 1px;
+	}
+	
+	.subtitle {
+		font-size: 0.8em;
+		color: var(--text-secondary);
+		font-weight: normal;
+		margin-top: var(--space-xs);
+	}
 
     .new-chat-button {
         width: 100%;
-        padding: 10px 15px;
-        margin-bottom: 25px;
-        background-color: #28a745;
+        padding: var(--space-md);
+        margin-bottom: var(--space-md);
+        background-color: var(--primary);
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: var(--radius-md);
         cursor: pointer;
         font-size: 1em;
-        transition: background-color 0.2s;
+        transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
+		gap: var(--space-sm);
+		box-shadow: var(--shadow-sm);
     }
+    
     .new-chat-button:hover:not(:disabled) {
-        background-color: #218838;
+        background-color: var(--primary-light);
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
     }
-     .new-chat-button:disabled {
-        background-color: #8fdfa3;
+    
+    .new-chat-button:disabled {
+        background-color: var(--primary-dark);
         cursor: not-allowed;
+		opacity: 0.7;
     }
-
-    .threads-section {
-        margin-bottom: 25px;
-    }
+	
+	.btn-icon {
+		font-weight: bold;
+		font-size: 1.2em;
+	}
+	
+	.sidebar-section {
+		border-top: 1px solid var(--input-border);
+		padding-top: var(--space-md);
+	}
 
     .thread-list {
         list-style: none;
@@ -185,85 +251,146 @@
         margin: 0;
         max-height: 200px; /* Limit height */
         overflow-y: auto;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background-color: #fff;
+        border: 1px solid var(--input-border);
+        border-radius: var(--radius-md);
+        background-color: var(--bg-surface);
+		scrollbar-width: thin;
+		scrollbar-color: var(--primary-light) var(--bg-surface);
     }
+	
+	.thread-list::-webkit-scrollbar {
+		width: 4px;
+	}
+	
+	.thread-list::-webkit-scrollbar-track {
+		background: var(--bg-surface);
+	}
+	
+	.thread-list::-webkit-scrollbar-thumb {
+		background-color: var(--primary-light);
+		border-radius: var(--radius-pill);
+	}
+	
     .thread-list li {
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--input-border);
+		transition: all 0.2s ease;
     }
-     .thread-list li:last-child {
+	
+    .thread-list li:last-child {
         border-bottom: none;
     }
+	
     .thread-list li button {
         width: 100%;
         text-align: left;
-        padding: 8px 12px;
+        padding: var(--space-sm) var(--space-md);
         background: none;
         border: none;
         cursor: pointer;
         font-size: 0.9em;
-        color: #333;
+        color: var(--text-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+		transition: all 0.2s ease;
     }
-     .thread-list li button:hover:not(:disabled) {
-         background-color: #e9ecef;
-     }
-      .thread-list li button:disabled {
-         color: #999;
-         cursor: not-allowed;
-     }
-    .thread-list li.active button {
-        background-color: #007bff;
-        color: white;
-        font-weight: bold;
+	
+    .thread-list li button:hover:not(:disabled) {
+		background-color: var(--bg-elevated);
     }
-
+	
+    .thread-list li button:disabled {
+		color: var(--text-disabled);
+		cursor: not-allowed;
+    }
+	
+    .thread-list li.active {
+		background-color: var(--primary-dark);
+    }
+	
+	.thread-list li.active button {
+		color: white;
+		font-weight: bold;
+	}
+	
+	.empty-list {
+		padding: var(--space-md);
+		text-align: center;
+		color: var(--text-secondary);
+		font-style: italic;
+	}
+	
+	.section-icon {
+		margin-right: var(--space-xs);
+		font-size: 1.1em;
+	}
 
 	.mode-switcher {
-		margin-bottom: 20px;
-        border-top: 1px solid #ccc;
-        padding-top: 15px;
+		margin-bottom: var(--space-md);
 	}
-    .mode-switcher label {
-        display: block;
-        margin-bottom: 8px;
+	
+    .mode-option {
+        display: flex;
+        align-items: center;
+        margin-bottom: var(--space-sm);
         cursor: pointer;
+		padding: var(--space-xs) var(--space-sm);
+		border-radius: var(--radius-sm);
+		transition: all 0.2s ease;
     }
-     .mode-switcher input {
-         margin-right: 8px;
-     }
+	
+	.mode-option:hover {
+		background-color: var(--bg-surface);
+	}
+	
+	.mode-option.selected {
+		background-color: var(--bg-elevated);
+		box-shadow: var(--shadow-sm);
+	}
+	
+    .mode-option input {
+		margin-right: var(--space-sm);
+		accent-color: var(--primary-light);
+    }
 
     .mode-options {
         flex-grow: 1; /* Takes remaining space */
-         border-top: 1px solid #ccc;
-        padding-top: 15px;
     }
-    .mode-options h4 { margin-bottom: 10px; }
+	
+    .mode-options h4 { 
+		margin-bottom: var(--space-sm); 
+	}
 
     .mode-info {
         font-size: 0.9em;
-        color: #666;
+        color: var(--text-secondary);
         font-style: italic;
+		padding: var(--space-sm);
+		background-color: var(--bg-surface);
+		border-radius: var(--radius-md);
+		border-left: 3px solid var(--primary-light);
     }
 
-    h4 { margin-top: 0; margin-bottom: 10px; color: #555; }
+    h4 { 
+		margin-top: 0; 
+		margin-bottom: var(--space-sm); 
+		color: var(--text-primary);
+		display: flex;
+		align-items: center;
+	}
 
-    /* Reusing spinner animation */
+    /* Spinner animation */
     .button-spinner {
-		border: 3px solid rgba(255, 255, 255, 0.3);
+		border: 3px solid rgba(255, 255, 255, 0.2);
 		border-top: 3px solid #fff;
 		border-radius: 50%;
-		width: 16px;
-		height: 16px;
+		width: 18px;
+		height: 18px;
 		animation: spin 1s linear infinite;
-        margin-right: 8px; /* Space between spinner and text if needed */
-	}
+    }
+	
     @keyframes spin {
 		0% { transform: rotate(0deg); }
 		100% { transform: rotate(360deg); }
 	}
-
 </style>
