@@ -1,9 +1,4 @@
-from pathlib import Path
-from typing import Dict, List, Optional
-import asyncio
-
 from mcp.server.fastmcp import FastMCP
-from mcp.server import stdio
 from constitution_utils import (
     get_available_constitutions,
     get_constitution_content,
@@ -17,7 +12,6 @@ app = FastMCP("Constitution Server")
 def list_constitutions() -> str:
     """List all available constitutions"""
     constitutions = get_available_constitutions()
-    print(f"Constitutions: {constitutions}")
     return "\n".join([f"- {k}: {v}" for k, v in constitutions.items()])
 
 @app.resource("constitutions://{constitution_id}")
