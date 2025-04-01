@@ -25,7 +25,6 @@
 		userInput = ''; // Clear input field
 		isExpanded = false; // Reset expanded state
 
-		// Call the appropriate mock API function based on mode
 		try {
 			if (mode === 'compare') {
 				const sets = $compareSets;

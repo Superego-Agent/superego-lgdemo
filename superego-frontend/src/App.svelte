@@ -40,7 +40,6 @@
 		background-color: var(--bg-primary);
 	}
 
-    /* Ensure global styles don't interfere too much */
     :global(body) {
         margin: 0;
         padding: 0;
@@ -60,14 +59,12 @@
         box-sizing: border-box;
     }
     
-    /* Mobile styles */
     @media (max-width: 768px) {
         .app-layout {
             flex-direction: column;
         }
     }
     
-    /* Fix iOS height issues */
     @supports (-webkit-touch-callout: none) {
         .app-layout {
             height: -webkit-fill-available;
