@@ -167,7 +167,7 @@
         border-radius: var(--radius-md);
         padding: var(--space-md);
         text-align: center;
-        border-left: 3px solid var(--secondary);
+        border: 1px solid var(--input-border);
     }
     
     .no-sets-info p {
@@ -196,7 +196,7 @@
         box-shadow: var(--shadow-md);
     }
     
-    .card-header {
+    .catyld-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -268,10 +268,11 @@
     }
     
     .chip {
-        background: linear-gradient(135deg, var(--primary), var(--primary-light));
-        color: white;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
         padding: var(--space-xs) var(--space-sm);
         border-radius: var(--radius-pill);
+        border: 1px solid var(--input-border);
         font-size: 0.85em;
         display: inline-flex;
         align-items: center;
@@ -282,7 +283,7 @@
     
     .chip:hover {
         transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
+        background-color: var(--bg-elevated);
     }
     
     .chip-name {
@@ -295,7 +296,7 @@
     .remove-btn {
         background: none;
         border: none;
-        color: white;
+        color: var(--text-secondary);
         cursor: pointer;
         padding: 0;
         font-weight: bold;
@@ -320,10 +321,11 @@
         align-items: center;
         gap: var(--space-sm);
         margin-top: var(--space-sm);
-        padding: var(--space-sm);
+        padding: var(--space-md);
         background-color: var(--bg-elevated);
-        border-radius: var(--radius-sm);
-        border-left: 3px solid var(--primary-light);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--input-border);
+        box-shadow: var(--shadow-sm);
     }
     
     .info-note p {

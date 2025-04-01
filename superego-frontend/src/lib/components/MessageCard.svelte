@@ -65,25 +65,19 @@
 	// HTML Escaping helper
 	function escapeHtml(unsafe: string): string { if (!unsafe) return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
-	// Node colors using CSS vars
-	$: finalBorderStyle = (() => {
-		if (isError) return 'border-color: var(--error);';
-		if (node === 'superego') return 'border-color: var(--node-superego);';
-		if (node === 'inner_agent') return 'border-color: var(--node-inner-agent);';
-		if (node === 'tools' || sender === 'tool_result') return 'border-color: var(--node-tools);';
-		if (sender === 'human') return 'border-color: var(--human-border);';
-		if (sender === 'system') return 'border-color: var(--system-border);';
-		return 'border-color: var(--node-default);';
-	})();
-
-	// Reactive style for title color
-	$: finalTitleColor = (() => {
+	// Card style and accent colors
+	$: cardAccentColor = (() => {
 		if (isError) return 'var(--error)';
 		if (node === 'superego') return 'var(--node-superego)';
 		if (node === 'inner_agent') return 'var(--node-inner-agent)';
 		if (node === 'tools' || sender === 'tool_result') return 'var(--node-tools)';
+		if (sender === 'human') return 'var(--human-border)';
+		if (sender === 'system') return 'var(--system-border)';
 		return 'var(--node-default)';
 	})();
+
+	// Reactive style for title color
+	$: finalTitleColor = cardAccentColor;
 
 	// Entry animation setup
 	function getMessageAnimation(msgSender: string) {
@@ -108,7 +102,7 @@
 </script>
 
 <div class="message-card-wrapper" in:fly|local={animProps}>
-	<div class={cardClasses} style={finalBorderStyle}>
+	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
 			<div class="message-title" style:color={finalTitleColor}>
 				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
@@ -150,7 +144,7 @@
 		border-radius: var(--radius-lg);
 		padding: var(--space-md); 
 		background-color: var(--ai-bg); 
-		border-left: 4px solid; 
+		border: 1px solid var(--input-border);
 		max-width: 90%; 
 		position: relative; 
 		overflow-wrap: break-word; 
@@ -162,6 +156,7 @@
 	
 	.message-card:hover {
 		box-shadow: var(--shadow-lg);
+		transform: translateY(-1px);
 	}
 	
 	.message-card.human { 
@@ -177,7 +172,6 @@
 	
 	.message-card.system { 
 		background-color: var(--system-bg); 
-		border-color: var(--system-border); 
 		font-style: italic; 
 		color: var(--text-primary); 
 		max-width: 100%; 
@@ -185,7 +179,6 @@
 	
 	.message-card.system.error, .message-card.tool_result.error { 
 		background-color: var(--error-bg); 
-		border-color: var(--error); 
 		color: var(--text-primary); 
 	}
 	
@@ -229,8 +222,7 @@
 		font-size: 0.9em; 
 		margin-bottom: 0.75em; 
 		color: var(--text-primary); 
-		white-space: pre; 
-		border-left: 2px solid var(--primary-light);
+		white-space: pre;
 	} 
 	
 	:global(.message-content code:not(pre code)) { 
@@ -243,7 +235,7 @@
 	} 
 	
 	:global(.message-content blockquote) { 
-		border-left: 3px solid var(--primary-light); 
+		border-left: 3px solid var(--input-border); 
 		padding-left: 1em; 
 		margin-left: 0; 
 		margin-right: 0; 
@@ -309,7 +301,6 @@
 		color: var(--text-primary); 
 		white-space: pre; 
 		margin-top: var(--space-xs);
-		border-left: 2px solid var(--node-tools);
 	}
 	
 	.message-set-id { 

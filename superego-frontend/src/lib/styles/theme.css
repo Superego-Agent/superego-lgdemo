@@ -1,47 +1,47 @@
 :root {
-  /* Color Palette */
-  --primary: #2563eb;
-  --primary-light: #3b82f6;
-  --primary-dark: #1d4ed8;
-  --secondary: #0ea5e9;
-  --secondary-light: #38bdf8;
-  --secondary-dark: #0284c7;
+  /* Color Palette - more subdued */
+  --primary: #4b5563;
+  --primary-light: #6b7280;
+  --primary-dark: #374151;
+  --secondary: #9ca3af;
+  --secondary-light: #d1d5db;
+  --secondary-dark: #6b7280;
   
   --error: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
   
-  /* Background and surfaces */
-  --bg-primary: #f8fafc;
+  /* Background and surfaces - mostly white */
+  --bg-primary: #ffffff;
   --bg-surface: #ffffff;
-  --bg-elevated: #f1f5f9;
-  --bg-sidebar: #f8fafc;
+  --bg-elevated: #f9fafb;
+  --bg-sidebar: #f9fafb;
   
   /* Text */
-  --text-primary: #334155;
-  --text-secondary: #64748b;
-  --text-disabled: #94a3b8;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-disabled: #9ca3af;
   
   /* Input fields */
-  --input-bg: #ffffff;
-  --input-border: #e2e8f0;
-  --input-focus: var(--primary);
+  --input-bg: #f3f4f6;
+  --input-border: #e5e7eb;
+  --input-focus: #9ca3af;
   
-  /* Role-specific colors */
-  --human-bg: #eff6ff;
-  --human-border: var(--primary);
-  --ai-bg: #f0fdfa;
-  --ai-border: var(--secondary);
-  --system-bg: #fff7ed;
-  --system-border: var(--warning);
-  --error-bg: #fef2f2;
-  --error-border: var(--error);
+  /* Role-specific colors - mostly white with subtle differences */
+  --human-bg: #f3f4f6;
+  --human-border: #e5e7eb;
+  --ai-bg: #ffffff;
+  --ai-border: #e5e7eb;
+  --system-bg: #f9fafb;
+  --system-border: #e5e7eb;
+  --error-bg: #fee2e2;
+  --error-border: #fecaca;
   
-  /* Node colors */
-  --node-superego: var(--primary);
-  --node-inner-agent: var(--success);
-  --node-tools: #f97316;
-  --node-default: #64748b;
+  /* Node colors - subtle */
+  --node-superego: #6b7280;
+  --node-inner-agent: #6b7280;
+  --node-tools: #9ca3af;
+  --node-default: #d1d5db;
   
   /* Spacing */
   --space-xs: 4px;
