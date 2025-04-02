@@ -2,12 +2,15 @@
 	import { onMount } from 'svelte'; // Removed duplicate import
 	import { slide, fly } from 'svelte/transition'; // Removed fade as it wasn't used after mode removal
 	import {
-		availableConstitutions, // Keep for potential future use? Or remove if definitely not needed? Let's keep for now.
+		availableConstitutions,
 		availableThreads,
         currentThreadId,
         messages,
         isLoading,
+        currentMode,
+        activeConstitutionIds,
 	} from '../stores';
+	import { showThreadConfigTrigger } from '../stores/events';
 	import { fetchConstitutions, fetchThreads, createNewThread, fetchHistory } from '../api';
     // Removed ConstitutionDropdown and CompareInterface imports
 
@@ -25,7 +28,12 @@
             currentThreadId.set(newThread.thread_id);
             messages.set([]); // Clear messages
             availableThreads.set(await fetchThreads()); // Refresh thread list
-            // Removed currentMode.set('chat');
+            
+            // Set mode to 'use' to ensure constitutions are used
+            currentMode.set('use');
+            
+            // Trigger the thread configuration modal
+            showThreadConfigTrigger.set(true);
         } catch (error) {
             console.error("Failed to create new chat:", error);
             // Show error to user?

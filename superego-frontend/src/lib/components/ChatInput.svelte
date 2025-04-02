@@ -1,12 +1,36 @@
 <script lang="ts">
 	import { messages, currentThreadId, currentMode, activeConstitutionIds, compareSets, isLoading } from '../stores';
 	import { streamRun, streamCompareRun } from '../api'; // Use mock API
+	import { showThreadConfigTrigger, resetThreadConfigTrigger } from '../stores/events';
 	import { fly, scale } from 'svelte/transition';
+	import { onMount } from 'svelte';
+	import ThreadConfigModal from './ThreadConfigModal.svelte';
 
 	let userInput: string = '';
 	let inputElement: HTMLTextAreaElement;
 	let isExpanded = false;
+	let showThreadConfig = false;
 
+	// Watch for the show thread config trigger
+	$: if ($showThreadConfigTrigger) {
+		showThreadConfig = true;
+		resetThreadConfigTrigger(); // Reset the trigger
+	}
+	
+	// Initialize thread config when opening a new thread
+	onMount(() => {
+		// Show thread config on first launch or new thread creation
+		if (!$currentThreadId || $messages.length === 0) {
+			showThreadConfig = true;
+		}
+	});
+	
+	// Handle thread config save
+	function handleConfigSave() {
+		// Config saved, no additional action needed
+		console.log('Thread config saved with constitutions:', $activeConstitutionIds);
+	}
+	
 	async function handleSubmit() {
 		const trimmedInput = userInput.trim();
 		if (!trimmedInput || $isLoading) return;
@@ -56,6 +80,12 @@
 		}
 	}
 </script>
+
+<ThreadConfigModal 
+	visible={showThreadConfig} 
+	onClose={() => showThreadConfig = false}
+	onSave={handleConfigSave}
+/>
 
 <form class="chat-input-form" class:expanded={isExpanded} on:submit|preventDefault={handleSubmit}>
 	<div class="textarea-container">
