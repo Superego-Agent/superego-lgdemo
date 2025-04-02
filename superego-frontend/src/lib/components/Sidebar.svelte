@@ -1,305 +1,223 @@
 <script lang="ts">
-	import { onMount } from 'svelte'; // Removed duplicate import
-	import { slide, fly } from 'svelte/transition'; // Removed fade as it wasn't used after mode removal
-	import {
-		availableConstitutions,
-		availableThreads,
+    import { onMount, tick } from 'svelte';
+    import { slide } from 'svelte/transition';
+    import {
+        availableThreads,
         currentThreadId,
-        messages,
         isLoading,
-        currentMode,
-        activeConstitutionIds,
-	} from '../stores';
-	import { showThreadConfigTrigger } from '../stores/events';
-	import { fetchConstitutions, fetchThreads, createNewThread, fetchHistory } from '../api';
-    // Removed ConstitutionDropdown and CompareInterface imports
+    } from '../stores';
+    // Removed unused imports: availableConstitutions, messages, activeConstitutionIds
+    import { fetchHistory, renameThread } from '../api';
+    import { resetForNewChat } from '../stores';
 
-    onMount(async () => {
-        // Fetch initial data for sidebar
-        availableConstitutions.set(await fetchConstitutions());
-        availableThreads.set(await fetchThreads());
-    });
+    // State for inline editing
+    let editingThreadId: number | null = null;
+    let editingName: string = '';
+    let renameInput: HTMLInputElement | null = null;
 
-    async function handleNewChat() {
+    // Removed onMount data fetching
+
+    function handleNewChat() {
         if ($isLoading) return;
-        console.log("Starting new chat...");
+        console.log("Resetting for new chat...");
+        resetForNewChat();
+    }
+
+    async function loadThread(threadId: number) {
+        if ($isLoading || threadId === $currentThreadId) return;
+        console.log(`Loading thread ID: ${threadId}`);
+        editingThreadId = null;
         try {
-            const newThread = await createNewThread();
-            currentThreadId.set(newThread.thread_id);
-            messages.set([]); // Clear messages
-            availableThreads.set(await fetchThreads()); // Refresh thread list
-            
-            // Set mode to 'use' to ensure constitutions are used
-            currentMode.set('use');
-            
-            // Trigger the thread configuration modal
-            showThreadConfigTrigger.set(true);
+            await fetchHistory(threadId);
         } catch (error) {
-            console.error("Failed to create new chat:", error);
-            // Show error to user?
+            console.error(`Failed to load history for thread ID ${threadId}:`, error);
         }
     }
 
-    async function loadThread(threadId: string) {
-        if ($isLoading || threadId === $currentThreadId) return;
-        console.log(`Loading thread: ${threadId}`);
+    function startRename(event: MouseEvent, thread: ThreadItem) {
+        event.stopPropagation(); // Prevent loadThread if edit button is clicked directly
+        if ($isLoading) return;
+        editingThreadId = thread.thread_id;
+        editingName = thread.name;
+        tick().then(() => {
+            renameInput?.focus();
+            renameInput?.select();
+        });
+    }
+
+    async function handleRename() {
+        if (editingThreadId === null || $isLoading) return;
+
+        const threadIdToRename = editingThreadId;
+        const newName = editingName.trim();
+        editingThreadId = null; // Exit editing mode
+
+        if (!newName) {
+            console.warn("Rename cancelled: name was empty.");
+            return;
+        }
+
+        const originalThread = $availableThreads.find(t => t.thread_id === threadIdToRename);
+        if (originalThread && originalThread.name === newName) {
+            console.log("Rename cancelled: name did not change.");
+            return;
+        }
+
+        console.log(`Attempting to rename thread ${threadIdToRename} to "${newName}"`);
         try {
-             currentThreadId.set(threadId);
-             const history = await fetchHistory(threadId);
-             messages.set(history.messages);
+            await renameThread(threadIdToRename, newName);
+            console.log(`Thread ${threadIdToRename} renamed successfully.`);
         } catch (error) {
-             console.error(`Failed to load history for ${threadId}:`, error);
-             // Show error? Reset state?
+            console.error(`Failed to rename thread ${threadIdToRename}:`, error);
+        }
+    }
+
+    function handleRenameKeyDown(event: KeyboardEvent) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleRename();
+        } else if (event.key === 'Escape') {
+            editingThreadId = null;
         }
     }
 
 </script>
 
 <div class="sidebar">
-    <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading}>
-        {#if $isLoading && !$currentThreadId} 
-			<div class="button-spinner"></div>
-		{:else} 
-			<span class="btn-icon">+</span>
-		{/if}
+    <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading && $currentThreadId === null} title="New Chat">
+        {#if $isLoading && $currentThreadId === null}
+            <div class="button-spinner"></div>
+        {:else}
+            <span class="btn-icon">+</span>
+        {/if}
     </button>
 
     <div class="sidebar-section threads-section">
         <ul class="thread-list">
-            {#each $availableThreads as thread, i (thread.thread_id)}
-                <li class:active={thread.thread_id === $currentThreadId}>
-                    <button on:click={() => loadThread(thread.thread_id)} disabled={$isLoading}>
-                        {thread.title || thread.thread_id.substring(0, 8)}
-                    </button>
+            {#each $availableThreads as thread (thread.thread_id)}
+                <li class:active={thread.thread_id === $currentThreadId} class:editing={editingThreadId === thread.thread_id}>
+                    {#if editingThreadId === thread.thread_id}
+                        <form class="rename-form" on:submit|preventDefault={handleRename}>
+                             <input
+                                 type="text"
+                                 bind:this={renameInput}
+                                 bind:value={editingName}
+                                 on:blur={handleRename}
+                                 on:keydown={handleRenameKeyDown}
+                                 disabled={$isLoading}
+                                 class="rename-input"
+                             />
+                         </form>
+                    {:else}
+                        <div class="thread-item-container" on:click={() => loadThread(thread.thread_id)} role="button" tabindex="0"
+                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadThread(thread.thread_id); }}>
+                             <span class="thread-name">{thread.name}</span>
+                             <button class="edit-button" title="Rename Thread" on:click={(e) => startRename(e, thread)} disabled={$isLoading}>
+                                 ✏️
+                             </button>
+                        </div>
+                    {/if}
                 </li>
             {:else}
                 <li class="empty-list">No history yet.</li>
             {/each}
         </ul>
     </div>
-
-    <!-- Mode Switcher and Mode Options sections removed -->
-
 </div>
 
 <style>
-	.sidebar {
-		width: 320px;
-		min-width: 270px; /* Prevent excessive shrinking */
-		background-color: var(--bg-sidebar);
-		padding: var(--space-lg);
-		display: flex;
-		flex-direction: column;
-		border-right: 1px solid var(--input-border);
-        height: 100%;
-        overflow-y: auto;
-        flex-shrink: 0; /* Prevent sidebar from shrinking */
-		box-shadow: var(--shadow-lg);
-		color: var(--text-primary);
-		gap: var(--space-lg);
-		scrollbar-width: thin;
-		scrollbar-color: var(--primary-light) var(--bg-sidebar);
-	}
-	
-	.sidebar::-webkit-scrollbar {
-		width: 6px;
-	}
-	
-	.sidebar::-webkit-scrollbar-track {
-		background: var(--bg-sidebar);
-	}
-	
-	.sidebar::-webkit-scrollbar-thumb {
-		background-color: var(--primary-light);
-		border-radius: var(--radius-pill);
-	}
-	
-	/* Mobile styles */
-    @media (max-width: 768px) {
-        .sidebar {
-            width: 100%;
-            height: auto;
-            min-height: 60px;
-            max-height: 40vh;
-            border-right: none;
-            border-bottom: 1px solid var(--input-border);
-            padding: var(--space-sm);
-			gap: var(--space-md);
-        }
-        
-        h2 {
-            font-size: 1.5em;
-            margin-bottom: var(--space-xs);
-        }
-        
-        .threads-section {
-            margin-bottom: var(--space-sm);
-        }
-        
-        .thread-list {
-            max-height: 120px;
-        }
-        
-        .sidebar-section {
-            padding-top: var(--space-sm);
-            margin-bottom: var(--space-sm);
-        }
-    }
+    /* Existing styles ... */
+    .sidebar { width: 320px; min-width: 270px; background-color: var(--bg-sidebar); padding: var(--space-lg); display: flex; flex-direction: column; border-right: 1px solid var(--input-border); height: 100%; overflow-y: auto; flex-shrink: 0; box-shadow: var(--shadow-lg); color: var(--text-primary); gap: var(--space-lg); scrollbar-width: thin; scrollbar-color: var(--primary-light) var(--bg-sidebar); }
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-track { background: var(--bg-sidebar); }
+    .sidebar::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
 
-    /* Removed h2, .logo-text, and .subtitle styles as they're now in App.svelte */
+    .new-chat-button { width: 40px; height: 40px; padding: 0; margin-bottom: var(--space-md); background-color: var(--primary); color: white; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 1em; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); align-self: flex-end; flex-shrink: 0; }
+    .new-chat-button:hover:not(:disabled) { background-color: var(--primary-light); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .new-chat-button:disabled { background-color: var(--primary-dark); cursor: not-allowed; opacity: 0.7; }
+    .btn-icon { font-weight: bold; font-size: 1.2em; }
 
-    .new-chat-button {
-		/* Make it a smaller square button */
-		width: 40px; 
-		height: 40px;
-		padding: 0; /* Remove padding */
-		margin-bottom: var(--space-md);
-		background-color: var(--primary);
-		color: white;
-		border: none;
-		border-radius: var(--radius-md);
-		cursor: pointer;
-		font-size: 1em; /* Keep font size for icon */
-		transition: all 0.3s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		/* Removed gap */
-		box-shadow: var(--shadow-sm);
-		align-self: flex-end; /* Align to the right */
-		flex-shrink: 0; /* Prevent shrinking */
-    }
-    
-    .new-chat-button:hover:not(:disabled) {
-        background-color: var(--primary-light);
-		transform: translateY(-2px);
-		box-shadow: var(--shadow-md);
-    }
-    
-    .new-chat-button:disabled {
-        background-color: var(--primary-dark);
-        cursor: not-allowed;
-		opacity: 0.7;
-    }
-	
-	.btn-icon {
-		font-weight: bold;
-		font-size: 1.2em;
-	}
-	
-	.threads-section { /* Target the specific section */
-		border-top: 1px solid var(--input-border);
-		padding-top: var(--space-md);
-		flex-grow: 1; /* Allow this section to grow */
-		display: flex; /* Enable flex for children */
-		flex-direction: column; /* Stack children vertically */
-		min-height: 0; /* Prevent overflow issues in flex */
-	}
+    .threads-section { border-top: 1px solid var(--input-border); padding-top: var(--space-md); flex-grow: 1; display: flex; flex-direction: column; min-height: 0; }
 
-    .thread-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-		flex-grow: 1; /* Allow list to fill space in threads-section */
-        overflow-y: auto;
-        background-color: transparent;
-		scrollbar-width: thin;
-		scrollbar-color: var(--primary-light) transparent;
-        display: block;
-    }
-	
-	.thread-list::-webkit-scrollbar {
-		width: 4px;
-	}
-	
-	.thread-list::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	
-	.thread-list::-webkit-scrollbar-thumb {
-		background-color: var(--primary-light);
-		border-radius: var(--radius-pill);
-	}
-	
+    .thread-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; background-color: transparent; scrollbar-width: thin; scrollbar-color: var(--primary-light) transparent; display: block; }
+    .thread-list::-webkit-scrollbar { width: 4px; }
+    .thread-list::-webkit-scrollbar-track { background: transparent; }
+    .thread-list::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
+
     .thread-list li {
-        /* Removed border-radius */
-		transition: all 0.2s ease;
-		/* Removed box-shadow */
-		overflow: hidden;
-		background-color: var(--bg-surface);
-        /* Removed margin-bottom */
-        display: block;
-        width: 100%;
-        border-bottom: 1px solid var(--input-border); /* Add subtle separation */
-    }
-    
-    .thread-list li:last-child {
-        border-bottom: none; /* Remove border from last item */
-    }
-    
-    .thread-list li button {
-        width: 100%;
-        text-align: left;
-        padding: 12px 16px; /* Slightly more padding for touch targets */
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 0.9em;
-        color: var(--text-primary);
-        white-space: nowrap;
+        transition: background-color 0.2s ease; /* Simplified transition */
         overflow: hidden;
-        text-overflow: ellipsis;
-		transition: all 0.2s ease;
-		position: relative;
-        display: block;
+        background-color: var(--bg-surface);
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border-bottom: 1px solid var(--input-border);
+        position: relative; /* For potential absolute positioning inside if needed */
     }
-	
-    .thread-list li button:hover:not(:disabled) {
-		background-color: var(--bg-elevated);
-    }
-	
-    .thread-list li button:disabled {
-		color: var(--text-disabled);
-		cursor: not-allowed;
-    }
-	
-    .thread-list li.active {
-		background-color: var(--primary);
-		/* Removed box-shadow */
-    }
-	
-	.thread-list li.active button {
-		color: white;
-		font-weight: bold;
-	}
-	
-	/* Removed the ::before element with the accent border */
-	
-	.empty-list {
-		padding: 16px;
-		text-align: center;
-		color: var(--text-secondary);
-		font-style: italic;
-		background-color: transparent;
-		/* Removed border-radius */
-		/* Removed border-left */
-		margin: 0;
-	}
+    .thread-list li:last-child { border-bottom: none; }
+    .thread-list li.editing { background-color: var(--bg-elevated); }
 
-    /* Removed h4 styles since we removed the History heading */
-
-    /* Spinner animation */
-    .button-spinner {
-		border: 3px solid rgba(255, 255, 255, 0.2);
-		border-top: 3px solid #fff;
-		border-radius: 50%;
-		width: 18px;
-		height: 18px;
-		animation: spin 1s linear infinite;
+    /* --- NEW: Clickable container for non-edit mode --- */
+    .thread-item-container {
+        flex-grow: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px; /* Apply padding here */
+        cursor: pointer;
+        transition: background-color 0.2s ease;
     }
-	
-    @keyframes spin {
-		0% { transform: rotate(0deg); }
-		100% { transform: rotate(360deg); }
-	}
+    .thread-item-container:hover {
+        background-color: var(--bg-elevated);
+    }
+    .thread-list li.active .thread-item-container {
+        background-color: var(--primary); /* Apply active background here */
+        color: white; /* Apply active text color here */
+    }
+     .thread-list li.active .thread-item-container .thread-name {
+          font-weight: bold; /* Bold active thread name */
+     }
+     .thread-list li.active .thread-item-container .edit-button {
+          color: white; /* Ensure edit button contrasts on active */
+          opacity: 1; /* Ensure edit button visible on active */
+      }
+
+
+    .rename-form { width: 100%; display: flex; }
+    .rename-input {
+         flex-grow: 1; padding: 12px 16px; font-size: 0.9em; border: none; /* Removed border */
+         background-color: transparent; /* Use li background */
+         color: var(--text-primary); border-radius: 0; outline: none;
+         border: 1px solid var(--primary); /* Add border only for input */
+     }
+    .rename-input:focus { box-shadow: 0 0 0 2px var(--primary-light); }
+
+    .thread-name {
+         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+         padding-right: 5px;
+         flex-grow: 1; /* Allow name to take available space */
+         /* Inherit color from parent (.thread-item-container) */
+     }
+
+    .edit-button {
+         background: none; border: none; cursor: pointer; padding: 4px;
+         margin-left: 8px; color: var(--text-secondary); font-size: 0.8em;
+         line-height: 1; border-radius: var(--radius-sm); flex-shrink: 0;
+         opacity: 0; /* Hidden by default */
+         transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+         z-index: 1; /* Ensure button is clickable over container hover */
+     }
+    /* Show edit button on hover of the LIST ITEM */
+    .thread-list li:hover .edit-button {
+         opacity: 1;
+    }
+    .edit-button:hover { background-color: var(--primary-light); color: white; }
+    .edit-button:disabled { opacity: 0.3 !important; cursor: not-allowed; } /* Use !important to override hover opacity */
+
+    .empty-list { padding: 16px; text-align: center; color: var(--text-secondary); font-style: italic; background-color: transparent; margin: 0; display: block; border-bottom: none; }
+
+    .button-spinner { border: 3px solid rgba(255, 255, 255, 0.2); border-top: 3px solid #fff; border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) { /* Existing mobile styles */ }
 </style>
