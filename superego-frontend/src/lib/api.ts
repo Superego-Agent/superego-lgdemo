@@ -6,10 +6,10 @@ import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-even
 import { nanoid } from 'nanoid';
 
 // Assuming types are defined in global.d.ts or similar and updated:
-// type ConstitutionItem = { id: string; name: string; content?: string };
+// type ConstitutionItem = { id: string; title: string; description?: string }; // Updated name -> title
 // type MessageType = HumanMessage | AIMessage | ToolResultMessage | SystemMessage; // etc.
 // type HistoryResponse = { messages: MessageType[]; thread_id: string; thread_name?: string }; // thread_id is now string
-// type StreamRunRequest = { thread_id: string | null; input: any; constitution_ids: string[] }; // thread_id is string | null
+// type StreamRunRequest = { thread_id: string | null; input: any; constitution_ids: string[]; adherence_levels_text?: string }; // Added adherence_levels_text
 // type CompareRunRequest = { thread_id: string | null; input: any; constitution_sets: { id: string; constitution_ids: string[] }[] }; // thread_id is string | null
 // type SSEEventData = { type: string; data: any; node?: string; set_id?: string };
 // type SSEEndData = { thread_id: string }; // thread_id is now string
@@ -369,14 +369,16 @@ async function performStreamRequest(
 export const streamRun = async (
     userInput: string,
     threadId: string | null, // Now string | null (UUID)
-    constitutionIds: string[] = ['none']
+    constitutionIds: string[] = [], // Default to empty list, backend handles 'none' if empty
+    adherenceLevelsText?: string // Optional adherence text
 ): Promise<void> => {
-    // TODO: Ensure StreamRunRequest type definition (e.g., in global.d.ts)
-    // is updated to expect thread_id: string | null
+    // Ensure StreamRunRequest type definition includes adherence_levels_text
     const requestBody: StreamRunRequest = {
-        thread_id: threadId, // Pass string UUID or null (TS error here implies type def needs update)
+        thread_id: threadId,
         input: { type: 'human', content: userInput },
-        constitution_ids: constitutionIds
+        // Send empty list if no constitutions selected, backend defaults to 'none'
+        constitution_ids: constitutionIds.length > 0 ? constitutionIds : ['none'],
+        adherence_levels_text: adherenceLevelsText || undefined // Add adherence text if provided
     };
     const wasNewThread = threadId === null; // Determine if this is for a new thread
     if (wasNewThread) {
@@ -388,6 +390,35 @@ export const streamRun = async (
     }
     await performStreamRequest('/runs/stream', requestBody, wasNewThread);
 };
+
+export const fetchConstitutionContent = async (constitutionId: string): Promise<string> => {
+    console.log(`API: Fetching content for constitution ${constitutionId}`);
+    const url = `${BASE_URL}/constitutions/${constitutionId}/content`;
+    // We expect plain text, so use fetch directly, not apiFetch helper which expects JSON
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'text/plain', // Request plain text
+            },
+        });
+        if (!response.ok) {
+            let errorMsg = `HTTP error! Status: ${response.status}`;
+            try {
+                // Try to get text detail even for non-JSON error
+                const errorText = await response.text();
+                errorMsg += ` - ${errorText}`;
+            } catch (e) { /* Ignore */ }
+            throw new Error(errorMsg);
+        }
+        return await response.text();
+    } catch (error: any) {
+        console.error(`API Fetch Error (Content): ${url}`, error);
+        globalError.set(error.message || `Failed to load content for ${constitutionId}.`);
+        throw error; // Re-throw
+    }
+    // No isLoading handling here as it's a quick fetch, managed by the calling component
+};
+
 
 // streamCompareRun needs similar adjustments if used
 export const streamCompareRun = async (

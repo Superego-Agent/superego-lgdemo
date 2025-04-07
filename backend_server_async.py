@@ -6,6 +6,7 @@ import uuid
 import json
 import asyncio
 import traceback
+import logging # Import logging module
 from contextlib import asynccontextmanager
 from typing import List, Dict, Optional, Any, Literal, Union, AsyncGenerator, Tuple
 from datetime import datetime # Added for timestamp handling in models
@@ -25,7 +26,8 @@ from langgraph.checkpoint.base import CheckpointTuple, BaseCheckpointSaver # Imp
 # Project-specific imports
 try:
     from config import CONFIG # Assumed to exist and be configured
-    from constitution_utils import get_available_constitutions, get_combined_constitution_content # Assumed to exist
+    # Import get_constitution_content as well
+    from constitution_utils import get_available_constitutions, get_combined_constitution_content, get_constitution_content
     from superego_core_async import create_models, create_workflow # Assumed to exist
     # Removed metadata_manager import
 except ImportError as e:
@@ -104,7 +106,7 @@ app.add_middleware(
 
 class ConstitutionItem(BaseModel):
     id: str
-    name: str
+    title: str # Changed from 'name' to 'title' to match constitution_utils
     description: Optional[str] = None
 
 # ThreadItem and RenameThreadRequest removed - managed by frontend localStorage
@@ -133,6 +135,7 @@ class StreamRunRequest(BaseModel):
     thread_id: Optional[str] = None
     input: StreamRunInput
     constitution_ids: List[str] = ["none"]
+    adherence_levels_text: Optional[str] = None # Added field for adherence levels
 
 class CompareRunSet(BaseModel):
     id: str # User-defined ID for the set (e.g., 'strict_vs_default')
@@ -173,6 +176,7 @@ async def stream_events(
     input_messages: List[BaseMessage],
     constitution_ids: List[str],
     run_app: Any, # The compiled LangGraph app to run
+    adherence_levels_text: Optional[str] = None, # Added adherence text parameter
     set_id: Optional[str] = None # Identifier for compare mode sets
 ) -> AsyncGenerator[ServerSentEvent, None]:
     """Generates Server-Sent Events for a single LangGraph run."""
@@ -201,7 +205,13 @@ async def stream_events(
 
 
         # Prepare run config using the UNIQUE checkpoint_thread_id for this run
-        config = {"configurable": {"thread_id": checkpoint_thread_id, "constitution_content": constitution_content_for_run}}
+        config = {
+            "configurable": {
+                "thread_id": checkpoint_thread_id,
+                "constitution_content": constitution_content_for_run,
+                "adherence_levels_text": adherence_levels_text or "" # Pass adherence text to graph config
+            }
+        }
         stream_input = {'messages': input_messages}
 
         # Stream events from the LangGraph app
@@ -308,30 +318,52 @@ async def stream_events(
 
 @app.get("/api/constitutions", response_model=List[ConstitutionItem])
 async def get_constitutions_endpoint():
-    """Returns a list of available constitutions."""
-    # (No changes needed to this endpoint's logic)
+    """Returns a list of available constitutions with title and description."""
     try:
+        # get_available_constitutions now returns the desired structure with 'title'
         constitutions_dict = get_available_constitutions()
-        if "none" not in constitutions_dict:
-             constitutions_dict["none"] = {"name": "None", "description": "No constitution applied."}
-        elif not isinstance(constitutions_dict.get("none"), dict):
-              constitutions_dict["none"] = {"name": "None", "description": str(constitutions_dict.get("none", "N/A"))}
 
         response_items = []
-        for k, v in constitutions_dict.items():
-              if isinstance(v, dict):
-                   response_items.append(ConstitutionItem(
-                        id=k,
-                        name=v.get('name', k.replace('_', ' ').title()),
-                        description=v.get('description')
-                   ))
-              else:
-                   print(f"Warning: Constitution '{k}' has non-dictionary value: {v}. Skipping.")
+        for const_id, metadata in constitutions_dict.items():
+            if isinstance(metadata, dict):
+                # Use 'title' from the metadata provided by the updated utility function
+                response_items.append(ConstitutionItem(
+                    id=const_id,
+                    title=metadata.get('title', const_id.replace('_', ' ').title()), # Fallback if title missing
+                    description=metadata.get('description')
+                ))
+            else:
+                # This case should be less likely now with error handling in get_available_constitutions
+                logging.warning(f"Constitution '{const_id}' has unexpected data format: {metadata}. Skipping.")
         return response_items
     except Exception as e:
-        print(f"Error loading constitutions: {e}")
+        logging.error(f"Error loading constitutions in endpoint: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to load constitutions: {str(e)}")
+
+
+@app.get("/api/constitutions/{constitution_id}/content", response_model=str)
+async def get_constitution_content_endpoint(
+    constitution_id: str = FastApiPath(..., title="The ID of the constitution")
+):
+    """Returns the raw text content of a single constitution."""
+    try:
+        # Use the existing utility function to get content (handles 'none' and invalid IDs)
+        content = get_constitution_content(constitution_id)
+        if content is None:
+            # Utility function returns None if ID is invalid or file not found
+            raise HTTPException(status_code=404, detail=f"Constitution '{constitution_id}' not found or invalid.")
+        # Return content directly as a string (FastAPI handles text/plain response)
+        # Forcing text/plain might be better if FastAPI defaults to JSON for string response_model
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(content=content)
+    except HTTPException:
+        raise # Re-raise explicit HTTP exceptions
+    except Exception as e:
+        logging.error(f"Error getting content for constitution {constitution_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to load content for constitution '{constitution_id}'.")
+
 
 # Removed /api/threads and /api/threads/{thread_id}/rename endpoints
 
@@ -463,12 +495,13 @@ async def run_stream_endpoint(request: StreamRunRequest):
         input_messages = [HumanMessage(content=request.input.content)]
 
         # 3. Return the SSE response stream
-        # Pass the determined checkpoint_thread_id to the helper
+        # Pass the determined checkpoint_thread_id and adherence text to the helper
         return EventSourceResponse(stream_events(
             checkpoint_thread_id=checkpoint_thread_id,
             input_messages=input_messages,
             constitution_ids=request.constitution_ids,
-            run_app=graph_app # Use the main graph app
+            run_app=graph_app, # Use the main graph app
+            adherence_levels_text=request.adherence_levels_text # Pass from request
         ))
 
     except HTTPException:
@@ -481,10 +514,6 @@ async def run_stream_endpoint(request: StreamRunRequest):
 
 
 # --- Compare Streaming Helper and Endpoint ---
-
-# --- Compare Streaming Helper and Endpoint ---
-
-# consume_and_forward_stream helper remains the same
 
 async def stream_compare_events(
     base_checkpoint_thread_id: Optional[str], # The base thread ID (UUID string) or None if new

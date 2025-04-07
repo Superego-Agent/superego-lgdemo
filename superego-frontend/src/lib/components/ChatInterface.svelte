@@ -1,6 +1,15 @@
 <script lang="ts">
     // Updated imports
-    import { messages, isLoading, globalError, activeThreadId, activeConversationId, activeConstitutionIds } from '../stores';
+    import {
+        messages,
+        isLoading,
+        globalError,
+        activeThreadId,
+        activeConversationId,
+        // activeConstitutionIds, // No longer directly used for sending
+        availableConstitutions, // Needed for titles
+        constitutionAdherenceLevels // The new source of truth for active constitutions and levels
+    } from '../stores';
     import { streamRun, fetchHistory } from '../api'; // Added fetchHistory
     import { createNewConversation } from '../conversationManager'; // Import conversation creation function
     import MessageCard from './MessageCard.svelte';
@@ -114,10 +123,30 @@
         };
         messages.update(msgs => [...msgs, userMessage]);
 
-        // Get constitution IDs (activeConversationId is already set if it was a new chat)
-        const constitutionIds = $activeConstitutionIds;
+        // --- Format Adherence Levels ---
+        let adherenceLevelsText = "";
+        const levels = $constitutionAdherenceLevels;
+        const activeIds = Object.keys(levels);
 
-        console.log(`Sending message to thread ${currentThreadId === null ? 'NEW (Client ID: ' + currentConversationId + ')' : currentThreadId} with constitutions: ${constitutionIds.join(', ')}`);
+        if (activeIds.length > 0) {
+            const constitutionsMap = $availableConstitutions.reduce((acc, c) => {
+                acc[c.id] = c.title;
+                return acc;
+            }, {} as Record<string, string>);
+
+            const levelLines = activeIds.map(id => {
+                const title = constitutionsMap[id] || id; // Fallback to ID if title not found
+                const level = levels[id];
+                return `${title}: Level ${level}/5`;
+            });
+            adherenceLevelsText = "# User-Specified Adherence Levels\n" + levelLines.join('\n');
+        }
+        // --- End Format Adherence Levels ---
+
+        // Use activeIds derived from adherence levels store
+        console.log(`Sending message to thread ${currentThreadId === null ? 'NEW (Client ID: ' + currentConversationId + ')' : currentThreadId} with constitutions: ${activeIds.join(', ') || 'none'}`);
+        console.log(`Adherence Levels Payload:\n${adherenceLevelsText || '(None)'}`);
+
 
         // Collapse selector after sending message in a new chat
         if (currentThreadId === null && isConstitutionSelectorVisible) {
@@ -126,7 +155,8 @@
 
         try {
             // Call streamRun, passing null for threadId if it's a new chat
-            await streamRun(userInput, currentThreadId, constitutionIds);
+            // Pass activeIds derived from adherence levels, and the formatted text
+            await streamRun(userInput, currentThreadId, activeIds, adherenceLevelsText);
             // Stream 'end' event in api.ts now handles updating conversation metadata using the activeConversationId set above
         } catch (error) {
             console.error("Error during streamRun:", error);

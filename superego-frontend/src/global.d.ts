@@ -5,7 +5,7 @@ declare global {
     /** Represents a single constitution available for selection. */
     interface ConstitutionItem {
         id: string;
-        name: string;
+        title: string; // Changed from name to title
         description?: string;
     }
 
@@ -87,6 +87,7 @@ declare global {
         thread_id: string | null; // Changed to string | null (UUID)
         input: StreamRunInput;
         constitution_ids?: string[];
+        adherence_levels_text?: string; // Added optional field for adherence levels
     }
 
     /** Defines a set of constitutions for comparison. */

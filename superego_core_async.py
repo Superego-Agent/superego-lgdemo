@@ -97,7 +97,9 @@ def create_models():
 
 def call_superego(state: MessagesState, config: dict, superego_model) -> Dict[str, List[BaseMessage]]:
     messages = state["messages"]
-    constitution_content = config.get("configurable", {}).get("constitution_content", "")
+    configurable = config.get("configurable", {})
+    constitution_content = configurable.get("constitution_content", "")
+    adherence_levels_text = configurable.get("adherence_levels_text", "") # Get adherence levels text
     superego_instructions = load_superego_instructions()
 
     system_prompt = f"{superego_instructions}"
@@ -105,6 +107,10 @@ def call_superego(state: MessagesState, config: dict, superego_model) -> Dict[st
         system_prompt += f"\n\n{constitution_content}"
     else:
         system_prompt += "\n\n## Constitution\nNo specific constitution provided for this run."
+
+    # Append adherence levels if provided
+    if adherence_levels_text:
+        system_prompt += f"\n\n{adherence_levels_text}"
 
     prompt_template = ChatPromptTemplate.from_messages([
         ("system", system_prompt),

@@ -7,7 +7,8 @@ import type { ConversationMetadata } from './conversationManager'; // Import the
 // TODO: Define or import these types if not already done elsewhere
 type MessageType = any;
 type AppMode = 'chat' | 'use' | 'compare';
-type ConstitutionItem = { id: string; name: string; content?: string };
+// Updated to match backend API response after Phase 1 changes
+type ConstitutionItem = { id: string; title: string; description?: string };
 type CompareSet = any;
 // type ThreadItem = any; // Assuming this was implicitly used or defined elsewhere
 
@@ -52,6 +53,10 @@ export const availableConstitutions: Writable<ConstitutionItem[]> = writable([])
 
 /** List of constitution IDs currently selected/active for the next run. */
 export const activeConstitutionIds: Writable<string[]> = writable(['none']); // Default to 'none'
+// NOTE: This store might be refactored or its usage changed once ConstitutionSelector uses adherence levels as the primary state.
+
+/** Stores the adherence level (1-5) for each active constitution. Maps constitution ID to level. */
+export const constitutionAdherenceLevels: Writable<Record<string, number>> = writable({});
 
 // --- Compare Mode State ---
 /** List of constitution sets defined for comparison. */
@@ -70,7 +75,8 @@ export function resetForNewChat() {
     const newConversation = createNewConversation(); // Create new entry in localStorage
     activeConversationId.set(newConversation.id); // Set the new one as active
     // activeThreadId will be updated automatically by its subscription
-    activeConstitutionIds.set(['none']); // Reset constitutions for the new chat
+    activeConstitutionIds.set(['none']); // Reset selected IDs (legacy, might be removed later)
+    constitutionAdherenceLevels.set({}); // Reset adherence levels for the new chat
     globalError.set(null);
     // Keep availableConstitutions loaded
 }
