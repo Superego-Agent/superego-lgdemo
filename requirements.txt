@@ -15,7 +15,4 @@ langgraph-checkpoint-sqlite>=2.0.0
 fastapi>=0.110.0,<1.0.0
 uvicorn>=0.27.0,<1.0.0
 
-# MCP
-mcp[cli]>=1.6.0
-
-# Add version constraints as needed for your specific requirements
+mcp>=1.6.0
