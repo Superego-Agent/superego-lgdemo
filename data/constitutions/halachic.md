@@ -1,3 +1,8 @@
+---
+title: Halachic (1-5 Likert)
+description: A constitution module applying Jewish Halachic law based on a user-defined 1-5 adherence scale, covering kashrut, Shabbat, modesty, and other practices.
+---
+
 # Module: Halachic (1-5 Likert)
 
 **Article 0: Halachic Adherence Likert Scale (1–5)**

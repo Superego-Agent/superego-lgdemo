@@ -1,0 +1,63 @@
+:root {
+  /* Color Palette - more subdued */
+  --primary: #4b5563;
+  --primary-light: #6b7280;
+  --primary-dark: #374151;
+  --secondary: #9ca3af;
+  --secondary-light: #d1d5db;
+  --secondary-dark: #6b7280;
+  
+  --error: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  
+  /* Background and surfaces - mostly white */
+  --bg-primary: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f9fafb;
+  --bg-sidebar: #f9fafb;
+  
+  /* Text */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-disabled: #9ca3af;
+  
+  /* Input fields */
+  --input-bg: #f3f4f6;
+  --input-border: #e5e7eb;
+  --input-focus: #9ca3af;
+  
+  /* Role-specific colors - mostly white with subtle differences */
+  --human-bg: #f3f4f6;
+  --human-border: #e5e7eb;
+  --ai-bg: #ffffff;
+  --ai-border: #e5e7eb;
+  --system-bg: #f9fafb;
+  --system-border: #e5e7eb;
+  --error-bg: #fee2e2;
+  --error-border: #fecaca;
+  
+  /* Node colors - subtle */
+  --node-superego: #6b7280;
+  --node-inner-agent: #6b7280;
+  --node-tools: #9ca3af;
+  --node-default: #d1d5db;
+  
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Elevation (shadows) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 3px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 6px 12px rgba(0, 0, 0, 0.1);
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+}

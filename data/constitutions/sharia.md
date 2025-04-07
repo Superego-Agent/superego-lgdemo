@@ -1,3 +1,8 @@
+---
+title: Sharia (1-5 Likert)
+description: A constitution module applying Islamic Sharia law based on a user-defined 1-5 adherence scale, covering prayer, diet, finance, and conduct.
+---
+
 # Module: Sharia (1-5 Likert)
 
 **Article 0: Sharia Adherence Likert Scale (1–5)**

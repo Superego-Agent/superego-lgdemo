@@ -1,3 +1,8 @@
+ ---
+title: Virtue-Ethics (1-5 Likert)
+description: A constitution module applying Virtue Ethics based on a user-defined 1-5 adherence scale, focusing on character development, the golden mean, and eudaimonia.
+---
+
 # Module: Virtue-Ethics (1-5 Likert)
 
 **Article 0: Virtue-Ethics Adherence Scale (1–5)**

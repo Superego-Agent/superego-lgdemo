@@ -1,0 +1,45 @@
+:root[data-theme="dark"] {
+  /* Color Palette - subdued */
+  --primary: #9ca3af;
+  --primary-light: #d1d5db;
+  --primary-dark: #6b7280;
+  --secondary: #6b7280;
+  --secondary-light: #9ca3af;
+  --secondary-dark: #4b5563;
+  
+  --error: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  
+  /* Background and surfaces - dark but not too dark */
+  --bg-primary: #1f2937;
+  --bg-surface: #1f2937;
+  --bg-elevated: #374151;
+  --bg-sidebar: #111827;
+  
+  /* Text */
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-disabled: rgba(255, 255, 255, 0.38);
+  
+  /* Input fields */
+  --input-bg: #374151;
+  --input-border: #4b5563;
+  --input-focus: #9ca3af;
+  
+  /* Role-specific colors - subtle differences */
+  --human-bg: #374151;
+  --human-border: #4b5563;
+  --ai-bg: #1f2937;
+  --ai-border: #4b5563;
+  --system-bg: #111827;
+  --system-border: #4b5563;
+  --error-bg: #7f1d1d;
+  --error-border: #ef4444;
+  
+  /* Node colors - subdued */
+  --node-superego: #9ca3af;
+  --node-inner-agent: #9ca3af;
+  --node-tools: #6b7280;
+  --node-default: #4b5563;
+}
