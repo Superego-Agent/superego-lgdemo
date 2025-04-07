@@ -1,74 +1,76 @@
 <script lang="ts">
-    import { onMount, tick } from 'svelte';
-    import { slide } from 'svelte/transition';
-    import {
-        availableThreads,
-        currentThreadId,
-        isLoading,
-    } from '../stores';
-    // Removed unused imports: availableConstitutions, messages, activeConstitutionIds
-    import { fetchHistory, renameThread } from '../api';
-    import { resetForNewChat } from '../stores';
+    import { tick } from 'svelte';
+    import { get } from 'svelte/store'; // Import get
+    import { slide } from 'svelte/transition'; // Keep slide if used, otherwise remove
+    import { isLoading, activeConversationId, resetForNewChat } from '../stores'; // Use activeConversationId
+    import { managedConversations, updateConversation } from '../conversationManager'; // Use managedConversations and update function
+    import type { ConversationMetadata } from '../conversationManager'; // Import type
+    // Removed fetchHistory, renameThread - fetchHistory likely moves to ChatInterface, rename is client-side now
+    // Removed availableThreads, currentThreadId
 
     // State for inline editing
-    let editingThreadId: number | null = null;
+    let editingConversationId: string | null = null; // Changed from number to string ID
     let editingName: string = '';
     let renameInput: HTMLInputElement | null = null;
 
-    // Removed onMount data fetching
-
     function handleNewChat() {
-        if ($isLoading) return;
+        if ($isLoading && $activeConversationId === null) return; // Prevent multiple rapid clicks if already creating
         console.log("Resetting for new chat...");
-        resetForNewChat();
+        resetForNewChat(); // This now creates a new entry and sets it active
     }
 
-    async function loadThread(threadId: number) {
-        if ($isLoading || threadId === $currentThreadId) return;
-        console.log(`Loading thread ID: ${threadId}`);
-        editingThreadId = null;
-        try {
-            await fetchHistory(threadId);
-        } catch (error) {
-            console.error(`Failed to load history for thread ID ${threadId}:`, error);
-        }
+    // Renamed from loadThread - only sets the active conversation ID
+    function selectConversation(conversationId: string) {
+        if ($isLoading || conversationId === $activeConversationId) return;
+        console.log(`Selecting conversation ID: ${conversationId}`);
+        editingConversationId = null; // Exit editing mode if selecting a different chat
+        activeConversationId.set(conversationId);
+        // Fetching history should now be triggered by a component observing activeThreadId changes
     }
 
-    function startRename(event: MouseEvent, thread: ThreadItem) {
-        event.stopPropagation(); // Prevent loadThread if edit button is clicked directly
+    function startRename(event: MouseEvent, conversation: ConversationMetadata) {
+        event.stopPropagation(); // Prevent selectConversation if edit button is clicked directly
         if ($isLoading) return;
-        editingThreadId = thread.thread_id;
-        editingName = thread.name;
+        editingConversationId = conversation.id;
+        editingName = conversation.name;
         tick().then(() => {
             renameInput?.focus();
             renameInput?.select();
         });
     }
 
-    async function handleRename() {
-        if (editingThreadId === null || $isLoading) return;
+    // Renaming now updates localStorage via conversationManager
+    function handleRename() {
+        if (editingConversationId === null || $isLoading) return;
 
-        const threadIdToRename = editingThreadId;
+        const conversationIdToRename = editingConversationId;
         const newName = editingName.trim();
-        editingThreadId = null; // Exit editing mode
+        editingConversationId = null; // Exit editing mode
 
         if (!newName) {
             console.warn("Rename cancelled: name was empty.");
             return;
         }
 
-        const originalThread = $availableThreads.find(t => t.thread_id === threadIdToRename);
-        if (originalThread && originalThread.name === newName) {
+        // Find original name directly from the store using get()
+        const currentConversations = get(managedConversations);
+        const originalConv = currentConversations.find(c => c.id === conversationIdToRename);
+        const originalName = originalConv?.name ?? '';
+
+        if (originalName === newName) {
             console.log("Rename cancelled: name did not change.");
             return;
         }
 
-        console.log(`Attempting to rename thread ${threadIdToRename} to "${newName}"`);
+        console.log(`Attempting to rename conversation ${conversationIdToRename} to "${newName}" (client-side)`);
         try {
-            await renameThread(threadIdToRename, newName);
-            console.log(`Thread ${threadIdToRename} renamed successfully.`);
+            // Update using the conversationManager function
+            updateConversation(conversationIdToRename, { name: newName });
+            console.log(`Conversation ${conversationIdToRename} renamed successfully in localStorage.`);
         } catch (error) {
-            console.error(`Failed to rename thread ${threadIdToRename}:`, error);
+            // This catch might not be effective if updateConversation doesn't throw
+            console.error(`Failed to rename conversation ${conversationIdToRename}:`, error);
+            // TODO: Add user feedback for rename failure?
         }
     }
 
@@ -77,15 +79,15 @@
             event.preventDefault();
             handleRename();
         } else if (event.key === 'Escape') {
-            editingThreadId = null;
+            editingConversationId = null; // Cancel edit on Escape
         }
     }
 
 </script>
 
 <div class="sidebar">
-    <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading && $currentThreadId === null} title="New Chat">
-        {#if $isLoading && $currentThreadId === null}
+    <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading && $activeConversationId === null} title="New Chat">
+        {#if $isLoading && $activeConversationId === null} 
             <div class="button-spinner"></div>
         {:else}
             <span class="btn-icon">+</span>
@@ -94,9 +96,9 @@
 
     <div class="sidebar-section threads-section">
         <ul class="thread-list">
-            {#each $availableThreads as thread (thread.thread_id)}
-                <li class:active={thread.thread_id === $currentThreadId} class:editing={editingThreadId === thread.thread_id}>
-                    {#if editingThreadId === thread.thread_id}
+            {#each $managedConversations as conversation (conversation.id)} 
+                <li class:active={conversation.id === $activeConversationId} class:editing={editingConversationId === conversation.id}> 
+                    {#if editingConversationId === conversation.id} 
                         <form class="rename-form" on:submit|preventDefault={handleRename}>
                              <input
                                  type="text"
@@ -109,17 +111,17 @@
                              />
                          </form>
                     {:else}
-                        <div class="thread-item-container" on:click={() => loadThread(thread.thread_id)} role="button" tabindex="0"
-                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadThread(thread.thread_id); }}>
-                             <span class="thread-name">{thread.name}</span>
-                             <button class="edit-button" title="Rename Thread" on:click={(e) => startRename(e, thread)} disabled={$isLoading}>
+                        <div class="thread-item-container" on:click={() => selectConversation(conversation.id)} role="button" tabindex="0"
+                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectConversation(conversation.id); }}> 
+                             <span class="thread-name">{conversation.name}</span> 
+                             <button class="edit-button" title="Rename Conversation" on:click={(e) => startRename(e, conversation)} disabled={$isLoading}> 
                                  ✏️
                              </button>
                         </div>
                     {/if}
                 </li>
             {:else}
-                <li class="empty-list">No history yet.</li>
+                <li class="empty-list">No conversations yet.</li>
             {/each}
         </ul>
     </div>

@@ -1,40 +1,80 @@
 <script lang="ts">
-    import { messages, isLoading, globalError, currentThreadId, activeConstitutionIds } from '../stores';
-    import { streamRun } from '../api';
+    // Updated imports
+    import { messages, isLoading, globalError, activeThreadId, activeConversationId, activeConstitutionIds } from '../stores';
+    import { streamRun, fetchHistory } from '../api'; // Added fetchHistory
+    import { createNewConversation } from '../conversationManager'; // Import conversation creation function
     import MessageCard from './MessageCard.svelte';
     import ChatInput from './ChatInput.svelte';
     import ConstitutionSelector from './ConstitutionSelector.svelte';
-    import { afterUpdate, onMount } from 'svelte'; // Added onMount
+    import { afterUpdate, onMount, onDestroy } from 'svelte'; // Added onDestroy for potential cleanup
     import { slide, fade } from 'svelte/transition';
-    import { nanoid } from 'nanoid'; // Import nanoid for unique IDs
+    import { nanoid } from 'nanoid';
 
     let chatContainer: HTMLElement;
     let isAtBottom = true;
     let isConstitutionSelectorVisible = false; // State for collapsible selector
+    let initialLoadComplete = false; // Flag to prevent fetch on initial null threadId
 
     // --- Auto-scroll Logic ---
-    function checkScroll() { /* ... (no changes) ... */
+    function checkScroll() {
         if (chatContainer) {
             const threshold = 50; // Pixels from bottom
             isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < threshold;
         }
     }
-    afterUpdate(() => { /* ... (no changes) ... */
+    afterUpdate(() => {
         if (chatContainer && isAtBottom) {
-            setTimeout(() => {
-                chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-            }, 0);
+            // Use requestAnimationFrame for smoother scroll after DOM updates
+            requestAnimationFrame(() => {
+                 chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            });
         }
     });
 
-    // --- Initialize constitution visibility ---
-    // Auto-expand on new chat (when component mounts and currentThreadId is null)
+    // --- Initialize constitution visibility & Load initial history ---
     onMount(() => {
-        isConstitutionSelectorVisible = ($currentThreadId === null);
+        // Check initial state
+        const initialThreadId = $activeThreadId;
+        isConstitutionSelectorVisible = (initialThreadId === null);
+
+        if (initialThreadId) {
+            console.log(`ChatInterface onMount: Loading history for initial thread ${initialThreadId}`);
+            fetchHistory(initialThreadId).catch(err => {
+                console.error("Error loading initial history:", err);
+                // Error handled by globalError store
+            }).finally(() => {
+                initialLoadComplete = true;
+            });
+        } else {
+            console.log("ChatInterface onMount: No initial thread selected.");
+            messages.set([]); // Ensure messages are clear for new chat
+            initialLoadComplete = true;
+        }
     });
-    // Also reactively set visibility if thread ID changes back to null (e.g., "New Chat" clicked)
-    $: if ($currentThreadId === null && !isConstitutionSelectorVisible) {
+
+    // --- Reactive History Loading ---
+    $: if (initialLoadComplete && $activeThreadId) {
+        // Only fetch if the thread ID changes *after* initial mount
+        console.log(`ChatInterface reactive: Loading history for thread ${$activeThreadId}`);
+        fetchHistory($activeThreadId).catch(err => {
+            console.error(`Error loading history for thread ${$activeThreadId}:`, err);
+            // Error handled by globalError store
+        });
+    } else if (initialLoadComplete && $activeThreadId === null) {
+        // Clear messages if user selects "New Chat" after initial load
+        console.log("ChatInterface reactive: New chat selected, clearing messages.");
+        messages.set([]);
+    }
+
+    // --- Reactive Constitution Selector Visibility ---
+    // Auto-expand on new chat (when activeThreadId becomes null)
+    $: if ($activeThreadId === null && !isConstitutionSelectorVisible) {
          isConstitutionSelectorVisible = true;
+    }
+    // Auto-collapse if a thread is selected and it was previously visible
+    $: if ($activeThreadId !== null && isConstitutionSelectorVisible) {
+        // Optional: Auto-collapse when selecting an existing thread
+        // isConstitutionSelectorVisible = false;
     }
 
 
@@ -46,29 +86,50 @@
             return;
         }
 
-        // --- FIX: Optimistically add user message ---
+        let currentThreadId = $activeThreadId; // Capture current thread ID
+        let currentConversationId = $activeConversationId; // Capture current conversation ID
+
+        // --- Create new conversation if needed ---
+        if (currentThreadId === null) {
+            console.log("Creating new conversation locally...");
+            const newConversation = createNewConversation(); // Create new conversation entry
+            if (newConversation) {
+                currentConversationId = newConversation.id; // Get the new client-side ID
+                activeConversationId.set(currentConversationId); // Set it as active *before* sending
+                // currentThreadId remains null, as the backend will assign it
+                console.log(`New conversation created locally with ID: ${currentConversationId}. Active ID set.`);
+            } else {
+                console.error("Failed to create new conversation locally.");
+                globalError.set("Failed to initialize new chat session.");
+                return; // Stop if creation failed
+            }
+        }
+
+        // Optimistically add user message
         const userMessage: HumanMessage = {
-            // Use nanoid for a more robust temporary unique ID
-            id: nanoid(8), // Generate short unique ID
+            id: nanoid(8),
             sender: 'human',
             content: userInput,
             timestamp: Date.now()
-            // node, set_id typically not set for human input
         };
         messages.update(msgs => [...msgs, userMessage]);
-        // --- End Fix ---
 
-        // Get current state from stores
-        const threadId = $currentThreadId; // Can be number or null
-        const constitutionIds = $activeConstitutionIds; // Array of strings
+        // Get constitution IDs (activeConversationId is already set if it was a new chat)
+        const constitutionIds = $activeConstitutionIds;
 
-        console.log(`Sending message to thread ${threadId === null ? 'NEW' : threadId} with constitutions: ${constitutionIds.join(', ')}`);
+        console.log(`Sending message to thread ${currentThreadId === null ? 'NEW (Client ID: ' + currentConversationId + ')' : currentThreadId} with constitutions: ${constitutionIds.join(', ')}`);
+
+        // Collapse selector after sending message in a new chat
+        if (currentThreadId === null && isConstitutionSelectorVisible) {
+            isConstitutionSelectorVisible = false;
+        }
 
         try {
-            await streamRun(userInput, threadId, constitutionIds);
-            // Stream handles AI responses, end event updates threadId if new
+            // Call streamRun, passing null for threadId if it's a new chat
+            await streamRun(userInput, currentThreadId, constitutionIds);
+            // Stream 'end' event in api.ts now handles updating conversation metadata using the activeConversationId set above
         } catch (error) {
-            console.error("Error starting streamRun:", error);
+            console.error("Error during streamRun:", error);
             // Optionally remove the optimistic user message if the stream fails immediately
             // messages.update(msgs => msgs.filter(m => m.id !== userMessage.id));
             // Error display is handled globally by api.ts
@@ -93,15 +154,23 @@
 
     <div class="messages-container" bind:this={chatContainer} on:scroll={checkScroll}>
         {#each $messages as message (message.id)}
-             <div transition:fade={{ duration: 300 }} key={message.id}>
+             <div transition:fade={{ duration: 300 }}>
                   <MessageCard {message} />
              </div>
         {:else}
-            <div class="empty-chat" transition:fade={{ duration: 500 }}>
-                <div class="empty-chat-icon">💬</div>
-                <p>Select constitution(s) and send a message</p>
-            </div>
+            {#if !initialLoadComplete}
+                 <div class="loading-indicator">
+                      <div class="spinner"></div>
+                      <span>Loading History...</span>
+                  </div>
+            {:else}
+                 <div class="empty-chat" transition:fade={{ duration: 500 }}>
+                      <div class="empty-chat-icon">💬</div>
+                      <p>Select constitution(s) and send a message</p>
+                  </div>
+            {/if}
         {/each}
+        
 
         {#if $isLoading}
             <div class="loading-indicator">
@@ -119,11 +188,12 @@
               </button>
          </div>
          {#if isConstitutionSelectorVisible}
-              <div class="selector-wrapper" transition:slide|local={{duration: 200}}>
+              <div class="selector-wrapper"> 
                    <ConstitutionSelector />
               </div>
          {/if}
-        <ChatInput on:send={handleSend} disabled={$isLoading} />
+         {/* @ts-ignore */ null}
+        <ChatInput on:send={handleSend} disabled='{$isLoading}' />
     </div>
 </div>
 

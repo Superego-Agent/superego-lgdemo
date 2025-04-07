@@ -1,17 +1,41 @@
 // src/lib/api.ts
-import { messages, isLoading, globalError, currentThreadId, availableThreads, availableConstitutions, resetForNewChat } from './stores';
+import { messages, isLoading, globalError, activeConversationId, activeThreadId, activeConstitutionIds, availableConstitutions } from './stores'; // Updated store imports
+import { updateConversation } from './conversationManager'; // Import update function
 import { get } from 'svelte/store';
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { nanoid } from 'nanoid';
+
+// Assuming types are defined in global.d.ts or similar and updated:
+// type ConstitutionItem = { id: string; name: string; content?: string };
+// type MessageType = HumanMessage | AIMessage | ToolResultMessage | SystemMessage; // etc.
+// type HistoryResponse = { messages: MessageType[]; thread_id: string; thread_name?: string }; // thread_id is now string
+// type StreamRunRequest = { thread_id: string | null; input: any; constitution_ids: string[] }; // thread_id is string | null
+// type CompareRunRequest = { thread_id: string | null; input: any; constitution_sets: { id: string; constitution_ids: string[] }[] }; // thread_id is string | null
+// type SSEEventData = { type: string; data: any; node?: string; set_id?: string };
+// type SSEEndData = { thread_id: string }; // thread_id is now string
+// type SSEToolCallChunkData = { id?: string; name?: string; args?: string };
+// type SSEToolResultData = { result: string; tool_name: string; is_error: boolean; tool_call_id?: string };
+// type HumanMessage = { id: string; sender: 'human'; content: string; timestamp: number };
+// type AIMessage = { id: string; sender: 'ai'; content: string; node?: string; set_id?: string; timestamp: number; tool_calls?: ToolCall[] };
+// type ToolResultMessage = { id: string; sender: 'tool_result'; content: string; tool_name: string; is_error: boolean; node?: string; set_id?: string; timestamp: number; tool_call_id?: string };
+// type SystemMessage = { id: string; sender: 'system'; content: string; node?: string; set_id?: string; isError?: boolean; timestamp: number };
+// type ToolCall = { id: string; name: string; args: string };
+// type CompareSet = { id: string; constitution_ids: string[] }; // Assuming definition
 
 // Ensure this matches your environment (Vite default or custom)
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // --- Helper for standard Fetch requests ---
 async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-    isLoading.set(true);
+    const isStreamRequest = options.headers && (options.headers as Record<string, string>)['Accept'] === 'text/event-stream';
+    let requestStartedLoading = false;
+
+    // Only set global loading for non-stream requests
+    if (!isStreamRequest) {
+        isLoading.set(true);
+        requestStartedLoading = true; // Mark that this specific request set the loading state
+    }
     globalError.set(null);
-    let isStream = options.headers && (options.headers as Record<string, string>)['Accept'] === 'text/event-stream';
 
     try {
         const response = await fetch(url, {
@@ -30,10 +54,7 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
             } catch (e) { /* Ignore if error body isn't JSON */ }
             throw new Error(errorMsg);
         }
-        // Don't set isLoading false here for event streams initiated via this helper (though usually not)
-        if (!isStream && !options.signal) {
-             isLoading.set(false);
-        }
+        // isLoading is handled in finally block for non-streams
         // Handle cases where response might be empty (e.g., successful PUT/DELETE with 204 No Content)
         if (response.status === 204) {
             return undefined as T; // Or handle as appropriate for your expected types
@@ -42,66 +63,53 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
     } catch (error: any) {
         console.error('API Fetch Error:', url, error);
         globalError.set(error.message || 'An unknown API error occurred.');
-        // Don't set isLoading false here for streams
-         if (!isStream && !options.signal) {
+        // isLoading is handled in finally block
+        throw error; // Re-throw after handling state
+    } finally {
+        // Only turn off loading if this specific non-stream request turned it on
+        if (requestStartedLoading) {
+            console.log(`apiFetch finally: Resetting isLoading for ${url}`); // Add log
             isLoading.set(false);
         }
-        throw error;
+        // Streaming requests manage their own isLoading state via fetchEventSource callbacks (onclose, onerror)
     }
 }
 
+
 // --- API Functions ---
 
+// fetchConstitutions remains the same
 export const fetchConstitutions = async (): Promise<ConstitutionItem[]> => {
     console.log('API: Fetching constitutions');
     const constitutions = await apiFetch<ConstitutionItem[]>(`${BASE_URL}/constitutions`);
-    availableConstitutions.set(constitutions);
+    // availableConstitutions store needs to be imported if still used directly, otherwise remove .set()
+    // Assuming availableConstitutions is still needed and imported:
+    // import { availableConstitutions } from './stores'; // Add this import if needed - Already added above
+    availableConstitutions.set(constitutions); // Uncommented this line
     return constitutions;
 };
 
-export const fetchThreads = async (): Promise<ThreadItem[]> => {
-    console.log('API: Fetching threads');
-    // Assuming ThreadItem in global.d.ts now has id: number, last_updated?: string | Date
-    const threads = await apiFetch<ThreadItem[]>(`${BASE_URL}/threads`);
-    availableThreads.set(threads);
-    return threads;
-};
+// fetchThreads removed - managed by conversationManager now
 
-export const fetchHistory = async (threadId: number): Promise<HistoryResponse> => {
+export const fetchHistory = async (threadId: string): Promise<HistoryResponse> => { // threadId is now string
     console.log(`API: Fetching history for Thread ID ${threadId}`);
-    // Assuming HistoryResponse in global.d.ts now has thread_id: number, thread_name?: string
+    // Assuming HistoryResponse type is updated (thread_id: string)
     try {
+        // Use string threadId in URL
         const historyData = await apiFetch<HistoryResponse>(`${BASE_URL}/threads/${threadId}/history`);
         messages.set(historyData.messages || []);
-        currentThreadId.set(threadId); // Set the active thread ID
-        // Optionally store/display historyData.thread_name in the UI
+        // currentThreadId.set(threadId); // REMOVED - activeThreadId is derived reactively
+        // Optionally use historyData.thread_name if needed
         return historyData;
     } catch (error) {
         console.error(`Failed to fetch history for Thread ID ${threadId}:`, error);
-        // Don't reset currentThreadId here, maybe the thread exists but history fetch failed
-        messages.set([]);
-        throw error;
+        messages.set([]); // Clear messages on error
+        throw error; // Re-throw error after setting state
     }
 };
 
-// Removed createNewThread - handled implicitly by streamRun/streamCompareRun
 
-export const renameThread = async (threadId: number, newName: string): Promise<ThreadItem | void> => {
-    console.log(`API: Renaming Thread ID ${threadId} to "${newName}"`);
-    try {
-        // Assuming backend returns the updated ThreadItem on success or 204/error
-        const updatedThread = await apiFetch<ThreadItem>(`${BASE_URL}/threads/${threadId}/rename`, {
-            method: 'PUT',
-            body: JSON.stringify({ new_name: newName }),
-        });
-        await fetchThreads(); // Refresh the threads list in the store
-        return updatedThread;
-    } catch (error) {
-        console.error(`Failed to rename Thread ID ${threadId}:`, error);
-        // Error is already set by apiFetch
-        throw error;
-    }
-};
+// renameThread removed - handled client-side by conversationManager
 
 
 // --- Real Streaming Functions ---
@@ -155,11 +163,13 @@ function handleSSEMessage(event: EventSourceMessage, wasNewThread: boolean) {
                     const chunkContent = parsedData.data as string;
                     if (chunkContent === null || chunkContent === undefined) break;
                     if (lastMessage?.sender === 'ai' && lastMessage.node === currentNodeId && lastProcessedNodeId === currentNodeId) {
+                        // Append chunk to existing AI message if conditions match
                         updatedMsgs[lastMsgIndex] = { ...lastMessage, content: (lastMessage.content || '') + chunkContent };
                     } else {
+                        // Create new AI message
                         const newMsg: AIMessage = {
                             id: nanoid(8), sender: 'ai', content: chunkContent, node: currentNodeId,
-                            set_id: setId, timestamp: Date.now(), tool_calls: []
+                            set_id: setId ?? null, timestamp: Date.now(), tool_calls: [] // Coalesce setId to null
                         };
                         updatedMsgs.push(newMsg);
                     }
@@ -167,7 +177,8 @@ function handleSSEMessage(event: EventSourceMessage, wasNewThread: boolean) {
                     break;
                 case 'ai_tool_chunk':
                     const toolChunkData = parsedData.data as SSEToolCallChunkData;
-                    const targetAiMsgIndexTool = findLastMatchingAiMessageIndex(updatedMsgs, currentNodeId, setId);
+                    // Ensure setId passed is string | null, not undefined
+                    const targetAiMsgIndexTool = findLastMatchingAiMessageIndex(updatedMsgs, currentNodeId, setId ?? null);
                     if (targetAiMsgIndexTool > -1) {
                         let targetMsg = updatedMsgs[targetAiMsgIndexTool] as AIMessage;
                         if (!targetMsg.tool_calls) { targetMsg.tool_calls = []; }
@@ -202,7 +213,7 @@ function handleSSEMessage(event: EventSourceMessage, wasNewThread: boolean) {
                     const newToolResultMsg: ToolResultMessage = {
                         id: nanoid(8), sender: 'tool_result', content: toolResultData.result,
                         tool_name: toolResultData.tool_name, is_error: toolResultData.is_error,
-                        node: currentNodeId, set_id: setId, timestamp: Date.now(),
+                        node: currentNodeId, set_id: setId ?? null, timestamp: Date.now(), // Coalesce setId to null
                         tool_call_id: toolResultData.tool_call_id
                     };
                     updatedMsgs.push(newToolResultMsg);
@@ -214,7 +225,7 @@ function handleSSEMessage(event: EventSourceMessage, wasNewThread: boolean) {
                     const newErrorMsg: SystemMessage = {
                         id: nanoid(8), sender: 'system',
                         content: `Error (node: ${currentNodeId || 'graph'}, set: ${setId || 'general'}): ${errorMsg}`,
-                        node: currentNodeId, set_id: setId, isError: true, timestamp: Date.now()
+                        node: currentNodeId, set_id: setId ?? null, isError: true, timestamp: Date.now() // Coalesce setId to null
                     };
                     updatedMsgs.push(newErrorMsg);
                     lastProcessedNodeId = 'error_node';
@@ -222,15 +233,34 @@ function handleSSEMessage(event: EventSourceMessage, wasNewThread: boolean) {
 
                 case 'end':
                     // --- UPDATED HANDLING for 'end' ---
-                    const endData = parsedData.data as SSEEndData; // Assuming SSEEndData has thread_id: number
-                    const endedThreadId = endData?.thread_id;
-                    console.log(`SSE Stream ended (node: ${currentNodeId}, set: ${setId || 'N/A'}, Metadata Thread ID: ${endedThreadId})`);
+                    const endData = parsedData.data as SSEEndData; // Assuming SSEEndData has thread_id: string
+                    const endedThreadId = endData?.thread_id; // Now a string UUID
+                    console.log(`SSE Stream ended (node: ${currentNodeId}, set: ${setId || 'N/A'}, Backend Thread ID: ${endedThreadId})`);
 
-                    if (wasNewThread && typeof endedThreadId === 'number') {
-                        console.log(`Updating currentThreadId to newly created ID: ${endedThreadId}`);
-                        currentThreadId.set(endedThreadId);
-                        // Refresh thread list after a new thread is confirmed created
-                        fetchThreads();
+                    if (wasNewThread && typeof endedThreadId === 'string' && endedThreadId) {
+                        const currentConversationId = get(activeConversationId); // Get client-side ID (string | null)
+                        const currentActiveConstitutions = get(activeConstitutionIds); // Get constitutions used (string[])
+
+                        if (currentConversationId) {
+                            // Explicitly type the const to help TS within the block
+                            const convId: string = currentConversationId;
+                            console.log(`Updating localStorage conversation ${convId} with backend thread_id ${endedThreadId} and constitutions [${currentActiveConstitutions.join(', ')}]`);
+                            // Call updateConversation with the explicitly typed string ID
+                            updateConversation(convId, {
+                                thread_id: endedThreadId, // endedThreadId is confirmed string here
+                                last_used_constitution_ids: currentActiveConstitutions
+                            });
+                            // Explicitly update activeThreadId store as the subscription might not catch the localStorage change
+                            if (get(activeConversationId) === convId) { // Check if the conversation is still active
+                                console.log(`api.ts end event: Explicitly setting activeThreadId to ${endedThreadId}`);
+                                activeThreadId.set(endedThreadId);
+                            }
+                        } else {
+                            console.error("SSE 'end' event received for new thread, but no activeConversationId was set in the store!");
+                        }
+                        // fetchThreads(); // REMOVED
+                    } else if (wasNewThread) {
+                         console.error("SSE 'end' event received for new thread, but no valid thread_id string was provided in the payload:", endData);
                     }
                     lastProcessedNodeId = null; // Reset node tracker
                     break;
@@ -338,11 +368,13 @@ async function performStreamRequest(
 // --- Specific Stream Run Functions ---
 export const streamRun = async (
     userInput: string,
-    threadId: number | null, // Now number | null
+    threadId: string | null, // Now string | null (UUID)
     constitutionIds: string[] = ['none']
 ): Promise<void> => {
+    // TODO: Ensure StreamRunRequest type definition (e.g., in global.d.ts)
+    // is updated to expect thread_id: string | null
     const requestBody: StreamRunRequest = {
-        thread_id: threadId, // Pass number or null
+        thread_id: threadId, // Pass string UUID or null (TS error here implies type def needs update)
         input: { type: 'human', content: userInput },
         constitution_ids: constitutionIds
     };
@@ -357,13 +389,16 @@ export const streamRun = async (
     await performStreamRequest('/runs/stream', requestBody, wasNewThread);
 };
 
+// streamCompareRun needs similar adjustments if used
 export const streamCompareRun = async (
     userInput: string,
-    threadId: number | null, // Now number | null
-    compareSetsConfig: CompareSet[]
+    threadId: string | null, // Now string | null (UUID)
+    compareSetsConfig: CompareSet[] // Assuming CompareSet type is defined
 ): Promise<void> => {
+     // TODO: Ensure CompareRunRequest type definition (e.g., in global.d.ts)
+     // is updated to expect thread_id: string | null
     const requestBody: CompareRunRequest = {
-        thread_id: threadId, // Pass number or null
+        thread_id: threadId, // Pass string UUID or null (TS error here implies type def needs update)
         input: { type: 'human', content: userInput },
         constitution_sets: compareSetsConfig.map(set => ({ id: set.id, constitution_ids: set.constitution_ids }))
     };
