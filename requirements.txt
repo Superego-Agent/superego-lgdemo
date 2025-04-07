@@ -11,7 +11,11 @@ aiosqlite>=0.19.0,<1.0.0
 langgraph-cli>=0.1.55,<1.0.0
 langgraph-checkpoint-sqlite>=2.0.0
 
-# Web server
+# YAML frontmatting for constitutions 
+python-frontmatter>=1.0,<2.0.0 
+PyYAML>=6.0,<7.0.0 
+
+# Web Server
 fastapi>=0.110.0,<1.0.0
 uvicorn>=0.27.0,<1.0.0
 

@@ -1,12 +1,13 @@
 <script lang="ts">
-    import { onMount } from 'svelte'; // Removed afterUpdate as it wasn't used
+    import { onMount } from 'svelte';
+    // Removed get, managedConversations, activeConversationId imports
     import Sidebar from './lib/components/Sidebar.svelte';
     import ChatInterface from './lib/components/ChatInterface.svelte';
     import ThemeToggle from './lib/components/ThemeToggle.svelte';
     import TabBar from './lib/components/TabBar.svelte';
     import AddConstitution from './lib/components/AddConstitution.svelte';
     import { theme } from './lib/stores/theme';
-    import { fetchConstitutions, fetchThreads } from './lib/api'; // Import API functions
+    import { fetchConstitutions } from './lib/api';
     import './lib/styles/theme.css';
     import './lib/styles/dark-theme.css';
 
@@ -21,12 +22,14 @@
     onMount(async () => {
         document.documentElement.setAttribute('data-theme', $theme);
         try {
-            // Fetch essential data when the app loads
+            // Fetch essential data
             await fetchConstitutions();
-            await fetchThreads();
-            console.log('App mounted: Fetched initial constitutions and threads.');
+            console.log('App mounted: Fetched initial constitutions.');
+
+            // Removed logic to auto-select most recent conversation
+
         } catch (error) {
-            console.error("App onMount Error: Failed to fetch initial data:", error);
+            console.error("App onMount Error: Failed to fetch initial constitutions:", error);
             // Error display is handled by the globalError store via apiFetch
         }
     });

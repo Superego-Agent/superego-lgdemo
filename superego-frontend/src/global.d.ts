@@ -5,15 +5,17 @@ declare global {
     /** Represents a single constitution available for selection. */
     interface ConstitutionItem {
         id: string;
-        name: string;
+        title: string; // Changed from name to title
         description?: string;
     }
 
     /** Represents a chat thread (user-facing conversation) in the list. */
+    // TODO: This interface might be obsolete now that conversationManager.ts handles metadata.
+    // If kept, thread_id should align with backend expectations (likely string UUID).
     interface ThreadItem {
-        thread_id: number; // Changed from string to number (metadata DB ID)
-        name: string;      // Changed from optional title to required name
-        last_updated?: string | Date; // Changed from updated_at, made optional, allow Date
+        thread_id: string; // Assuming backend uses string UUIDs now
+        name: string;
+        last_updated?: string | Date;
     }
 
     /** Base structure for messages displayed in the UI */
@@ -68,7 +70,7 @@ declare global {
     /** Response when fetching history for a thread. */
     interface HistoryResponse {
         messages: MessageType[];
-        thread_id: number; // The metadata DB thread ID
+        thread_id: string; // Changed to string (UUID)
         thread_name?: string; // The user-defined name of the thread
     }
 
@@ -82,9 +84,10 @@ declare global {
 
     /** Request body for starting a normal streaming run. */
     interface StreamRunRequest {
-        thread_id?: number | null; // Changed to number | null (metadata DB ID)
-        input: StreamRunInput;     // Made input non-optional
+        thread_id: string | null; // Changed to string | null (UUID)
+        input: StreamRunInput;
         constitution_ids?: string[];
+        adherence_levels_text?: string; // Added optional field for adherence levels
     }
 
     /** Defines a set of constitutions for comparison. */
@@ -96,7 +99,7 @@ declare global {
 
     /** Request body for starting a comparison streaming run. */
     interface CompareRunRequest {
-        thread_id?: number | null; // Added thread_id (number | null)
+        thread_id: string | null; // Changed to string | null (UUID)
         input: StreamRunInput;
         constitution_sets: CompareSet[];
     }
@@ -121,7 +124,7 @@ declare global {
 
     /** Structure for the final 'end' event payload */
     interface SSEEndData {
-        thread_id: number; // Changed to number (metadata DB ID)
+        thread_id: string; // Changed to string (UUID)
     }
 
     /** Overall structure of data received via SSE */

@@ -1,74 +1,79 @@
 <script lang="ts">
-    import { onMount, tick } from 'svelte';
+    import { tick } from 'svelte';
+    import { get } from 'svelte/store';
     import { slide } from 'svelte/transition';
-    import {
-        availableThreads,
-        currentThreadId,
-        isLoading,
-    } from '../stores';
-    // Removed unused imports: availableConstitutions, messages, activeConstitutionIds
-    import { fetchHistory, renameThread } from '../api';
-    import { resetForNewChat } from '../stores';
+    import { isLoading, activeConversationId, resetForNewChat } from '../stores';
+    import { managedConversations, updateConversation, deleteConversation } from '../conversationManager'; // Import deleteConversation
+    import type { ConversationMetadata } from '../conversationManager';
+
+    // Import icons
+    import IconEdit from '~icons/fluent/edit-24-regular';
+    import IconDelete from '~icons/fluent/delete-24-regular';
+    import IconAdd from '~icons/fluent/add-24-regular';
 
     // State for inline editing
-    let editingThreadId: number | null = null;
+    let editingConversationId: string | null = null; // Changed from number to string ID
     let editingName: string = '';
     let renameInput: HTMLInputElement | null = null;
 
-    // Removed onMount data fetching
-
     function handleNewChat() {
-        if ($isLoading) return;
+        if ($isLoading && $activeConversationId === null) return; // Prevent multiple rapid clicks if already creating
         console.log("Resetting for new chat...");
-        resetForNewChat();
+        resetForNewChat(); // This now creates a new entry and sets it active
     }
 
-    async function loadThread(threadId: number) {
-        if ($isLoading || threadId === $currentThreadId) return;
-        console.log(`Loading thread ID: ${threadId}`);
-        editingThreadId = null;
-        try {
-            await fetchHistory(threadId);
-        } catch (error) {
-            console.error(`Failed to load history for thread ID ${threadId}:`, error);
-        }
+    // Renamed from loadThread - only sets the active conversation ID
+    function selectConversation(conversationId: string) {
+        if ($isLoading || conversationId === $activeConversationId) return;
+        console.log(`Selecting conversation ID: ${conversationId}`);
+        editingConversationId = null; // Exit editing mode if selecting a different chat
+        activeConversationId.set(conversationId);
+        // Fetching history should now be triggered by a component observing activeThreadId changes
     }
 
-    function startRename(event: MouseEvent, thread: ThreadItem) {
-        event.stopPropagation(); // Prevent loadThread if edit button is clicked directly
+    function startRename(event: MouseEvent, conversation: ConversationMetadata) {
+        event.stopPropagation(); // Prevent selectConversation if edit button is clicked directly
         if ($isLoading) return;
-        editingThreadId = thread.thread_id;
-        editingName = thread.name;
+        editingConversationId = conversation.id;
+        editingName = conversation.name;
         tick().then(() => {
             renameInput?.focus();
             renameInput?.select();
         });
     }
 
-    async function handleRename() {
-        if (editingThreadId === null || $isLoading) return;
+    // Renaming now updates localStorage via conversationManager
+    function handleRename() {
+        if (editingConversationId === null || $isLoading) return;
 
-        const threadIdToRename = editingThreadId;
+        const conversationIdToRename = editingConversationId;
         const newName = editingName.trim();
-        editingThreadId = null; // Exit editing mode
+        editingConversationId = null; // Exit editing mode
 
         if (!newName) {
             console.warn("Rename cancelled: name was empty.");
             return;
         }
 
-        const originalThread = $availableThreads.find(t => t.thread_id === threadIdToRename);
-        if (originalThread && originalThread.name === newName) {
+        // Find original name directly from the store using get()
+        const currentConversations = get(managedConversations);
+        const originalConv = currentConversations.find(c => c.id === conversationIdToRename);
+        const originalName = originalConv?.name ?? '';
+
+        if (originalName === newName) {
             console.log("Rename cancelled: name did not change.");
             return;
         }
 
-        console.log(`Attempting to rename thread ${threadIdToRename} to "${newName}"`);
+        console.log(`Attempting to rename conversation ${conversationIdToRename} to "${newName}" (client-side)`);
         try {
-            await renameThread(threadIdToRename, newName);
-            console.log(`Thread ${threadIdToRename} renamed successfully.`);
+            // Update using the conversationManager function
+            updateConversation(conversationIdToRename, { name: newName });
+            console.log(`Conversation ${conversationIdToRename} renamed successfully in localStorage.`);
         } catch (error) {
-            console.error(`Failed to rename thread ${threadIdToRename}:`, error);
+            // This catch might not be effective if updateConversation doesn't throw
+            console.error(`Failed to rename conversation ${conversationIdToRename}:`, error);
+            // TODO: Add user feedback for rename failure?
         }
     }
 
@@ -77,49 +82,77 @@
             event.preventDefault();
             handleRename();
         } else if (event.key === 'Escape') {
-            editingThreadId = null;
+            editingConversationId = null; // Cancel edit on Escape
         }
     }
 
+    // Function to handle deleting a conversation
+    function handleDelete(event: MouseEvent, conversationId: string) {
+        event.stopPropagation(); // Prevent selectConversation
+        if ($isLoading) return;
+
+        // Optional: Add a confirmation dialog here
+        if (confirm(`Are you sure you want to delete this conversation?`)) {
+            console.log(`Attempting to delete conversation ${conversationId} (client-side)`);
+            try {
+                deleteConversation(conversationId);
+                console.log(`Conversation ${conversationId} deleted successfully from localStorage.`);
+                // If the deleted conversation was the active one, reset to new chat state
+                if ($activeConversationId === conversationId) {
+                    resetForNewChat();
+                }
+            } catch (error) {
+                console.error(`Failed to delete conversation ${conversationId}:`, error);
+                // TODO: Add user feedback for delete failure?
+            }
+        }
+    }
 </script>
 
 <div class="sidebar">
-    <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading && $currentThreadId === null} title="New Chat">
-        {#if $isLoading && $currentThreadId === null}
+    <button class="new-chat-button" on:click={handleNewChat} disabled={$isLoading && $activeConversationId === null} title="New Chat">
+        {#if $isLoading && $activeConversationId === null}
             <div class="button-spinner"></div>
+            <span>Creating...</span>
         {:else}
-            <span class="btn-icon">+</span>
+            <IconAdd class="btn-icon" />
+            <span>New Chat</span>
         {/if}
     </button>
 
     <div class="sidebar-section threads-section">
         <ul class="thread-list">
-            {#each $availableThreads as thread (thread.thread_id)}
-                <li class:active={thread.thread_id === $currentThreadId} class:editing={editingThreadId === thread.thread_id}>
-                    {#if editingThreadId === thread.thread_id}
+            {#each $managedConversations as conversation (conversation.id)} 
+                <li class:active={conversation.id === $activeConversationId} class:editing={editingConversationId === conversation.id}> 
+                    {#if editingConversationId === conversation.id} 
                         <form class="rename-form" on:submit|preventDefault={handleRename}>
-                             <input
-                                 type="text"
+                            <input
+                                type="text"
                                  bind:this={renameInput}
                                  bind:value={editingName}
                                  on:blur={handleRename}
                                  on:keydown={handleRenameKeyDown}
                                  disabled={$isLoading}
-                                 class="rename-input"
-                             />
-                         </form>
+                                class="rename-input"
+                            />
+                        </form>
                     {:else}
-                        <div class="thread-item-container" on:click={() => loadThread(thread.thread_id)} role="button" tabindex="0"
-                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') loadThread(thread.thread_id); }}>
-                             <span class="thread-name">{thread.name}</span>
-                             <button class="edit-button" title="Rename Thread" on:click={(e) => startRename(e, thread)} disabled={$isLoading}>
-                                 ✏️
-                             </button>
+                        <div class="thread-item-container" on:click={() => selectConversation(conversation.id)} role="button" tabindex="0"
+                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectConversation(conversation.id); }}>
+                            <span class="thread-name">{conversation.name}</span>
+                            <div class="thread-actions">
+                                <button class="icon-button edit-button" title="Rename Conversation" on:click={(e) => startRename(e, conversation)} disabled={$isLoading}>
+                                    <IconEdit />
+                                </button>
+                                <button class="icon-button delete-button" title="Delete Conversation" on:click={(e) => handleDelete(e, conversation.id)} disabled={$isLoading}>
+                                    <IconDelete />
+                                </button>
+                            </div>
                         </div>
                     {/if}
                 </li>
             {:else}
-                <li class="empty-list">No history yet.</li>
+                <li class="empty-list">No conversations yet.</li>
             {/each}
         </ul>
     </div>
@@ -132,30 +165,49 @@
     .sidebar::-webkit-scrollbar-track { background: var(--bg-sidebar); }
     .sidebar::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
 
-    .new-chat-button { width: 40px; height: 40px; padding: 0; margin-bottom: var(--space-md); background-color: var(--primary); color: white; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 1em; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); align-self: flex-end; flex-shrink: 0; }
-    .new-chat-button:hover:not(:disabled) { background-color: var(--primary-light); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    /* Updated New Chat Button styles */
+    .new-chat-button {
+        width: 100%; /* Full width */
+        height: 40px;
+        padding: 0 var(--space-md); /* Add horizontal padding */
+        margin-bottom: var(--space-sm); /* Reduced margin */
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 0.9em; /* Slightly smaller font */
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Center content */
+        gap: var(--space-xs); /* Space between icon and text */
+        box-shadow: var(--shadow-sm);
+        flex-shrink: 0;
+    }
+    .new-chat-button:hover:not(:disabled) { background-color: var(--primary-light); box-shadow: var(--shadow-md); }
     .new-chat-button:disabled { background-color: var(--primary-dark); cursor: not-allowed; opacity: 0.7; }
-    .btn-icon { font-weight: bold; font-size: 1.2em; }
+    .btn-icon { font-size: 1.3em; /* Adjust icon size if needed */ display: flex; align-items: center; justify-content: center; }
 
-    .threads-section { border-top: 1px solid var(--input-border); padding-top: var(--space-md); flex-grow: 1; display: flex; flex-direction: column; min-height: 0; }
+    /* Remove top border and reduce padding */
+    .threads-section { padding-top: 0; /* Removed padding */ flex-grow: 1; display: flex; flex-direction: column; min-height: 0; }
 
     .thread-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; background-color: transparent; scrollbar-width: thin; scrollbar-color: var(--primary-light) transparent; display: block; }
     .thread-list::-webkit-scrollbar { width: 4px; }
     .thread-list::-webkit-scrollbar-track { background: transparent; }
     .thread-list::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
 
+    /* Remove background and border from list items */
     .thread-list li {
-        transition: background-color 0.2s ease; /* Simplified transition */
         overflow: hidden;
-        background-color: var(--bg-surface);
         display: flex;
         align-items: center;
         width: 100%;
-        border-bottom: 1px solid var(--input-border);
         position: relative; /* For potential absolute positioning inside if needed */
     }
-    .thread-list li:last-child { border-bottom: none; }
-    .thread-list li.editing { background-color: var(--bg-elevated); }
+    /* Remove last-child rule as border is gone */
+    .thread-list li.editing { background-color: var(--bg-elevated); /* Keep editing distinct */ }
 
     /* --- NEW: Clickable container for non-edit mode --- */
     .thread-item-container {
@@ -163,16 +215,18 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 16px; /* Apply padding here */
+        padding: 12px 16px; /* Keep padding on container */
         cursor: pointer;
         transition: background-color 0.2s ease;
+        border-radius: var(--radius-md); /* Add slight rounding to hover/active states */
+        margin: 2px 0; /* Add small vertical margin between items */
     }
     .thread-item-container:hover {
-        background-color: var(--bg-elevated);
+        background-color: var(--bg-elevated); /* Keep hover effect */
     }
     .thread-list li.active .thread-item-container {
-        background-color: var(--primary); /* Apply active background here */
-        color: white; /* Apply active text color here */
+        background-color: var(--primary); /* Keep active background */
+        color: white; /* Keep active text color */
     }
      .thread-list li.active .thread-item-container .thread-name {
           font-weight: bold; /* Bold active thread name */
@@ -220,4 +274,55 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     @media (max-width: 768px) { /* Existing mobile styles */ }
+
+    /* --- NEW: Styles for icon buttons --- */
+    .thread-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px; /* Space between icons */
+        flex-shrink: 0;
+        margin-left: 8px;
+    }
+
+    .icon-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: var(--text-secondary);
+        font-size: 1.1em; /* Adjust size as needed */
+        line-height: 1;
+        border-radius: var(--radius-sm);
+        opacity: 0; /* Hidden by default */
+        transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        display: flex; /* Helps center icon if needed */
+        align-items: center;
+        justify-content: center;
+        z-index: 1; /* Ensure button is clickable over container hover */
+    }
+
+    /* Show buttons on hover of the LIST ITEM */
+    .thread-list li:hover .icon-button {
+        opacity: 1;
+    }
+     /* Keep buttons visible on active item */
+     .thread-list li.active .icon-button {
+         opacity: 1;
+         color: white; /* Ensure icons contrast on active background */
+     }
+
+    .icon-button:hover:not(:disabled) {
+        background-color: var(--primary-light);
+        color: white;
+    }
+    .icon-button:disabled {
+        opacity: 0.3 !important; /* Use !important to override hover opacity */
+        cursor: not-allowed;
+    }
+
+    /* Specific color for delete button hover */
+    .delete-button:hover:not(:disabled) {
+        background-color: var(--error); /* Use error color for delete hover */
+        color: white;
+    }
 </style>

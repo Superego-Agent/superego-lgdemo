@@ -1,3 +1,8 @@
+---
+title: Hindu (1-5 Likert)
+description: A constitution module applying Hindu principles based on a user-defined 1-5 adherence scale, covering ahimsa, diet, rituals, and dharma.
+---
+
 # Module: Hindu (1-5 Likert)
 
 **Article 0: Hindu Adherence Likert Scale (1–5)**

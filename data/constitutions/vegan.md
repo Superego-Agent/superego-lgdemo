@@ -1,3 +1,8 @@
+---
+title: Vegan (1-5 Likert)
+description: A constitution module applying Vegan ethics based on a user-defined 1-5 adherence scale, covering diet, materials, and animal welfare.
+---
+
 # Module: Vegan (1-5 Likert)
 
 **Article 0: Vegan Adherence Likert Scale (1–5)**

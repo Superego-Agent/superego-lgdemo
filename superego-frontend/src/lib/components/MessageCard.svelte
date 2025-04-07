@@ -20,15 +20,48 @@
 
 	$: cardClasses = `message-card ${sender} ${node ? `node-${node.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
 
-	$: title = (sender === 'ai' || sender === 'tool_result') ? node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : null;
-	$: titlePrefix = sender === 'tool_result' ? '<<< Tool Result' : '>>>';
+	$: title = (() => {
+	    if (sender === 'ai' || sender === 'tool_result') {
+	        return node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+	    }
+	    if (sender === 'human') {
+	        return 'You';
+	    }
+	    return null;
+	})();
+	
+	$: titlePrefix = (() => {
+	    return '';
+	})();
 
 	// Main content rendering
 	$: renderedContent = (() => {
 		let rawContent = '';
 		if (sender === 'tool_result' && toolResultMsg) {
-		   rawContent = toolResultMsg.content ?? (isError ? 'Error occurred' : '(No result)');
-			return DOMPurify.sanitize(String(rawContent)); // Sanitize plain text result
+		   // For tool results, extract just the content part
+		   let content = toolResultMsg.content ?? (isError ? 'Error occurred' : '(No result)');
+		   
+		   // Format the content string - handle various tool result formats
+		   if (content && typeof content === 'string') {
+		       // Try to extract content from common formats
+		       
+		       // Format: <<< Tool Result Tools (superego_decision) content='✅ Superego allowed the prompt.' ...
+		       // We want to extract just the value from content='...'
+		       const contentMatch = content.match(/content=['"]([^'"]+)['"]/);
+		       if (contentMatch && contentMatch[1]) {
+		           content = contentMatch[1];
+		       }
+		       // If we didn't find a content= match but it still has the Tool Result prefix
+		       else if (content.includes('Tool Result')) {
+		           // Clean up common prefixes
+		           content = content
+		               .replace(/<<< Tool Result Tools \([^)]+\)\s*/g, '')
+		               .replace(/<<< Tool Result\s*/g, '')
+		               .trim();
+		       }
+		   }
+		   
+		   return DOMPurify.sanitize(String(content)); // Sanitize the extracted content
 		} else if (typeof message.content === 'string') {
 		   rawContent = message.content; // Main text content for AI/Human/System
 	   } else if (Array.isArray(message.content)) {
@@ -186,10 +219,13 @@
 	
 	.message-title { 
 		font-weight: 600; 
-		margin-bottom: var(--space-sm); 
+		margin: 0 calc(-1 * var(--space-md)) var(--space-sm);
+		padding: 0 var(--space-md) var(--space-xs);
 		font-size: 0.875rem;
 		display: flex;
 		align-items: center;
+		border-bottom: 1px solid var(--input-border);
+		width: calc(100% + 2 * var(--space-md));
 	}
 	
 	.title-text {
