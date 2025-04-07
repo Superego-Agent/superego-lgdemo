@@ -1,16 +1,43 @@
 <script lang="ts">
+    import { submitConstitution } from '../api';
+    
     let constitutionText = '';
     let isPrivate = true;  // Default to private
+    let isSubmitting = false;
+    let submitStatus: { success?: boolean; message?: string } | null = null;
 
     async function handleSubmit() {
         if (!constitutionText.trim()) return;
         
+        isSubmitting = true;
+        submitStatus = null;
+        
         try {
-            // TODO: Implement the actual API call to save the constitution
-            console.log('Submitting constitution:', { constitutionText, isPrivate });
-            constitutionText = '';
+            const response = await submitConstitution({ 
+                text: constitutionText, 
+                is_private: isPrivate 
+            });
+            
+            if (response.status === 'success') {
+                submitStatus = { 
+                    success: true, 
+                    message: 'Constitution submitted successfully for review' 
+                };
+                constitutionText = '';  // Clear the form
+            } else {
+                submitStatus = { 
+                    success: false, 
+                    message: 'Failed to submit constitution' 
+                };
+            }
         } catch (error) {
             console.error('Failed to submit constitution:', error);
+            submitStatus = { 
+                success: false, 
+                message: 'An error occurred while submitting the constitution' 
+            };
+        } finally {
+            isSubmitting = false;
         }
     }
 </script>
@@ -22,12 +49,14 @@
             bind:value={constitutionText}
             placeholder="Enter your constitution here..."
             rows="10"
+            disabled={isSubmitting}
         ></textarea>
         <div class="privacy-toggle">
             <label class="toggle">
                 <input
                     type="checkbox"
                     bind:checked={isPrivate}
+                    disabled={isSubmitting}
                 />
                 <span class="slider"></span>
             </label>
@@ -38,12 +67,17 @@
         <p class="review-note">
             All submitted constitutions will be reviewed before being added to the system.
         </p>
+        {#if submitStatus}
+            <p class="status-message {submitStatus.success ? 'success' : 'error'}">
+                {submitStatus.message}
+            </p>
+        {/if}
         <button 
             class="submit-button" 
             on:click={handleSubmit}
-            disabled={!constitutionText.trim()}
+            disabled={!constitutionText.trim() || isSubmitting}
         >
-            Submit Constitution For Review
+            {isSubmitting ? 'Submitting...' : 'Submit Constitution For Review'}
         </button>
     </div>
 </div>
@@ -163,5 +197,21 @@
     .toggle-label {
         color: var(--text-primary);
         font-size: 14px;
+    }
+
+    .status-message {
+        padding: 12px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .status-message.success {
+        background-color: var(--success-bg, #e6f4ea);
+        color: var(--success-text, #1e4620);
+    }
+
+    .status-message.error {
+        background-color: var(--error-bg, #fce8e6);
+        color: var(--error-text, #c5221f);
     }
 </style> 
