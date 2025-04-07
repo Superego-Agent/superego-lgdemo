@@ -5,19 +5,24 @@
     import IconInfo from '~icons/fluent/info-24-regular';
     import IconChevronDown from '~icons/fluent/chevron-down-24-regular'; // Icon for toggle
     import IconChevronUp from '~icons/fluent/chevron-up-24-regular'; // Icon for toggle
+    import IconAdd from '~icons/fluent/add-24-regular'; // Icon for add button
     import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
+    import AddConstitutionModal from './AddConstitutionModal.svelte';
     import { fetchConstitutionContent } from '../api';
 
     // Component State
     let isExpanded = true; // Start expanded
 
-    // Modal State
+    // Info Modal State
     let showModal = false;
     let modalIsLoading = false;
     let modalError: string | null = null;
     let modalTitle: string = '';
     let modalDescription: string | undefined = undefined;
     let modalContent: string | undefined = undefined;
+    
+    // Add Constitution Modal State
+    let showAddModal = false;
 
     // Filter out the 'none' constitution from the display options if it exists
     // Use constitution.title now
@@ -90,6 +95,12 @@
         <div class="options-container">
             {#if displayConstitutions.length > 0}
                 <div class="options-wrapper">
+                        <div class="option-item add-item" on:click={() => showAddModal = true}>
+                            <div class="option-label add-label">
+                                <span class="add-icon">+</span>
+                                <span class="title-text">Add Constitution</span>
+                            </div>
+                        </div>
                         {#each displayConstitutions as constitution (constitution.id)}
                             <div class="option-item">
                                 <label class="option-label">
@@ -124,6 +135,7 @@
                                 {/if}
                             </div>
                         {/each}
+                        <!-- Add Constitution Button at the end of the list -->
                     </div>
                 {:else}
                     <p class="loading-text">Loading constitutions...</p>
@@ -141,6 +153,10 @@
         error={modalError}
         on:close={() => showModal = false}
     />
+{/if}
+
+{#if showAddModal}
+    <AddConstitutionModal on:close={() => showAddModal = false} />
 {/if}
 
 <style>
@@ -189,10 +205,43 @@
 
     .options-container {
         padding: var(--space-sm) var(--space-md);
-        max-height: 250px; /* Increased default height */
+        max-height: 350px; /* Further increased height */
         overflow-y: auto;
         scrollbar-width: thin;
         scrollbar-color: var(--primary-light) var(--bg-surface);
+    }
+    
+    .add-constitution-container {
+        margin-bottom: var(--space-sm);
+        padding-bottom: var(--space-sm);
+        border-bottom: 1px solid var(--input-border);
+        display: flex;
+        justify-content: center;
+    }
+    
+    .add-button {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        background-color: var(--primary-lightest);
+        color: var(--primary);
+        border: 1px solid var(--primary-light);
+        border-radius: var(--radius-sm);
+        padding: var(--space-xs) var(--space-md);
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+        justify-content: center;
+        min-width: 180px;
+    }
+    
+    .add-button:hover {
+        background-color: var(--primary);
+        color: white;
+    }
+    
+    .add-button:active {
+        transform: scale(0.98);
     }
     .options-container::-webkit-scrollbar { width: 6px; }
     .options-container::-webkit-scrollbar-track { background: var(--bg-surface); }
@@ -259,6 +308,28 @@
     .info-button:hover {
         color: var(--primary);
         opacity: 1;
+    }
+    
+    /* Add constitution item styles */
+    .add-item {
+        cursor: pointer;
+        grid-template-columns: 1fr; /* Use a single column for the add item */
+    }
+    
+    .add-label {
+        grid-column: 1 / -1;
+        color: var(--primary);
+    }
+    
+    .add-icon {
+        font-size: 1.2em;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        line-height: 1;
     }
 
     .slider-container {

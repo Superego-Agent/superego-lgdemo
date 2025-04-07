@@ -1,5 +1,8 @@
 <script lang="ts">
     import { submitConstitution } from '../api';
+    import { createEventDispatcher } from 'svelte';
+    
+    const dispatch = createEventDispatcher();
     
     let constitutionText = '';
     let isPrivate = true;  // Default to private
@@ -24,6 +27,14 @@
                     message: 'Constitution submitted successfully for review' 
                 };
                 constitutionText = '';  // Clear the form
+                
+                // Dispatch event to notify parent components
+                dispatch('constitutionAdded', { success: true });
+                
+                // Auto-close modal after a delay
+                setTimeout(() => {
+                    dispatch('close');
+                }, 2000);
             } else {
                 submitStatus = { 
                     success: false, 
@@ -84,9 +95,9 @@
 
 <style>
     .add-constitution {
-        padding: 20px;
-        width: 1200px;
-        margin: 0 auto;
+        padding: 0;
+        width: 100%;
+        margin: 0;
         height: 100%;
         overflow-y: auto;
     }
@@ -214,4 +225,4 @@
         background-color: var(--error-bg, #fce8e6);
         color: var(--error-text, #c5221f);
     }
-</style> 
+</style>
