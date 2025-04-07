@@ -216,7 +216,7 @@
     .input-area {
         padding: var(--space-sm) var(--space-lg) var(--space-md);
         border-top: 1px solid var(--input-border);
-        background-color: var(--bg-surface);
+        background-color: var(--bg-primary); /* Changed background to primary */
         flex-shrink: 0;
          display: flex;
          flex-direction: column;
@@ -252,14 +252,14 @@
     }
     .toggle-icon.rotated {
          transform: rotate(180deg);
-    }
-    .selector-wrapper {
-         /* Wrapper helps with transition */
-         overflow: hidden;
-         border: 1px solid var(--input-border); /* Optional border around selector */
-         border-radius: var(--radius-md);
-         margin-bottom: var(--space-xs); /* Space below selector */
-    }
+     }
+     .selector-wrapper {
+          /* Wrapper helps with transition */
+          overflow: hidden;
+          /* border: 1px solid var(--input-border); */ /* REMOVED BORDER */
+          border-radius: var(--radius-md);
+          /* margin-bottom: var(--space-xs); */ /* Removed margin, rely on gap */
+     }
 
     /* --- Mobile adjustments --- */
      @media (max-width: 768px) { /* ... existing mobile styles ... */ }
