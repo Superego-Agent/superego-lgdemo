@@ -4,10 +4,14 @@
     import Sidebar from './lib/components/Sidebar.svelte';
     import ChatInterface from './lib/components/ChatInterface.svelte';
     import ThemeToggle from './lib/components/ThemeToggle.svelte';
+    import TabBar from './lib/components/TabBar.svelte';
+    import AddConstitution from './lib/components/AddConstitution.svelte';
     import { theme } from './lib/stores/theme';
     import { fetchConstitutions } from './lib/api';
     import './lib/styles/theme.css';
     import './lib/styles/dark-theme.css';
+
+    let activeTab = 'home';
 
     // Handle theme updates reactively
     $: if (typeof document !== 'undefined') {
@@ -40,10 +44,16 @@
         <div class="theme-toggle-container">
             <ThemeToggle />
         </div>
+        
     </div>
+    <TabBar bind:activeTab />
     <div class="app-content">
-        <Sidebar />
-        <ChatInterface />
+        {#if activeTab === 'home'}
+            <Sidebar />
+            <ChatInterface />
+        {:else if activeTab === 'add-constitution'}
+            <AddConstitution />
+        {/if}
     </div>
 </main>
 

@@ -111,6 +111,24 @@ export const fetchHistory = async (threadId: string): Promise<HistoryResponse> =
 
 // renameThread removed - handled client-side by conversationManager
 
+interface ConstitutionSubmission {
+    text: string;
+    is_private: boolean;
+}
+
+interface SubmissionResponse {
+    status: string;
+    message: string;
+    email_sent: boolean;
+}
+
+export const submitConstitution = async (submission: ConstitutionSubmission): Promise<SubmissionResponse> => {
+    console.log('API: Submitting constitution');
+    return await apiFetch<SubmissionResponse>(`${BASE_URL}/constitutions/submit`, {
+        method: 'POST',
+        body: JSON.stringify(submission),
+    });
+};
 
 // --- Real Streaming Functions ---
 let streamController: AbortController | null = null;
