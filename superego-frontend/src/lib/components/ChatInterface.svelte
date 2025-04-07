@@ -211,17 +211,7 @@
     </div>
 
     <div class="input-area">
-         <div class="constitution-toggle-area">
-              <button class="toggle-button" on:click={toggleConstitutionSelector} title={isConstitutionSelectorVisible ? 'Hide Constitutions' : 'Show Constitutions'}>
-                   <span>Constitutions</span>
-                   <span class="toggle-icon" class:rotated={isConstitutionSelectorVisible}>▼</span>
-              </button>
-         </div>
-         {#if isConstitutionSelectorVisible}
-              <div class="selector-wrapper"> 
-                   <ConstitutionSelector />
-              </div>
-         {/if}
+        <ConstitutionSelector />
          {/* @ts-ignore */ null}
         <ChatInput on:send={handleSend} disabled='{$isLoading}' />
     </div>

@@ -1,9 +1,15 @@
 <script lang="ts">
     import { availableConstitutions, constitutionAdherenceLevels } from '../stores';
     import { tick } from 'svelte';
+    // import { fly } from 'svelte/transition'; // Removed fly import
     import IconInfo from '~icons/fluent/info-24-regular';
-    import ConstitutionInfoModal from './ConstitutionInfoModal.svelte'; // Import the modal
-    import { fetchConstitutionContent } from '../api'; // Import the API function
+    import IconChevronDown from '~icons/fluent/chevron-down-24-regular'; // Icon for toggle
+    import IconChevronUp from '~icons/fluent/chevron-up-24-regular'; // Icon for toggle
+    import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
+    import { fetchConstitutionContent } from '../api';
+
+    // Component State
+    let isExpanded = true; // Start expanded
 
     // Modal State
     let showModal = false;
@@ -62,17 +68,32 @@
         }
     }
 
+    function toggleExpand() {
+        isExpanded = !isExpanded;
+    }
+
 </script>
 
-<div class="constitution-selector">
-    {#if displayConstitutions.length > 0}
-        <fieldset>
-            <legend>Constitution Adherence</legend>
-            <div class="options-wrapper">
-                {#each displayConstitutions as constitution (constitution.id)}
-                    <div class="option-item">
-                        <label class="option-label">
-                            <input
+<div class="selector-card">
+    <!-- Header with integrated toggle -->
+    <div class="selector-header" on:click={toggleExpand} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && toggleExpand()}>
+        <span class="header-title">Constitutions</span>
+        {#if isExpanded}
+            <IconChevronDown class="toggle-icon"/>
+        {:else}
+            <IconChevronUp class="toggle-icon"/>
+        {/if}
+    </div>
+
+    <!-- Collapsible content area -->
+    {#if isExpanded}
+        <div class="options-container">
+            {#if displayConstitutions.length > 0}
+                <div class="options-wrapper">
+                        {#each displayConstitutions as constitution (constitution.id)}
+                            <div class="option-item">
+                                <label class="option-label">
+                                    <input
                                 type="checkbox"
                                 checked={$constitutionAdherenceLevels[constitution.id] !== undefined}
                                 on:change={(e) => handleCheckChange(constitution.id, e.currentTarget.checked)}
@@ -80,7 +101,6 @@
                             <span class="title-text" title={constitution.description || constitution.title}>
                                 {constitution.title}
                             </span>
-                             <!-- Info button now calls showInfo -->
                             <button class="info-button" title="Show constitution info" on:click|stopPropagation={() => showInfo(constitution)}>
                                 <IconInfo />
                             </button>
@@ -99,16 +119,17 @@
                                 <span class="level-display">
                                     {$constitutionAdherenceLevels[constitution.id]}/5
                                 </span>
-                                <!-- Info button removed from here -->
+                                        <!-- Info button removed from here -->
+                                    </div>
+                                {/if}
                             </div>
-                        {/if}
+                        {/each}
                     </div>
-                {/each}
-            </div>
-        </fieldset>
-    {:else}
-        <p class="loading-text">Loading constitutions...</p>
-        {/if}
+                {:else}
+                    <p class="loading-text">Loading constitutions...</p>
+            {/if}
+        </div>
+    {/if}
 </div>
 
 {#if showModal}
@@ -123,46 +144,77 @@
 {/if}
 
 <style>
-    .constitution-selector {
-        padding: var(--space-sm) 0; /* Add some vertical padding */
+    /* Remove fieldset and legend styles */
+
+    .selector-card {
+        background-color: var(--bg-surface); /* Card background */
+        border: 1px solid var(--input-border);
+        border-radius: var(--radius-lg); /* Rounded corners */
+        overflow: hidden; /* Clip content during transition */
+        margin-bottom: var(--space-sm); /* Space below card */
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow 0.2s ease;
+    }
+    .selector-card:hover {
+         box-shadow: var(--shadow-md);
+    }
+
+    .selector-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-sm) var(--space-md);
+        cursor: pointer;
+        border-bottom: 1px solid var(--input-border); /* Separator when expanded */
+        background-color: var(--bg-elevated); /* Slightly different header bg */
+        transition: background-color 0.2s ease;
+    }
+    .selector-header:hover {
+        background-color: var(--primary-lightest);
+    }
+
+    .header-title {
+        font-weight: 600; /* Make header title bolder */
         font-size: 0.9em;
-         /* Max height and scroll for many constitutions */
-        max-height: 150px; /* Adjust as needed */
+        color: var(--text-primary);
+    }
+
+    .toggle-icon {
+        color: var(--text-secondary);
+        transition: transform 0.2s ease-in-out;
+    }
+    .toggle-icon.rotated {
+        transform: rotate(180deg);
+    }
+
+    .options-container {
+        padding: var(--space-sm) var(--space-md);
+        max-height: 250px; /* Increased default height */
         overflow-y: auto;
         scrollbar-width: thin;
         scrollbar-color: var(--primary-light) var(--bg-surface);
     }
-    .constitution-selector::-webkit-scrollbar { width: 6px; }
-    .constitution-selector::-webkit-scrollbar-track { background: var(--bg-surface); }
-    .constitution-selector::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
-
-    fieldset {
-        border: 1px solid var(--input-border);
-        border-radius: var(--radius-md);
-        padding: var(--space-sm) var(--space-md);
-        margin: 0;
-    }
-
-    legend {
-        padding: 0 var(--space-sm);
-        font-weight: bold;
-        color: var(--text-secondary);
-        font-size: 0.8em;
-    }
+    .options-container::-webkit-scrollbar { width: 6px; }
+    .options-container::-webkit-scrollbar-track { background: var(--bg-surface); }
+    .options-container::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
 
     .options-wrapper {
         display: flex;
-        flex-direction: column; /* Stack checkboxes */
+        flex-direction: column;
         gap: var(--space-xs);
     }
 
     .option-item {
         display: grid;
-        /* Adjust grid: Give label column more space (e.g., 3fr) vs slider (1fr) */
         grid-template-columns: minmax(150px, 3fr) minmax(100px, 1fr);
-        gap: var(--space-xs) var(--space-md); /* Row gap | Column gap */
+        gap: var(--space-xs) var(--space-md);
         align-items: center;
-        padding: var(--space-xs) 0;
+        padding: var(--space-xs); /* Add padding for hover effect */
+        border-radius: var(--radius-sm); /* Rounded corners for hover */
+        transition: background-color 0.15s ease; /* Smooth hover transition */
+    }
+    .option-item:hover {
+         background-color: var(--primary-lightest); /* Hover background color */
     }
 
     .option-label {
@@ -188,7 +240,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         flex-grow: 1; /* Allow text to grow */
-        margin-right: var(--space-xs); /* Restore space before info button */
+        margin-right: var(--space-xs);
     }
     .info-button {
         background: none;

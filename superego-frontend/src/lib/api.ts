@@ -97,10 +97,14 @@ export const fetchHistory = async (threadId: string): Promise<HistoryResponse> =
     try {
         // Use string threadId in URL
         const historyData = await apiFetch<HistoryResponse>(`${BASE_URL}/threads/${threadId}/history`);
-        messages.set(historyData.messages || []);
+
+        // --- History Transformation REMOVED ---
+        // The backend now provides structured tool_calls, so no frontend transformation is needed.
+
+        messages.set(historyData.messages || []); // Set store directly with backend data
         // currentThreadId.set(threadId); // REMOVED - activeThreadId is derived reactively
         // Optionally use historyData.thread_name if needed
-        return historyData;
+        return historyData; // Return original backend data
     } catch (error) {
         console.error(`Failed to fetch history for Thread ID ${threadId}:`, error);
         messages.set([]); // Clear messages on error

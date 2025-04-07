@@ -118,8 +118,9 @@ class HistoryMessage(BaseModel):
     timestamp: Optional[int] = None
     node: Optional[str] = None
     set_id: Optional[str] = None # Keep for compare mode differentiation in frontend
-    tool_name: Optional[str] = None
-    is_error: Optional[bool] = None
+    tool_name: Optional[str] = None # Specific to tool_result sender
+    is_error: Optional[bool] = None # Specific to tool_result or system sender
+    tool_calls: Optional[List[Dict[str, Any]]] = None # Specific to ai sender
 
 class HistoryResponse(BaseModel):
     messages: List[HistoryMessage]
@@ -434,8 +435,23 @@ async def get_thread_history_endpoint(
 
                      if content_str and tool_calls_str: formatted_content = f"{content_str}\n{tool_calls_str}"
                      elif content_str: formatted_content = content_str
-                     elif tool_calls_str: formatted_content = tool_calls_str
+                     elif tool_calls_str: formatted_content = tool_calls_str # Keep this line for now, might remove if content should always be empty for pure tool calls
                      else: formatted_content = ""
+
+                     # Prepare tool_calls structure for the response model
+                     response_tool_calls = None
+                     if tool_calls := getattr(msg, "tool_calls", None):
+                         # Ensure it's a list of dicts before assigning
+                         if isinstance(tool_calls, list) and all(isinstance(tc, dict) for tc in tool_calls):
+                             response_tool_calls = tool_calls
+                         else:
+                             print(f"Warning: Unexpected tool_calls format in history for msg {i}: {tool_calls}")
+
+                     # If there are tool calls, maybe clear the formatted_content?
+                     # Decide if an AI message that *only* calls tools should have empty content.
+                     # For now, let's keep content_str but NOT add tool_calls_str to it.
+                     formatted_content = content_str # Use only the text content
+
                  elif isinstance(msg, ToolMessage):
                      sender = "tool_result"
                      node = "tools"
@@ -455,8 +471,9 @@ async def get_thread_history_endpoint(
                          content=formatted_content,
                          timestamp=msg_timestamp,
                          node=node,
-                         tool_name=tool_name,
-                         is_error=is_error,
+                         tool_name=tool_name, # Only relevant for tool_result
+                         is_error=is_error, # Relevant for tool_result or system
+                         tool_calls=response_tool_calls if sender == 'ai' else None # Add the structured tool_calls
                          # set_id is not typically stored in checkpoint messages, omit or derive if needed
                      ))
              # --- End Message Loop ---
