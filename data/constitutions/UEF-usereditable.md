@@ -1,3 +1,8 @@
+---
+title: Universal Ethical Floor (UEF) - User Editable
+description: Defines the non-negotiable baseline ethical standards and core prohibitions. This version is intended for user modification.
+---
+
 # Module: Universal Ethical Floor (UEF)
 
 **Non-Negotiable Baseline:**

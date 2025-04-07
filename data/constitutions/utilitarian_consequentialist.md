@@ -1,3 +1,8 @@
+---
+title: Utilitarian/Consequentialist (1-5 Likert)
+description: A constitution module applying Utilitarian/Consequentialist ethics based on a user-defined 1-5 adherence scale, focusing on maximizing overall well-being or utility.
+---
+
 # Module: Utilitarian/Consequentialist (1-5 Likert)
 
 **Article 0: Utilitarian / Consequentialist Adherence Scale (1–5)**
