@@ -9,7 +9,14 @@ langchain_anthropic>=0.1.0,<1.0.0
 langgraph>=0.1.0,<1.0.0
 aiosqlite>=0.19.0,<1.0.0
 langgraph-cli>=0.1.55,<1.0.0
-PyYAML>=6.0,<7.0.0 # For parsing YAML frontmatter
-python-frontmatter>=1.0,<2.0.0 # For parsing frontmatter from markdown
+langgraph-checkpoint-sqlite>=2.0.0
 
-# Add version constraints as needed for your specific requirements
+# YAML frontmatting for constitutions 
+python-frontmatter>=1.0,<2.0.0 
+PyYAML>=6.0,<7.0.0 
+
+# Web Server
+fastapi>=0.110.0,<1.0.0
+uvicorn>=0.27.0,<1.0.0
+
+mcp>=1.6.0
