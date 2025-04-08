@@ -15,11 +15,13 @@ import {
     globalError,
     availableConstitutions,
     activeConstitutionIds, // Keep for streamRun params, though UI might change
-    constitutionAdherenceLevels, // Keep for streamRun params
+    constitutionAdherenceLevels, // Need this to get selected constitutions & check if an ID is global
     ensureConversationStateExists,
     updateConversationState,
     updateConversationMetadataState
+    // Removed duplicate imports for constitutionAdherenceLevels and availableConstitutions
 } from './stores';
+import { localConstitutionsStore } from './localConstitutions'; // Import local store
 import { logExecution } from './utils';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -39,22 +41,41 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
                 ...options.headers,
             },
         });
+        // Removed console.log(`[apiFetch] Received response...`)
         if (!response.ok) {
+            // Removed console.log(`[apiFetch] Response not OK...`)
             let errorMsg = `HTTP error! Status: ${response.status}`;
             try {
-                const errorBody = await response.json();
-                errorMsg += ` - ${errorBody.detail || JSON.stringify(errorBody)}`;
-            } catch (e) { /* Ignore */ }
+                // Attempt to read error body as text first, more robust than assuming JSON
+                const errorText = await response.text();
+                // Removed console.log(`[apiFetch] Error response body...`)
+                try {
+                    // Try parsing as JSON if possible for more detail
+                    const errorBody = JSON.parse(errorText);
+                    errorMsg += ` - ${errorBody.detail || JSON.stringify(errorBody)}`;
+                } catch (parseError) {
+                    errorMsg += ` - ${errorText}`; // Fallback to raw text
+                }
+                // Removed original response.json() call here as errorText is now primary
+            } catch (e) {
+                // Removed console.error(`[apiFetch] Error reading error response body...`)
+                // errorMsg already contains status
+            }
             throw new Error(errorMsg);
         }
         if (response.status === 204) { // Handle No Content
+            // Removed console.log(`[apiFetch] Received 204...`)
             return undefined as T;
         }
-        return await response.json() as T;
+        // Removed console.log(`[apiFetch] Attempting to parse JSON...`)
+        const jsonData = await response.json() as T;
+        // Removed console.log(`[apiFetch] Successfully parsed JSON...`)
+        return jsonData;
     } catch (error: unknown) {
+        // Removed console.error(`[apiFetch] Caught error...`)
         // Don't set globalError here for AbortError, let callers handle context-specific errors
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
-            console.error('API Fetch Error:', url, error);
+            console.error('API Fetch Error:', url, error); // Keep original console.error for actual fetch errors
             const errorMsg = error instanceof Error ? error.message : String(error);
             globalError.set(errorMsg || 'An unknown API error occurred.'); // Set global error for non-abort errors
             throw error; // Re-throw non-abort errors
@@ -70,9 +91,18 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
 
 export const fetchConstitutions = (): Promise<ConstitutionItem[]> => {
     return logExecution("Fetch constitutions", async () => {
-        const constitutions = await apiFetch<ConstitutionItem[]>(`${BASE_URL}/constitutions`);
-        availableConstitutions.set(constitutions);
-        return constitutions;
+        const fullUrl = `${BASE_URL}/constitutions`;
+        // Removed console.log(`[fetchConstitutions] Attempting...`)
+        try {
+            const constitutions = await apiFetch<ConstitutionItem[]>(fullUrl);
+            // Removed console.log(`[fetchConstitutions] Successfully fetched...`)
+            availableConstitutions.set(constitutions);
+            return constitutions;
+        } catch (error) {
+            // Removed console.error(`[fetchConstitutions] Error during apiFetch...`)
+            // logExecution will log the error from apiFetch if it's thrown
+            throw error; // Re-throw error for logExecution and Promise.all handling
+        }
     });
 };
 
@@ -547,15 +577,13 @@ async function performStreamRequest(
     });
 }
 
-
 // --- Public API Functions ---
 
 // Modified streamRun
 export const streamRun = async (
     userInput: string,
-    currentClientId: string | null, // Expect client ID now, null if starting completely fresh
-    constitutionIds: string[] = [],
-    adherenceLevelsText?: string
+    currentClientId: string | null // Expect client ID now, null if starting completely fresh
+    // Removed constitutionIds and adherenceLevelsText parameters
 ): Promise<void> => {
 
     let clientId = currentClientId;
@@ -592,16 +620,52 @@ export const streamRun = async (
 
     // Optimistic update for existing chats is handled in ChatInterface.svelte
 
+    // --- Build the constitutions array for the request ---
+    const selectedConstitutionsMap = get(constitutionAdherenceLevels);
+    const localConstitutions = get(localConstitutionsStore);
+    const globalConstitutions = get(availableConstitutions);
+
+    const constitutionsForRequest: Array<ConstitutionRefById | ConstitutionRefByText> = Object.keys(selectedConstitutionsMap)
+        .map(id => {
+            // Check if it's a local constitution first
+            const adherenceLevel = selectedConstitutionsMap[id]; // Get the adherence level
+            // Check if it's a local constitution first
+            const localMatch = localConstitutions.find(c => c.id === id);
+            if (localMatch) {
+                // Send text and adherence level for local
+                return { text: localMatch.text, adherence_level: adherenceLevel };
+            }
+            // Check if it's a known global constitution
+            const globalMatch = globalConstitutions.find(c => c.id === id);
+            if (globalMatch) {
+                 // Send ID and adherence level for global
+                return { id: globalMatch.id, adherence_level: adherenceLevel };
+            }
+            // If it's neither (e.g., 'none' or an orphaned ID), log a warning and skip
+            console.warn(`Selected constitution ID "${id}" not found in local or global lists. Skipping.`);
+            return null;
+        })
+        .filter(ref => ref !== null); // Filter out nulls - TS should infer the correct type after this
+
+    // Handle the 'none' case explicitly - if 'none' is selected, send an empty array
+    // (The backend should handle an empty array appropriately, assuming 'none' means no constitution)
+    if (constitutionsForRequest.length === 0 && selectedConstitutionsMap['none']) {
+        // If 'none' was the only thing selected, the array is already empty, which is correct.
+    } else if (constitutionsForRequest.length > 0 && selectedConstitutionsMap['none']) {
+        // If 'none' is selected alongside others, filter it out (it shouldn't be selectable with others anyway, but defensively handle)
+        console.warn("Constitution 'none' selected alongside other constitutions. Ignoring 'none'.");
+        // The filter logic above already handles this by not finding 'none' in local/global lists.
+    }
+
 
     const requestBody: StreamRunRequest = {
         thread_id: threadId ?? undefined, // Send thread_id only if it exists
         input: { type: 'human', content: userInput },
-        constitution_ids: constitutionIds.length > 0 ? constitutionIds : ['none'],
-        adherence_levels_text: adherenceLevelsText || undefined
+        constitutions: constitutionsForRequest // Use the constructed array
+        // Removed adherence_levels_text
     };
 
     // Pass the confirmed clientId to performStreamRequest
-    // Pass the confirmed clientId (guaranteed to be string here)
     await performStreamRequest('/runs/stream', requestBody, clientId);
 };
 

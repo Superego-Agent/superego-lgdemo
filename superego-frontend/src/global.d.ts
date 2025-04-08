@@ -76,6 +76,27 @@ declare global {
 
     // NewThreadResponse is removed
 
+    /** Represents a constitution stored locally in localStorage */
+    interface LocalConstitution {
+        id: string; // Unique local ID (e.g., UUID)
+        title: string;
+        text: string;
+        createdAt: string; // ISO timestamp string
+        // Add lastUpdatedAt?
+    }
+
+    /** API request structure for referencing a constitution by ID */
+    interface ConstitutionRefById {
+        id: string;
+        adherence_level?: number; // Optional adherence level (1-5)
+    }
+
+    /** API request structure for referencing a constitution by its text content */
+    interface ConstitutionRefByText {
+        text: string;
+        adherence_level?: number; // Optional adherence level (1-5)
+    }
+
     /** Input structure for starting a run */
     interface StreamRunInput {
         type: "human";
@@ -86,14 +107,16 @@ declare global {
     interface StreamRunRequest {
         thread_id?: string | null; // Optional: Only sent for existing threads
         input: StreamRunInput;
-        constitution_ids: string[];
+        // Updated to send either ID or text
+        constitutions: Array<ConstitutionRefById | ConstitutionRefByText>;
         adherence_levels_text?: string;
     }
 
     /** Defines a set of constitutions for comparison. */
     interface CompareSet {
         id: string; // User-defined ID for the set (e.g., 'strict_vs_default')
-        constitution_ids: string[];
+        // Updated to send either ID or text
+        constitutions: Array<ConstitutionRefById | ConstitutionRefByText>;
         // name?: string; // Optional name, not used by backend currently
     }
 

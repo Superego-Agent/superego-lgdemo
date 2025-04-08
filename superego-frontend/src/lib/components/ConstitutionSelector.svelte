@@ -1,7 +1,7 @@
 <script lang="ts">
     import { availableConstitutions, constitutionAdherenceLevels } from '../stores';
+    import { localConstitutionsStore } from '../localConstitutions'; // Import local store
     import { tick } from 'svelte';
-    // import { fly } from 'svelte/transition'; // Removed fly import
     import IconInfo from '~icons/fluent/info-24-regular';
     import IconChevronDown from '~icons/fluent/chevron-down-24-regular'; // Icon for toggle
     import IconChevronUp from '~icons/fluent/chevron-up-24-regular'; // Icon for toggle
@@ -20,15 +20,25 @@
     let modalTitle: string = '';
     let modalDescription: string | undefined = undefined;
     let modalContent: string | undefined = undefined;
-    
+
     // Add Constitution Modal State
     let showAddModal = false;
 
-    // Filter out the 'none' constitution from the display options if it exists
-    // Use constitution.title now
-    $: displayConstitutions = $availableConstitutions.filter(c => c.id !== 'none');
+    // Combine global and local constitutions for display
+    // Define a type for the combined list items
+    type DisplayConstitution =
+        | { type: 'global'; id: string; title: string; description?: string }
+        | { type: 'local'; id: string; title: string; text: string; createdAt: string };
 
-    // Function to handle checkbox changes
+    // Correct reactive declaration syntax (no type annotation here)
+    $: allDisplayConstitutions = [
+        ...$availableConstitutions
+            .filter(c => c.id !== 'none') // Filter out 'none' globally
+            .map((c): DisplayConstitution => ({ type: 'global', id: c.id, title: c.title, description: c.description })), // Add type assertion in map if needed
+        ...$localConstitutionsStore.map((c): DisplayConstitution => ({ type: 'local', id: c.id, title: c.title, text: c.text, createdAt: c.createdAt }))
+    ].sort((a, b) => a.title.localeCompare(b.title)); // Sort alphabetically
+
+    // Function to handle checkbox changes (uses ID, works for both global and local)
     function handleCheckChange(id: string, isChecked: boolean) {
         if (isChecked) {
             // Add constitution with default level 3 if checked
@@ -48,24 +58,29 @@
         // console.log('Adherence Levels:', $constitutionAdherenceLevels); // For debugging
     }
 
-    // Removed unnecessary reactive block that was likely leftover from previous logic
-
-    // Function to show the info modal
-    async function showInfo(constitution: ConstitutionItem) {
-        modalTitle = constitution.title;
-        modalDescription = constitution.description;
-        modalContent = undefined; // Clear previous content
-        modalError = null; // Clear previous error
-        modalIsLoading = true;
+    // Function to show the info modal - accepts the combined type
+    async function showInfo(item: DisplayConstitution) {
+        modalTitle = item.title;
+        modalDescription = item.type === 'global' ? item.description : `Local constitution created ${new Date(item.createdAt).toLocaleDateString()}`; // Use description or creation date
+        modalContent = undefined;
+        modalError = null;
+        modalIsLoading = true; // Set loading true initially
         showModal = true;
 
-        try {
-            modalContent = await fetchConstitutionContent(constitution.id);
-        } catch (err: any) {
-            console.error("Failed to fetch constitution content:", err);
-            modalError = err.message || "Unknown error fetching content.";
-        } finally {
-            modalIsLoading = false;
+        if (item.type === 'local') {
+            // For local, use text directly
+            modalContent = item.text;
+            modalIsLoading = false; // No fetching needed
+        } else {
+            // For global, fetch content
+            try {
+                modalContent = await fetchConstitutionContent(item.id);
+            } catch (err: any) {
+                console.error("Failed to fetch constitution content:", err);
+                modalError = err.message || "Unknown error fetching content.";
+            } finally {
+                modalIsLoading = false;
+            }
         }
     }
 
@@ -89,52 +104,64 @@
     <!-- Collapsible content area -->
     {#if isExpanded}
         <div class="options-container">
-            {#if displayConstitutions.length > 0}
+            {#if allDisplayConstitutions.length > 0}
                 <div class="options-wrapper">
-                        <div class="option-item add-item" on:click={() => showAddModal = true}>
-                            <div class="option-label add-label">
-                                <span class="add-icon">+</span>
-                                <span class="title-text">Add Constitution</span>
-                            </div>
+                    <!-- Add Button First -->
+                    <div class="option-item add-item" on:click={() => showAddModal = true} role="button" tabindex="0">
+                        <div class="option-label add-label">
+                            <IconAdd class="add-icon"/>
+                            <span class="title-text">Add Local Constitution</span>
                         </div>
-                        {#each displayConstitutions as constitution (constitution.id)}
-                            <div class="option-item">
-                                <label class="option-label">
-                                    <input
-                                type="checkbox"
-                                checked={$constitutionAdherenceLevels[constitution.id] !== undefined}
-                                on:change={(e) => handleCheckChange(constitution.id, e.currentTarget.checked)}
-                            />
-                            <span class="title-text" title={constitution.description || constitution.title}>
-                                {constitution.title}
-                            </span>
-                            <button class="info-button" title="Show constitution info" on:click|stopPropagation={() => showInfo(constitution)}>
-                                <IconInfo />
-                            </button>
-                        </label>
-                        {#if $constitutionAdherenceLevels[constitution.id] !== undefined}
-                            <div class="slider-container">
+                    </div>
+                    <!-- List Combined Constitutions -->
+                    {#each allDisplayConstitutions as item (item.id)}
+                        <div class="option-item">
+                            <label class="option-label">
                                 <input
-                                    type="range"
+                                    type="checkbox"
+                                    checked={$constitutionAdherenceLevels[item.id] !== undefined}
+                                    on:change={(e) => handleCheckChange(item.id, e.currentTarget.checked)}
+                                />
+                                <span class="title-text" title={item.type === 'global' ? item.description : item.title}>
+                                    {#if item.type === 'local'}
+                                        <span class="local-indicator">[Local]</span>
+                                    {/if}
+                                    {item.title}
+                                </span>
+                                <button class="info-button" title="Show constitution info" on:click|stopPropagation={() => showInfo(item)}>
+                                    <IconInfo />
+                                </button>
+                            </label>
+                            {#if $constitutionAdherenceLevels[item.id] !== undefined}
+                                <div class="slider-container">
+                                    <input
+                                        type="range"
                                     min="1"
                                     max="5"
                                     step="1"
-                                    bind:value={$constitutionAdherenceLevels[constitution.id]}
+                                    bind:value={$constitutionAdherenceLevels[item.id]}
                                     class="adherence-slider"
-                                    aria-label="{constitution.title} Adherence Level"
+                                    aria-label="{item.title} Adherence Level"
                                 />
                                 <span class="level-display">
-                                    {$constitutionAdherenceLevels[constitution.id]}/5
+                                    {$constitutionAdherenceLevels[item.id]}/5
                                 </span>
-                                        <!-- Info button removed from here -->
-                                    </div>
-                                {/if}
-                            </div>
-                        {/each}
-                        <!-- Add Constitution Button at the end of the list -->
+                                </div>
+                            {/if}
+                        </div>
+                    {/each}
+                </div>
+            {:else}
+                 <!-- Show Add button even if lists are empty -->
+                 <div class="options-wrapper">
+                    <div class="option-item add-item" on:click={() => showAddModal = true} role="button" tabindex="0">
+                        <div class="option-label add-label">
+                             <IconAdd class="add-icon"/>
+                            <span class="title-text">Add Local Constitution</span>
+                        </div>
                     </div>
-                {:else}
-                    <p class="loading-text">Loading constitutions...</p>
+                    <p class="loading-text">No constitutions loaded.</p>
+                </div> <!-- Missing closing div -->
             {/if}
         </div>
     {/if}
@@ -345,5 +372,12 @@
         color: var(--text-secondary);
         padding: var(--space-md);
         text-align: center;
+    }
+
+    .local-indicator {
+        font-weight: 600;
+        color: var(--secondary); /* Or another distinct color */
+        margin-right: var(--space-xs);
+        font-size: 0.9em;
     }
 </style>

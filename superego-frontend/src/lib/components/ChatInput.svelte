@@ -12,7 +12,7 @@
   /** Controls whether the input and button are disabled. Passed from parent. */
   export let disabled: boolean = false;
 
-  const dispatch = createEventDispatcher<{ send: { text: string } }>();
+  const dispatch = createEventDispatcher();
 
   function handleSubmit() {
     const trimmedInput = userInput.trim();
@@ -157,26 +157,24 @@
       cursor: pointer;
       align-self: flex-end;
       margin-bottom: var(--space-sm);
-      background-color: var(--button-bg, #eee); /* Fallback added */
-      border: 1px solid var(--button-border, #ccc); /* Fallback added */
+      background-color: var(--button-bg, #eee); 
+      border: 1px solid var(--button-border, #ccc); 
       border-radius: var(--radius-pill);
-      color: var(--button-text, #333); /* Fallback added */
+      color: var(--button-text, #333); 
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
-      transition: background-color 0.2s ease, opacity 0.2s ease; /* Added transition */
+      transition: background-color 0.2s ease, opacity 0.2s ease; 
   }
    button:disabled {
        cursor: not-allowed;
-       opacity: var(--button-disabled-opacity, 0.6); /* Fallback added */
-       background-color: var(--button-disabled-bg, #f5f5f5); /* Fallback added */
-       color: var(--button-disabled-text, #999); /* Fallback added */
+       opacity: var(--button-disabled-opacity, 0.6); 
+       background-color: var(--button-disabled-bg, #f5f5f5); 
+       color: var(--button-disabled-text, #999); 
    }
 
-   .loading-icon-animate {
-       animation: spin 1s linear infinite;
-   }
-
-  /* Removed commented-out media query */
+  //  .loading-icon-animate {
+  //      animation: spin 1s linear infinite;
+  //  }
 </style>

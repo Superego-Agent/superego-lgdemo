@@ -5,15 +5,21 @@ import ChatInterface from './lib/components/ChatInterface.svelte';
 import ThemeToggle from './lib/components/ThemeToggle.svelte';
 import { theme } from './lib/stores/theme';
 import { fetchConstitutions } from './lib/api';
+import { loadLocalConstitutions } from './lib/localConstitutions'; // Import the new function
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
 onMount( async () => {
     try {
-        await fetchConstitutions();
-        console.log('Fetched initial constitutions.');
+        // Load both global and local constitutions
+        await Promise.all([
+            fetchConstitutions(),
+            loadLocalConstitutions() // Call the function here
+        ]);
+        console.log('Fetched initial global constitutions and loaded local ones.');
     } catch (error) {
-        console.error("App onMount Error: Failed to fetch initial constitutions:", error);
+        // Handle potential errors from either fetch or load
+        console.error("App onMount Error: Failed to initialize constitutions:", error);
     }
 });
 

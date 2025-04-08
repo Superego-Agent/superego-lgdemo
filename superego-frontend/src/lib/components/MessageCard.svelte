@@ -53,17 +53,29 @@
 	$: renderedContent = (() => {
 		const rawText = getRawContentText(message.content);
 		if (sender === 'tool_result') {
-			// Reinstate the logic to extract content='...' if possible
 			let displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
-			const match = rawText.match(/^content='([^']*)'/);
-			if (match && match[1]) {
-				displayContent = match[1]; // Use extracted content
-			} else if (rawText) {
-				// Only warn if there was actual text that didn't match
-				console.warn("Tool result content did not match expected pattern. Displaying raw:", rawText);
+			// Refined Regex: Non-greedily capture content between content=' and the next '
+			// Ensures it stops before other attributes like name=...
+			const contentMatch = rawText.match(/^content='(.*?)'(?:\s|$)/); // Capture group 1 is the content
+
+			if (contentMatch && contentMatch[1]) {
+				displayContent = contentMatch[1]; // Use the captured content
+				// No need to manually replace \n with <br>, marked({ breaks: true }) handles it.
+			} else if (rawText && !isError) {
+				// Only warn if there was actual text that didn't match the pattern and wasn't an error
+				console.warn("Tool result content did not match expected pattern `content='...'`. Displaying raw:", rawText);
+				// Keep rawText as displayContent for the fallback
 			}
-			// Display extracted or raw content safely within <pre>
-			return `<pre class="tool-result-content">${displayContent}</pre>`;
+			// Process the extracted/fallback content through Markdown parser
+			try {
+				const html = marked.parse(displayContent, { gfm: true, breaks: true });
+				return DOMPurify.sanitize(String(html));
+			} catch (e) {
+				console.error("Markdown parsing error for tool result:", e);
+				// Fallback to plain text rendering in a pre tag if markdown fails, preserving whitespace/newlines
+				// Escape HTML characters to prevent XSS in the fallback.
+				return `<pre class="error-content">${displayContent.replace(/</g, '<').replace(/>/g, '>')}</pre>`;
+			}
 		} else {
 			// Keep Markdown processing for other message types
 			try {
@@ -213,7 +225,7 @@
 	.message-content {
 		font-size: 1rem;
 		line-height: 1.6;
-		white-space: pre-wrap;
+		/* white-space: pre-wrap; */ /* Removed this - might interfere with wrapping of non-pre elements */
 	}
 
 	:global(.message-content p) {
@@ -320,10 +332,12 @@
 		background: none;
 	}
 
-	/* Style for the <pre> tag generated for tool results content */
+	/* Style for the <pre> tag generated for tool results content - REMOVED as <pre> is no longer used */
+	/*
 	.tool-result-content {
 		white-space: pre-wrap;
 		word-break: break-word;
+		overflow-wrap: break-word;
 		font-family: inherit;
 		font-size: inherit;
 		margin: 0;
@@ -331,6 +345,7 @@
 		background: none;
 		color: inherit;
 	}
+	*/
 
 	/* Style for the <pre> tag generated for error content */
 	.error-content {
@@ -344,6 +359,20 @@
 		color: var(--error);
 	}
 
+	/* Style for the <pre> tag generated for tool call arguments */
+	:global(.tool-args-content) {
+		display: block; /* Ensure it takes block layout */
+		background-color: var(--bg-elevated);
+		padding: var(--space-sm);
+		border-radius: var(--radius-sm);
+		overflow-x: scroll; /* Always show scrollbar for horizontal overflow */
+		white-space: pre; /* Prevent wrapping */
+		font-family: 'Fira Code', 'Roboto Mono', monospace;
+		font-size: 0.85em;
+		color: var(--text-primary);
+		margin-top: var(--space-xs); /* Add some space above */
+	}
+
 
 	.message-set-id {
 		font-size: 0.75rem;
@@ -351,4 +380,5 @@
 		text-align: right;
 		margin-top: var(--space-sm);
 	}
+
 </style>

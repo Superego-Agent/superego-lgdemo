@@ -94,6 +94,13 @@ app.add_middleware(
 # --- Pydantic Models ---
 # Ensure these match frontend expectations (src/global.d.ts)
 
+# Models for referencing constitutions in requests
+class ConstitutionRefById(BaseModel):
+    id: str = Field(..., description="ID of a globally available constitution.")
+
+class ConstitutionRefByText(BaseModel):
+    text: str = Field(..., description="Raw text content of a locally defined constitution.")
+
 class ConstitutionItem(BaseModel):
     id: str
     title: str # Changed from 'name' to 'title' to match constitution_utils
@@ -122,12 +129,14 @@ class StreamRunRequest(BaseModel):
     # Now uses the string checkpoint thread ID (UUID)
     thread_id: Optional[str] = None
     input: StreamRunInput
-    constitution_ids: List[str] = ["none"]
+    # Accepts a list containing either IDs or raw text for constitutions
+    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]] = Field(default_factory=lambda: [ConstitutionRefById(id="none")], description="List of constitutions to apply, referenced by ID or provided as raw text.")
     adherence_levels_text: Optional[str] = None # Added field for adherence levels
 
 class CompareRunSet(BaseModel):
     id: str
-    constitution_ids: List[str]
+    # Accepts a list containing either IDs or raw text for constitutions within a compare set
+    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]] = Field(..., description="List of constitutions (by ID or text) for this comparison set.")
 
 class CompareRunRequest(BaseModel):
     # Now uses the string checkpoint thread ID (UUID)
@@ -155,10 +164,8 @@ class SSEEndData(BaseModel):
     thread_id: str
 
 class SSEEventData(BaseModel):
-    # Added "thread_created" type
     type: Literal["thread_created", "chunk", "ai_tool_chunk", "tool_result", "error", "end"]
     node: Optional[str] = None
-    # Added SSEThreadCreatedData to Union
     data: Union[SSEThreadCreatedData, str, SSEToolCallChunkData, SSEToolResultData, SSEEndData]
     set_id: Optional[str] = None # For compare mode tracking
 
@@ -166,12 +173,12 @@ class SSEEventData(BaseModel):
 async def stream_events(
     thread_id: str, # The unique LangGraph thread ID (string UUID) for this specific run
     input_messages: List[BaseMessage],
-    constitution_ids: List[str],
+    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]],
     run_app: Any, # The compiled LangGraph app to run
     adherence_levels_text: Optional[str] = None, # Added adherence text parameter
     set_id: Optional[str] = None # Identifier for compare mode sets
 ) -> AsyncGenerator[ServerSentEvent, None]:
-    """Generates Server-Sent Events for a single LangGraph run."""
+    """Generates Server-Sent Events for a single LangGraph run, processing constitutions by ID or text."""
     if not run_app or not checkpointer:
         error_data = "Graph app or checkpointer not initialized."
         yield ServerSentEvent(data=SSEEventData(type="error", node="setup", data=error_data, set_id=set_id).model_dump_json())
@@ -182,19 +189,38 @@ async def stream_events(
     # run_id_for_db removed
 
     try:
-        # Removed metadata_manager.add_run call
+        # --- Load constitution content from mixed list (ID or Text) ---
+        constitution_texts: List[str] = []
+        requested_ids: List[str] = []
+        loaded_ids: List[str] = []
+        missing_ids: List[str] = []
 
-        # Load constitution content
-        constitution_content_for_run, loaded_ids = get_combined_constitution_content(constitution_ids)
-        requested_set = set(id for id in constitution_ids if id != "none")
-        missing_in_run = requested_set - set(loaded_ids)
-        if missing_in_run:
+        for ref in constitutions:
+            if isinstance(ref, ConstitutionRefById):
+                if ref.id != "none": # Don't try to load 'none'
+                    requested_ids.append(ref.id)
+                    content = get_constitution_content(ref.id)
+                    if content is not None:
+                        constitution_texts.append(content)
+                        loaded_ids.append(ref.id)
+                    else:
+                        missing_ids.append(ref.id)
+            elif isinstance(ref, ConstitutionRefByText):
+                constitution_texts.append(ref.text)
+            else:
+                # Should not happen with Pydantic validation, but good to log
+                logging.warning(f"Unexpected constitution reference type in stream_events: {type(ref)}")
+
+        constitution_content_for_run = "\n\n---\n\n".join(constitution_texts)
+
+        # Report missing IDs
+        if missing_ids:
             yield ServerSentEvent(data=SSEEventData(
-                type="error", node="setup", # Use 'error' type for warnings too? Or add 'warning' type?
-                data=f"Warning: Constitution(s) not found/loaded: {', '.join(missing_in_run)}. Running without.",
+                type="error", node="setup", # Using 'error' type for warnings as well
+                data=f"Warning: Constitution ID(s) not found/loaded: {', '.join(missing_ids)}. Running without them.",
                 set_id=set_id
             ).model_dump_json())
-
+        # --- End Constitution Loading ---
 
         # Prepare run config using the UNIQUE thread_id for this run
         config = {
@@ -550,7 +576,7 @@ async def delete_thread_endpoint(
 async def stream_run_with_creation_event(
     new_thread_id: str, # The newly generated thread_id
     input_messages: List[BaseMessage],
-    constitution_ids: List[str],
+    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]],
     run_app: Any,
     adherence_levels_text: Optional[str] = None
 ) -> AsyncGenerator[ServerSentEvent, None]:
@@ -565,7 +591,7 @@ async def stream_run_with_creation_event(
     async for event in stream_events(
         thread_id=new_thread_id, # Use the new_thread_id for the actual run
         input_messages=input_messages,
-        constitution_ids=constitution_ids,
+        constitutions=constitutions,
         run_app=run_app,
         adherence_levels_text=adherence_levels_text,
         set_id=None # Standard stream doesn't use set_id
@@ -592,7 +618,7 @@ async def run_stream_endpoint(request: StreamRunRequest):
             event_stream = stream_run_with_creation_event(
                 new_thread_id=new_thread_id,
                 input_messages=input_messages,
-                constitution_ids=request.constitution_ids,
+                constitutions=request.constitutions, # Pass the new constitutions list
                 run_app=graph_app,
                 adherence_levels_text=request.adherence_levels_text
             )
@@ -603,7 +629,7 @@ async def run_stream_endpoint(request: StreamRunRequest):
             event_stream = stream_events(
                 thread_id=existing_thread_id, # Pass the existing thread_id
                 input_messages=input_messages,
-                constitution_ids=request.constitution_ids,
+                constitutions=request.constitutions, # Pass the new constitutions list
                 run_app=graph_app,
                 adherence_levels_text=request.adherence_levels_text
             )
@@ -631,10 +657,11 @@ async def stream_compare_events(
     """Runs multiple streams concurrently for comparison and multiplexes their events."""
     event_queue = asyncio.Queue()
     consumer_tasks = []
-    runs_to_perform: List[Tuple[str, List[str], str, Any]] = [] # (thread_id, constitution_ids, set_id, run_app)
+    # Tuple now holds: (thread_id, List[Union[ConstitutionRefById, ConstitutionRefByText]], set_id, run_app)
+    runs_to_perform: List[Tuple[str, List[Union[ConstitutionRefById, ConstitutionRefByText]], str, Any]] = []
 
-    # Generate a unique group ID for this comparison operation
-    compare_group_id = str(uuid.uuid4())
+    # Generate a unique group ID for this comparison operation - currently unused, could be used for logging/grouping
+    # compare_group_id = str(uuid.uuid4())
 
     # Determine base thread ID for naming/grouping checkpoints
     # If starting a new comparison, generate a base UUID, otherwise use the provided one
@@ -648,7 +675,7 @@ async def stream_compare_events(
         # Create a unique thread ID for this specific run within the comparison
         run_thread_id = f"compare_{effective_base_thread_id}_{set_id}"
         runs_to_perform.append(
-            (run_thread_id, const_set.constitution_ids, set_id, graph_app)
+            (run_thread_id, const_set.constitutions, set_id, graph_app) # Use const_set.constitutions
         )
 
     # Prepare Inner Agent Only run (if applicable)
@@ -665,12 +692,12 @@ async def stream_compare_events(
     print(f"Compare: Starting {active_stream_count} parallel runs based on Base Thread ID: {effective_base_thread_id}")
 
     # Launch consumer tasks
-    for run_thread_id, constitution_ids, set_id, run_app in runs_to_perform:
+    for run_thread_id, constitutions_for_run, set_id, run_app in runs_to_perform:
         print(f"Compare: Launching Set='{set_id}', Thread ID='{run_thread_id}'")
         stream = stream_events(
             thread_id=run_thread_id, # Pass the unique thread ID for this run
             input_messages=[input_message],
-            constitution_ids=constitution_ids,
+            constitutions=constitutions_for_run, # Pass the list of constitution refs
             run_app=run_app,
             set_id=set_id # Pass set_id for frontend tracking
         )
@@ -746,7 +773,8 @@ if __name__ == "__main__":
     if not os.getenv("ANTHROPIC_API_KEY"):
         print("WARNING: ANTHROPIC_API_KEY environment variable not set. LangGraph models may fail.")
 
-    host = os.getenv("BACKEND_HOST", "0.0.0.0")
+    # Explicitly bind to 127.0.0.1 for testing localhost connection
+    host = os.getenv("BACKEND_HOST", "127.0.0.1")
     port = int(os.getenv("BACKEND_PORT", "8000"))
     reload = os.getenv("BACKEND_RELOAD", "true").lower() == "true"
 
