@@ -33,3 +33,19 @@ export function formatAdherenceLevelsForApi(
 
     return "# User-Specified Adherence Levels\n" + levelLines.join('\n');
 }
+
+/**
+ * Wraps an async function execution with standardized logging for success or failure.
+ * @param description - A description of the action being performed (for logging).
+ * @param fn - The async function to execute.
+ * @returns The result of the executed function if successful, otherwise re-throws the error.
+ */
+export async function logExecution<T>(description: string, fn: () => Promise<T>): Promise<T> {
+    try {
+        const result = await fn();
+        return result;
+    } catch (error: unknown) {
+        console.error(`Failed: ${description}. Error:`, error instanceof Error ? error.message : error);
+        throw error; // Re-throw the error so the caller can handle it if needed
+    }
+}

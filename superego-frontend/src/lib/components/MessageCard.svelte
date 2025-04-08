@@ -15,20 +15,31 @@
 	$: aiMessage = sender === 'ai' ? (message as AIMessage) : null;
 	$: toolResultMsg = sender === 'tool_result' ? (message as ToolResultMessage) : null;
 
+	const titleMap: Record<string, string | undefined> = {
+		human: 'You',
+		system: 'System'
+	};
+
+	const accentColorMap: Record<string, string> = {
+		superego: 'var(--node-superego)',
+		inner_agent: 'var(--node-inner-agent)',
+		tools: 'var(--node-tools)',
+		human: 'var(--human-border)',
+		system: 'var(--system-border)'
+	};
+
+	$: cardAccentColor = isError
+		? 'var(--error)'
+		: accentColorMap[node ?? ''] ?? accentColorMap[sender] ?? 'var(--node-default)';
+
+	$: title = sender === 'ai'
+		? node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? 'AI'
+		: sender === 'tool_result'
+		? `Tool: ${toolName ?? 'Result'}`
+		: titleMap[sender];
+
 	$: cardClasses = `message-card ${sender} ${node ? `node-${node.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
 
-	$: title = (() => {
-		if (sender === 'ai') {
-			return node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? 'AI';
-		}
-		if (sender === 'tool_result') {
-			// Specific title format for tool results
-			return `Tool: ${toolName ?? 'Result'}`;
-		}
-		if (sender === 'human') return 'You';
-		if (sender === 'system') return 'System'; // Add title for system messages
-		return null;
-	})();
 
 	function getRawContentText(content: MessageType['content']): string {
 		if (typeof content === 'string') {
@@ -40,89 +51,55 @@
 	}
 
 	$: renderedContent = (() => {
+		const rawText = getRawContentText(message.content);
 		if (sender === 'tool_result') {
-			// Attempt to extract only the core message from the tool result string
-			let rawContent = String(toolResultMsg?.content ?? (isError ? 'Error occurred' : '(No result)'));
-			let displayContent = rawContent; // Default to the full content
-
-			// Try to match the pattern "content='...'" at the start of the string
-			const match = rawContent.match(/^content='([^']*)'/);
+			// Reinstate the logic to extract content='...' if possible
+			let displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
+			const match = rawText.match(/^content='([^']*)'/);
 			if (match && match[1]) {
-				// If matched, use the content within the single quotes
-				displayContent = match[1];
-			} else {
-				// If the pattern doesn't match, log a warning and display the raw content as a fallback
-				console.warn("Tool result content did not match expected pattern. Displaying raw:", rawContent);
+				displayContent = match[1]; // Use extracted content
+			} else if (rawText) {
+				// Only warn if there was actual text that didn't match
+				console.warn("Tool result content did not match expected pattern. Displaying raw:", rawText);
 			}
-			// Escape the extracted (or raw) content for safety before rendering
-			return escapeHtml(displayContent);
+			// Display extracted or raw content safely within <pre>
+			return `<pre class="tool-result-content">${displayContent}</pre>`;
 		} else {
 			// Keep Markdown processing for other message types
-			const rawText = getRawContentText(message.content);
 			try {
 				const html = marked.parse(rawText, { gfm: true, breaks: true });
 				return DOMPurify.sanitize(String(html));
 			} catch (e) {
 				console.error("Markdown parsing error:", e);
-				return `<pre>${escapeHtml(rawText)}</pre>`;
+				return `<pre class="error-content">${rawText}</pre>`;
 			}
 		}
 	})();
 
-	// Basic HTML escaping for safety
-	function escapeHtml(unsafe: string): string {
-		if (!unsafe) return '';
-		const str = String(unsafe);
-		return str.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
-	}
 
 	function formatToolArgs(args: any): string {
-		if (args === null || args === undefined) {
+		if (args === null || args === undefined || args === '') {
 			return "";
 		}
 
-		if (typeof args === 'string') {
-			try {
-				if (args.trim() === "") return "";
-				const parsed = JSON.parse(args);
-				return JSON.stringify(parsed, null, 2); 
-			} catch (e) {
-				console.warn("Failed to parse tool args string as JSON, escaping instead:", args);
-				return escapeHtml(args);
-			}
-		} else if (typeof args === 'object') {
-			try {
-				return JSON.stringify(args, null, 2); 
-			} catch (e) {
-				console.error("Failed to stringify tool args object:", args, e);
-				return escapeHtml(String(args)); 
-			}
-		} else {
-			return escapeHtml(String(args));
+		let formattedArgs = '';
+		try {
+			const valueToFormat = (typeof args === 'string') ? JSON.parse(args) : args;
+			formattedArgs = JSON.stringify(valueToFormat, null, 2);
+		} catch (e) {
+			formattedArgs = String(args);
 		}
+		return `<pre class="tool-args-content">${formattedArgs}</pre>`;
 	}
-
-	const accentColorMap: Record<string, string> = {
-		superego: 'var(--node-superego)',
-		inner_agent: 'var(--node-inner-agent)',
-		tools: 'var(--node-tools)',
-		tool_result: 'var(--node-tools)', // Group tool results with tools
-		human: 'var(--human-border)',
-		system: 'var(--system-border)'
-	};
-
-	$: cardAccentColor = isError
-		? 'var(--error)' 
-		: accentColorMap[node ?? ''] ?? accentColorMap[sender] ?? 'var(--node-default)'; 
 
 	function getMessageAnimation(msgSender: string) {
 		const common = { duration: 300, easing: elasticOut };
-		return msgSender === 'human'
-			? { ...common, y: -20, x: 20 } 
-			: { ...common, y: 20, x: -20 }; 
+		const position = msgSender === 'human' ? { y: -20, x: 20 } : { y: 20, x: -20 };
+		return { ...common, ...position };
 	}
 
 	$: animProps = getMessageAnimation(sender);
+
 </script>
 
 <div class="message-card-wrapper" in:fly|local={animProps}>
@@ -134,26 +111,25 @@
 				{/if}
 				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
 					{title}
-					<!-- Removed the extra toolName display here as it's now in the title -->
 				</span>
 			</div>
 		{/if}
 
-	   <div class="message-content main-content">
+		<div class="message-content main-content">
 			{@html renderedContent}
 		</div>
 
-	   {#if sender === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
-		   <div class="tool-calls-separator"></div>
-		   <div class="tool-calls-section">
-			   {#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
-				   <div class="tool-call-item" in:fade|local={{delay: 100 + i * 50, duration: 200}}>
-					   <span class="tool-call-prefix">↳ Called {toolCall.name || 'Tool'}:</span>
-					   <pre class="tool-call-args">{formatToolArgs(toolCall.args)}</pre>
-				   </div>
-			   {/each}
-		   </div>
-	   {/if}
+		{#if sender === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
+			<div class="tool-calls-separator"></div>
+			<div class="tool-calls-section">
+				{#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
+					<div class="tool-call-item" in:fade|local={{delay: 100 + i * 50, duration: 200}}>
+						<span class="tool-call-prefix">↳ Called {toolCall.name || 'Tool'}:</span>
+						{@html formatToolArgs(toolCall.args)}
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 </div>
 
@@ -197,7 +173,6 @@
 		// Slightly different background for tool results
 		background-color: color-mix(in srgb, var(--ai-bg) 90%, var(--bg-primary) 10%);
 		margin-right: auto;
-		/* Removed border-left */
 	}
 
 	.message-card.system {
@@ -340,8 +315,35 @@
 		font-size: 0.85em;
 		color: var(--text-primary);
 		white-space: pre;
-		margin-top: var(--space-xs);
+		margin: var(--space-xs) 0 0 0;
+		padding: 0;
+		background: none;
 	}
+
+	/* Style for the <pre> tag generated for tool results content */
+	.tool-result-content {
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-family: inherit;
+		font-size: inherit;
+		margin: 0;
+		padding: 0;
+		background: none;
+		color: inherit;
+	}
+
+	/* Style for the <pre> tag generated for error content */
+	.error-content {
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-family: inherit;
+		font-size: inherit;
+		margin: 0;
+		padding: 0;
+		background: none;
+		color: var(--error);
+	}
+
 
 	.message-set-id {
 		font-size: 0.75rem;

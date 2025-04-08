@@ -1,32 +1,31 @@
 <script lang="ts">
-    // Import stores - removed messages, isLoading; added conversationStates
     import {
         globalError,
         activeConversationId,
         availableConstitutions,
         constitutionAdherenceLevels,
-        conversationStates // Import the main state store
+        conversationStates
     } from '../stores';
-    import { streamRun } from '../api'; // fetchHistory is no longer called directly from here
+    import { streamRun } from '../api';
     import { get } from 'svelte/store';
-    // Import conversation manager store for metadata lookup if needed
     import { managedConversations } from '../conversationManager';
     import { formatAdherenceLevelsForApi } from '../utils';
     import MessageCard from './MessageCard.svelte';
     import ChatInput from './ChatInput.svelte';
     import ConstitutionSelector from './ConstitutionSelector.svelte';
-    // Removed onMount, onDestroy, tick - no longer needed for history loading here
     import { afterUpdate } from 'svelte';
     import { slide, fade } from 'svelte/transition';
     import { nanoid } from 'nanoid';
+    import ErrorIcon from '~icons/fluent/warning-24-regular';
+    import ChatIcon from '~icons/fluent/chat-24-regular'; // Import chat icon
 
     let chatContainer: HTMLElement;
     let isAtBottom = true;
 
-    // --- Auto-scroll Logic (remains the same) ---
+    // Auto-scroll Logic
     function checkScroll() {
         if (chatContainer) {
-            const threshold = 50;
+            const threshold = 50; // Pixels from bottom to trigger staying scrolled
             isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < threshold;
         }
     }
@@ -38,27 +37,25 @@
         }
     });
 
-    // --- Reactive State Derivations ---
+    // Reactive State Derivations from Stores
     $: activeState = $activeConversationId ? $conversationStates[$activeConversationId] : null;
     $: displayedMessages = activeState?.messages ?? [];
-    $: currentStatus = activeState?.status ?? 'idle'; // Default to idle if no active state
+    $: currentStatus = activeState?.status ?? 'idle';
     $: currentError = activeState?.error;
-    $: isProcessing = currentStatus === 'loading_history' || currentStatus === 'streaming';
+    $: isProcessing = currentStatus === 'loading_history' || currentStatus === 'streaming'; // Input disabled during these states
 
-    // --- Message Sending Logic ---
+    // Message Sending Logic
     async function handleSend(event: CustomEvent<{ text: string }>) {
         const userInput = event.detail.text.trim();
-        // Disable sending if currently processing the active conversation OR if input is empty
         if (!userInput || isProcessing) {
-            console.log(`Send cancelled: Input empty (${!userInput}), or processing (${isProcessing})`);
-            return;
+            return; // Prevent sending empty messages or while processing
         }
 
-        const currentActiveClientId = get(activeConversationId); // Can be null if starting a new chat
+        const currentActiveClientId = get(activeConversationId);
 
-        // Optimistic update: Add user message to the correct conversation state
+        // Optimistic update: Add user message immediately to the UI
         const userMessage: HumanMessage = {
-            id: nanoid(8),
+            id: nanoid(8), // Generate a temporary client-side ID
             sender: 'human',
             content: userInput,
             timestamp: Date.now()
@@ -77,19 +74,10 @@
                  return s;
              });
         }
-        // Note: For a truly new chat (activeId is null), the optimistic update won't happen here.
-        // streamRun will create the state and add the message upon receiving thread_created.
-        // This could be improved by having streamRun return the new clientId immediately,
-        // allowing optimistic update even for the very first message. For now, we accept this minor delay.
-
-
-        // Format adherence levels 
+        // Format adherence levels for the API call
         const levels = $constitutionAdherenceLevels;
         const activeIds = Object.keys(levels);
         const adherenceLevelsText = formatAdherenceLevelsForApi(levels, $availableConstitutions);
-
-        console.log(`Sending message for Client ID: ${currentActiveClientId ?? 'NEW CHAT'} with constitutions: ${activeIds.join(', ') || 'none'}`);
-        console.log(`Adherence Levels Payload:\n${adherenceLevelsText || '(None)'}`);
 
         try {
             // Call streamRun, passing the current *client* ID (null if new chat)
@@ -99,14 +87,13 @@
             globalError.set(`Failed to send message: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-
 </script>
 
 <div class="chat-interface">
     {#if $globalError}
         <div class="error-banner" transition:slide={{ duration: 300 }}>
              <div class="error-content">
-                 <span class="error-icon">⚠️</span>
+                 <span class="error-icon"><ErrorIcon /></span>
                  <span>Error: {$globalError}</span>
              </div>
          </div>
@@ -125,20 +112,20 @@
                   </div>
             {:else if currentStatus === 'error'}
                  <div class="empty-chat error-message" transition:fade={{ duration: 500 }}>
-                      <div class="empty-chat-icon">⚠️</div>
+                      <div class="empty-chat-icon"><ErrorIcon /></div>
                       <p>Error loading conversation:</p>
                       <p><small>{currentError || 'Unknown error'}</small></p>
                   </div>
             {:else if !$activeConversationId}
                  <div class="empty-chat" transition:fade={{ duration: 500 }}>
-                      <div class="empty-chat-icon">💬</div>
-                      <p>Select a conversation or start a new one.</p>
-                      <p><small>(Select constitution(s) below before sending first message)</small></p>
+                      <div class="empty-chat-icon"><ChatIcon /></div>
+                      <p>Select or start a thread</p>
+                      <p><small>(Select constitution(s) for the 'Superego' agent first)</small></p>
                   </div>
              {:else}
                   <div class="empty-chat" transition:fade={{ duration: 500 }}>
-                       <div class="empty-chat-icon">💬</div>
-                       <p>Send a message to start the chat.</p>
+                       <div class="empty-chat-icon"><ChatIcon /></div>
+                       <p>Send a message to start the run.</p>
                    </div>
             {/if}
         {/each}
@@ -146,7 +133,7 @@
         {#if currentStatus === 'streaming'}
             <div class="loading-indicator">
                   <div class="spinner"></div>
-                  <span>Thinking...</span>
+                  <span>Running...</span>
               </div>
         {/if}
     </div>
@@ -209,7 +196,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: var(--space-sm); /* Reduced gap */
+        gap: var(--space-sm);
     }
      .empty-chat.error-message {
          color: var(--error);
@@ -242,8 +229,6 @@
         flex-shrink: 0;
          display: flex;
          flex-direction: column;
-         gap: var(--space-sm); 
-    }
-
-     @media (max-width: 768px) { /* ... existing mobile styles ... */ }
-</style>
+          gap: var(--space-sm);
+     }
+ </style>

@@ -1,8 +1,9 @@
 // src/lib/conversationManager.ts
 
-import { writable, get } from 'svelte/store'; // Import get
+import { writable, get } from 'svelte/store';
 import type { Writable } from 'svelte/store';
-import { v4 as uuidv4 } from 'uuid'; // Need to install uuid: npm install uuid @types/uuid
+import { v4 as uuidv4 } from 'uuid';
+import { generateSlug } from 'random-word-slugs'; // Import the library
 
 const LOCAL_STORAGE_KEY = 'superego_conversations';
 
@@ -74,12 +75,20 @@ managedConversations.subscribe(value => {
 
 // --- Management Functions ---
 
+/** Generates a more readable default chat name from a slug */
+function generateDefaultChatName(): string {
+    const slug = generateSlug(3); // Generate a 3-word slug (e.g., happy-blue-car)
+    const words = slug.split('-');
+    const capitalizedWords = words.map(word => word.charAt(0).toUpperCase() + word.slice(1));
+    return capitalizedWords.join(' ') + " Chat"; // e.g., "Happy Blue Car Chat"
+}
+
 /** Creates a new conversation entry and adds it to the store */
-export function createNewConversation(name: string = "New Chat"): ConversationMetadata {
+export function createNewConversation(): ConversationMetadata {
 	const newConversation: ConversationMetadata = {
 		id: uuidv4(),
-		name: name,
-		thread_id: null, // Will be set after first backend interaction
+		name: generateDefaultChatName(), // Use the generated name
+		thread_id: null,
 		created_at: new Date().toISOString(),
 		last_updated_at: new Date().toISOString(),
 		last_used_constitution_ids: [], // Initially empty
@@ -125,7 +134,7 @@ export function findConversationByThreadId(thread_id: string): ConversationMetad
  * Gets or creates conversation metadata for a given backend thread_id.
  * Useful when loading a thread directly (e.g., from a URL or initial load).
  */
-export function getOrCreateConversationForThread(thread_id: string, initialName: string = "Loaded Chat"): ConversationMetadata {
+export function getOrCreateConversationForThread(thread_id: string): ConversationMetadata {
     let conversation = findConversationByThreadId(thread_id);
 
     if (!conversation) {
@@ -133,8 +142,8 @@ export function getOrCreateConversationForThread(thread_id: string, initialName:
         // Create the new conversation object directly with the thread_id
         const newConversation: ConversationMetadata = {
             id: uuidv4(),
-            name: initialName,
-            thread_id: thread_id, // Assign thread_id immediately
+            name: generateDefaultChatName(), // Use generated name for loaded chats too
+            thread_id: thread_id,
             created_at: new Date().toISOString(),
             last_updated_at: new Date().toISOString(),
             last_used_constitution_ids: [],

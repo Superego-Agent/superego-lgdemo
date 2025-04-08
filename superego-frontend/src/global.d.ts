@@ -161,6 +161,14 @@ declare global {
     // --- Application State/Mode Types ---
     type AppMode = 'chat' | 'use' | 'compare'; // Still relevant if UI uses modes? Sidebar removed it.
 
+    /** Represents the state of a single conversation in the UI */
+    interface ConversationState {
+        metadata: ConversationMetadata; // From conversationManager
+        messages: MessageType[];
+        status: 'idle' | 'loading_history' | 'streaming' | 'error'; // Granular status
+        error?: string; // Error specific to this conversation
+        abortController?: AbortController; // Controller for ongoing fetch/stream
+    }
 }
 
 // Ensures this file is treated as a module. Required for declare global.

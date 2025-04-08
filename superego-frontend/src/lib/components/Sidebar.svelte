@@ -2,9 +2,8 @@
     import { tick } from 'svelte';
     import { get } from 'svelte/store';
     import { slide } from 'svelte/transition';
-    // Removed isLoading import
-    import { activeConversationId, conversationStates, updateConversationMetadataState } from '../stores'; // Added conversationStates, updateConversationMetadataState
-    import { managedConversations, deleteConversation } from '../conversationManager'; // Removed updateConversation (will use store helper)
+    import { activeConversationId, conversationStates, updateConversationMetadataState } from '../stores';
+    import { managedConversations, deleteConversation } from '../conversationManager';
     import type { ConversationMetadata } from '../conversationManager';
     import { deleteThread } from '../api';
 
@@ -14,34 +13,24 @@
 
     let editingConversationId: string | null = null;
     let editingName: string = '';
-    let originalEditingName: string = ''; // Store original name during edit
+    let originalEditingName: string = '';
     let renameInput: HTMLInputElement | null = null;
 
-    // Derive processing state for the active conversation to potentially disable actions
-    // Note: This might not be granular enough for disabling *specific* list items during their own operations.
     $: isActiveConversationProcessing = $activeConversationId ? ($conversationStates[$activeConversationId]?.status === 'loading_history' || $conversationStates[$activeConversationId]?.status === 'streaming') : false;
 
-
     function handleNewChat() {
-        // Prevent clicking New Chat if the *current* view is already processing (e.g., first message stream)
         if (isActiveConversationProcessing && $activeConversationId === null) return;
-        console.log("Sidebar: Setting new chat state (activeConversationId = null)");
-        activeConversationId.set(null); // Set to null to enter "limbo" state
+        activeConversationId.set(null);
     }
 
     function selectConversation(conversationId: string) {
-        // Prevent selection if the target conversation is the same or if the *currently active* one is processing?
-        // Maybe allow switching away even if current is processing. Let's remove the isLoading check for now.
         if (conversationId === $activeConversationId) return;
-        console.log(`Selecting conversation ID: ${conversationId}`);
-        editingConversationId = null; // Exit editing mode if selecting a different chat
+        editingConversationId = null;
         activeConversationId.set(conversationId);
     }
 
     function startRename(event: MouseEvent, conversation: ConversationMetadata) {
-        event.stopPropagation(); // Prevent selectConversation if edit button is clicked directly
-        // Disable rename if active conversation is processing? Or allow rename anytime? Let's allow anytime for now.
-        // if (isActiveConversationProcessing) return;
+        event.stopPropagation();
         editingConversationId = conversation.id;
         editingName = conversation.name;
         originalEditingName = conversation.name;
@@ -52,36 +41,28 @@
     }
 
     function handleRename() {
-        // Allow rename anytime?
         if (editingConversationId === null) return;
 
         const conversationIdToRename = editingConversationId;
         const newName = editingName.trim();
+        const originalName = originalEditingName;
 
-        const originalName = originalEditingName; // Capture original name before clearing state
-
-        // Exit editing mode regardless of outcome
         editingConversationId = null;
 
         if (!newName || newName === originalName) {
-            console.log(`Rename cancelled: name empty or unchanged ("${newName}")`);
             return;
         }
 
-        console.log(`Attempting to rename conversation ${conversationIdToRename} to "${newName}"`);
         try {
-            // Update managedConversations (persists to localStorage)
             managedConversations.update(list =>
                 list.map(conv =>
                     conv.id === conversationIdToRename ? { ...conv, name: newName, last_updated_at: new Date().toISOString() } : conv
                 ).sort((a, b) => new Date(b.last_updated_at).getTime() - new Date(a.last_updated_at).getTime())
             );
-            // Update the metadata within conversationStates store
             updateConversationMetadataState(conversationIdToRename, { name: newName });
-            console.log(`Conversation ${conversationIdToRename} renamed successfully.`);
         } catch (error) {
             console.error(`Failed to rename conversation ${conversationIdToRename}:`, error);
-            // TODO: Add user feedback for rename failure? Maybe set globalError?
+            // TODO: Add user feedback for rename failure (e.g., globalError store)
         }
     }
 
@@ -90,14 +71,12 @@
             event.preventDefault();
             handleRename();
         } else if (event.key === 'Escape') {
-            editingConversationId = null; // Cancel edit on Escape
+            editingConversationId = null;
         }
     }
 
     async function handleDelete(event: MouseEvent, conversationId: string) {
-        event.stopPropagation(); // Prevent selectConversation
-        // Disable delete if active conversation is processing? Let's allow for now.
-        // if (isActiveConversationProcessing) return;
+        event.stopPropagation();
 
         const conversationToDelete = get(managedConversations).find(c => c.id === conversationId);
         if (!conversationToDelete) return;
@@ -106,49 +85,38 @@
             return;
         }
 
-        console.log(`Attempting to delete conversation ${conversationId} (Client & Backend)`);
         const wasActive = ($activeConversationId === conversationId);
 
         try {
-            // 1. Call backend API to delete the thread data (if it exists)
             if (conversationToDelete.thread_id) {
                 await deleteThread(conversationToDelete.thread_id);
-                console.log(`Backend deletion requested for thread ${conversationToDelete.thread_id}`);
-            } else {
-                console.log(`Conversation ${conversationId} has no backend thread_id, skipping backend deletion.`);
             }
 
-            // 2. Delete from local storage via conversationManager
-            deleteConversation(conversationId); // This updates managedConversations store
+            deleteConversation(conversationId);
 
-            // 3. Delete from conversationStates store
             conversationStates.update(s => {
                 delete s[conversationId];
                 return s;
             });
-            console.log(`Conversation ${conversationId} deleted successfully from local state.`);
 
-            // 4. If the deleted conversation was the active one, reset to new chat state
             if (wasActive) {
-                console.log("Deleted active conversation, resetting to new chat state.");
                 activeConversationId.set(null);
             }
         } catch (error: unknown) {
             console.error(`Failed to delete conversation ${conversationId}:`, error);
-            // TODO: Add user feedback for delete failure (e.g., using globalError store)
-            // globalError.set(`Failed to delete conversation: ${error.message}`);
+            // TODO: Add user feedback for delete failure (e.g., globalError store)
         }
     }
 </script>
 
 <div class="sidebar">
-    <button class="new-chat-button" on:click={handleNewChat} disabled={isActiveConversationProcessing && $activeConversationId === null} title="New Chat">
+    <button class="new-chat-button" on:click={handleNewChat} disabled={isActiveConversationProcessing && $activeConversationId === null} title="New Thread">
         {#if isActiveConversationProcessing && $activeConversationId === null}
             <div class="button-spinner"></div>
             <span>Creating...</span>
         {:else}
             <IconAdd class="btn-icon" />
-            <span>New Chat</span>
+            <span>New Thread</span>
         {/if}
     </button>
 
@@ -173,7 +141,7 @@
                              on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectConversation(conversation.id); }}>
                             <span class="thread-name">{conversation.name}</span>
                             <div class="thread-actions">
-                                <button class="icon-button edit-button" title="Rename Conversation" on:click={(e) => startRename(e, conversation)} disabled={false}>
+                                <button class="icon-button" title="Rename Conversation" on:click={(e) => startRename(e, conversation)} disabled={false}>
                                     <IconEdit />
                                 </button>
                                 <button class="icon-button delete-button" title="Delete Conversation" on:click={(e) => handleDelete(e, conversation.id)} disabled={false}>
@@ -277,10 +245,9 @@
                 background-color: var(--bg-elevated);
             }
 
-            &:hover {
-                .icon-button, .edit-button { // Show buttons on list item hover
-                    opacity: 1;
-                }
+            // Show action buttons on hover of the list item
+            &:hover .thread-actions .icon-button {
+                opacity: 1;
             }
 
             &.active {
@@ -291,15 +258,12 @@
                     .thread-name {
                         font-weight: bold;
                     }
-                    .edit-button { // Keep edit button visible and contrasting on active
+                    // Ensure buttons are visible and contrast on active item
+                    .icon-button {
                         color: white;
                         opacity: 1;
                     }
                 }
-                 .icon-button { // Keep icon buttons visible and contrasting on active
-                     opacity: 1;
-                     color: white;
-                 }
             }
         }
     }
@@ -345,10 +309,10 @@
         flex-grow: 1;
         padding: 12px 16px;
         font-size: 0.9em;
-        border: 1px solid var(--primary); // Keep border only for input
+        border: 1px solid var(--primary);
         background-color: transparent;
         color: var(--text-primary);
-        border-radius: 0;
+        border-radius: 0; // Keep sharp edges for input within list item
         outline: none;
 
         &:focus {
@@ -356,8 +320,7 @@
         }
     }
 
-    // Combined styles for icon-button and edit-button where possible
-    .icon-button, .edit-button {
+    .icon-button {
         background: none;
         border: none;
         cursor: pointer;
@@ -365,41 +328,29 @@
         color: var(--text-secondary);
         line-height: 1;
         border-radius: var(--radius-sm);
-        opacity: 0; // Hidden by default
+        opacity: 0;
         transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1;
         flex-shrink: 0;
+        font-size: 1.1em; 
 
         &:hover:not(:disabled) {
             background-color: var(--primary-light);
             color: white;
         }
         &:disabled {
-            opacity: 0.3 !important;
+            opacity: 0.3; 
             cursor: not-allowed;
         }
     }
 
-    // Specific styles for edit-button
-    .edit-button {
-        margin-left: 8px;
-        font-size: 0.8em; // Specific font size
-    }
-
-    // Specific styles for icon-button
-    .icon-button {
-        font-size: 1.1em; // Specific font size
-    }
-
-    // Specific hover for delete button
+    /* Specific hover for delete button */
     .delete-button:hover:not(:disabled) {
         background-color: var(--error);
         color: white;
     }
-
 
     .empty-list {
         padding: 16px;
@@ -413,12 +364,10 @@
     }
 
     .button-spinner {
-        @include loading-spinner($size: 18px, $color: #fff, $track-color: rgba(255, 255, 255, 0.2)); 
+        @include loading-spinner($size: 18px, $color: #fff, $track-color: rgba(255, 255, 255, 0.2));
     }
 
-    // Keep media query at the end or nest appropriately if needed
     @media (max-width: 768px) {
-        /* TODO: Review mobile styles if necessary */
+        /* Mobile styles can be added here if needed */
     }
-
 </style>

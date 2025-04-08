@@ -20,25 +20,9 @@ import {
     updateConversationState,
     updateConversationMetadataState
 } from './stores';
-import type { ConversationState } from './stores';
+import { logExecution } from './utils';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'; 
-
-interface SSEThreadCreatedData {
-    thread_id: string;
-}
-interface SSEEndData {
-    thread_id: string;
-}
-interface SSEEventData {
-    type: "thread_created" | "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end";
-    node: string | null;
-    data: SSEThreadCreatedData | string | SSEToolCallChunkData | SSEToolResultData | SSEEndData;
-    set_id: string | null; // Used for compare mode
-}
-interface StreamRunInput { type: "human"; content: string; }
-interface StreamRunRequest { thread_id?: string | null; input: StreamRunInput; constitution_ids: string[]; adherence_levels_text?: string; }
-interface CompareRunRequest { thread_id?: string | null; input: StreamRunInput; constitution_sets: Array<{ id: string; constitution_ids: string[] }>; }
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 
 // --- Core API Fetch Helper ---
@@ -84,18 +68,18 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
 
 // --- API Functions ---
 
-export const fetchConstitutions = async (): Promise<ConstitutionItem[]> => {
-    console.log('API: Fetching constitutions');
-    // No signal needed usually for this simple fetch
-    const constitutions = await apiFetch<ConstitutionItem[]>(`${BASE_URL}/constitutions`);
-    availableConstitutions.set(constitutions);
-    return constitutions;
+export const fetchConstitutions = (): Promise<ConstitutionItem[]> => {
+    return logExecution("Fetch constitutions", async () => {
+        const constitutions = await apiFetch<ConstitutionItem[]>(`${BASE_URL}/constitutions`);
+        availableConstitutions.set(constitutions);
+        return constitutions;
+    });
 };
 
-// Modified fetchHistory to update conversationStates
+// fetchHistory is called from the store subscription, which uses logExecution.
+// We keep internal logging for state updates but remove the outer log.
 export const fetchHistory = async (threadId: string, signal: AbortSignal, clientId: string): Promise<void> => {
-    console.log(`API: Fetching history for Client ID ${clientId} (Thread ID ${threadId})`);
-    // Status is already set to 'loading_history' by the caller (store subscription)
+    // Status is set to 'loading_history' by the caller (store subscription)
     try {
         const historyData = await apiFetch<HistoryResponse>(`${BASE_URL}/threads/${threadId}/history`, {}, signal);
         // Update state on success
@@ -121,38 +105,37 @@ export const fetchHistory = async (threadId: string, signal: AbortSignal, client
             });
             // Re-throwing might not be necessary if the store subscription handles the error state
         } else {
-            console.log(`API: History fetch aborted for Client ID ${clientId}`);
-            // State should be updated by the finally block below
+            // AbortError is handled by the caller (store subscription)
         }
-        // Do not re-throw AbortError, let the finally block handle cleanup
+        // Re-throw non-abort errors so the caller's logExecution catches them
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
-           throw error; // Re-throw other errors if needed by caller, though store handles UI state
+           throw error;
         }
     } finally {
-        // Always clear the controller and ensure status isn't stuck on loading, even if aborted
+        // Always clear the controller and ensure status isn't stuck on loading,
+        // even if aborted or errored.
         conversationStates.update(s => {
             if (s[clientId]) {
+                // If status is still loading_history, reset based on whether an error was set.
                 if (s[clientId].status === 'loading_history') {
-                    // If aborted during loading, reset to idle (or error if set above)
                     s[clientId].status = s[clientId].error ? 'error' : 'idle';
                 }
-                 s[clientId].abortController = undefined; // Clear controller
+                s[clientId].abortController = undefined; // Clear controller
             }
             return s;
         });
     }
 };
 
-// submitConstitution remains largely the same, doesn't interact with conversation state
-export const submitConstitution = async (submission: ConstitutionSubmission): Promise<SubmissionResponse> => {
-    console.log('API: Submitting constitution');
-    return await apiFetch<SubmissionResponse>(`${BASE_URL}/constitutions/submit`, {
-        method: 'POST',
-        body: JSON.stringify(submission),
-    });
+export const submitConstitution = (submission: ConstitutionSubmission): Promise<SubmissionResponse> => {
+    return logExecution("Submit constitution", () =>
+        apiFetch<SubmissionResponse>(`${BASE_URL}/constitutions/submit`, {
+            method: 'POST',
+            body: JSON.stringify(submission),
+        })
+    );
 };
 
-// cancelStream is removed - cancellation is handled via abortController in conversationStates
 
 // --- SSE Message Processing ---
 
@@ -220,7 +203,6 @@ function _handleToolChunk(clientId: string, data: SSEToolCallChunkData, nodeId: 
 
         // If no matching AI message found for this node/set, create one.
         if (targetAiMsgIndexTool === -1) {
-            console.log(`_handleToolChunk: No existing AI message for node ${nodeId}, set ${setId}. Creating one.`);
             const newMsg: AIMessage = {
                 id: nanoid(8),
                 sender: 'ai',
@@ -328,14 +310,13 @@ function _handleError(clientId: string | null, data: string, nodeId: string | nu
 function _handleThreadCreated(clientId: string, data: SSEThreadCreatedData, nodeId: string | null, setId: string | null): void {
     const { thread_id: newThreadId } = data;
     if (!clientId) {
-        console.error("SSE 'thread_created': Cannot process without the client ID of the initiating stream.");
+        console.error("SSE 'thread_created': Cannot process without the client ID."); // Keep error log
         globalError.set("Internal error processing new conversation start.");
         return;
     }
     if (typeof newThreadId === 'string' && newThreadId) {
-        console.log(`SSE thread_created: Associating backend thread ${newThreadId} with Client ID ${clientId}`);
         try {
-            // 1. Update the metadata in managedConversations (persists to localStorage)
+            // 1. Update metadata in managedConversations
             managedConversations.update(list =>
                 list.map(conv =>
                     conv.id === clientId ? { ...conv, thread_id: newThreadId, last_updated_at: new Date().toISOString() } : conv
@@ -355,11 +336,10 @@ function _handleThreadCreated(clientId: string, data: SSEThreadCreatedData, node
                  return s;
             });
 
-            // 3. DO NOT change activeConversationId here. It was already set correctly by streamRun.
-            console.log(`SSE thread_created: Updated state for Client ID ${clientId} with Thread ID ${newThreadId}.`);
+            // 3. Active ID is already set by streamRun.
 
         } catch (error: unknown) {
-             console.error(`SSE thread_created: Failed to update state for Client ID ${clientId} with thread ${newThreadId}:`, error);
+             console.error(`SSE thread_created: Failed to update state for Client ID ${clientId} with thread ${newThreadId}:`, error); // Keep error log
              globalError.set(`Failed to update chat state: ${error instanceof Error ? error.message : String(error)}`);
         }
     } else {
@@ -378,9 +358,6 @@ function _handleThreadCreated(clientId: string, data: SSEThreadCreatedData, node
 }
 
 function _handleEnd(clientId: string | null, data: SSEEndData, nodeId: string | null, setId: string | null): void {
-    const { thread_id: endedThreadId } = data;
-    console.log(`SSE Stream ended (Client: ${clientId}, Node: ${nodeId}, Set: ${setId}, Backend Thread: ${endedThreadId})`);
-
     if (clientId) {
         conversationStates.update(s => {
             if (s[clientId]) {
@@ -471,30 +448,26 @@ function handleSSEMessage(event: EventSourceMessage, clientId: string | null) { 
 }
 
 // --- Stream Request Orchestration ---
-// Modified to manage AbortController in conversationStates
+// Manages AbortController via conversationStates and wraps execution for logging.
 async function performStreamRequest(
     endpoint: string,
     requestBody: StreamRunRequest | CompareRunRequest,
-    clientId: string // Expect clientId to be passed in
+    clientId: string
 ): Promise<void> {
-    console.log(`API: Connecting to ${BASE_URL}${endpoint} for Client ID: ${clientId}`);
-    globalError.set(null); // Clear global error at start of new stream
+    globalError.set(null); // Clear global error at start
 
     const controller = new AbortController();
 
-    // Store the controller in the conversation state
+    // Store the controller in the conversation state, aborting previous if necessary
     conversationStates.update(s => {
         if (s[clientId]) {
-            // Abort any existing controller for this client first
             s[clientId].abortController?.abort();
             s[clientId].abortController = controller;
-            s[clientId].status = 'streaming'; // Set status to streaming
-            s[clientId].error = undefined; // Clear previous error
+            s[clientId].status = 'streaming';
+            s[clientId].error = undefined;
         } else {
-            // This case should ideally be handled before calling performStreamRequest
-            // e.g., ensureConversationStateExists called first
-            console.error(`API: State for Client ID ${clientId} not found before starting stream!`);
-            // Initialize a minimal state? Or throw error?
+            // This case should be handled before calling performStreamRequest, but initialize defensively.
+            console.error(`API: State for Client ID ${clientId} not found before starting stream! Initializing.`); // Keep error log
              s[clientId] = {
                  metadata: { id: clientId, name: "Loading...", thread_id: requestBody.thread_id ?? null, created_at: new Date().toISOString(), last_updated_at: new Date().toISOString(), last_used_constitution_ids: [] },
                  messages: [],
@@ -505,98 +478,75 @@ async function performStreamRequest(
         return s;
     });
 
-
-    try {
-        await fetchEventSource(`${BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-            body: JSON.stringify(requestBody),
-            signal: controller.signal,
-            openWhenHidden: true, // Keep connection active in background tabs
-            onopen: async (response) => {
-                if (!response.ok) {
-                    let errorMsg = `SSE connection failed! Status: ${response.status}`;
-                    try { const errorBody = await response.json(); errorMsg += ` - ${errorBody.detail || JSON.stringify(errorBody)}`; } catch (e) { /* Ignore */ }
-                    // Update state on connection error
-                    conversationStates.update(s => {
-                        if (s[clientId]) {
-                            s[clientId].status = 'error';
-                            s[clientId].error = errorMsg;
-                            s[clientId].abortController = undefined;
+    // Wrap the fetchEventSource setup in logExecution
+    return logExecution(`Stream request to ${endpoint} for ${clientId}`, async () => {
+        // This try/catch block handles errors during the fetchEventSource setup
+        // or errors explicitly thrown from within the callbacks (like onopen).
+        try {
+            await fetchEventSource(`${BASE_URL}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal,
+                openWhenHidden: true,
+                onopen: async (response) => {
+                    if (!response.ok) {
+                        let errorMsg = `SSE connection failed! Status: ${response.status}`;
+                        try { const errorBody = await response.json(); errorMsg += ` - ${errorBody.detail || JSON.stringify(errorBody)}`; } catch (e) { /* Ignore */ }
+                        conversationStates.update(s => { // Update state on connection error
+                            if (s[clientId]) { s[clientId].status = 'error'; s[clientId].error = errorMsg; s[clientId].abortController = undefined; } return s;
+                        });
+                        throw new Error(errorMsg); // Throw to be caught by outer try/catch -> logExecution
+                    }
+                },
+                onmessage: (event) => {
+                    handleSSEMessage(event, clientId);
+                },
+                onclose: () => {
+                    // Clear controller as a fallback if 'end'/'error' didn't fire before close.
+                     conversationStates.update(s => {
+                        if (s[clientId]?.abortController === controller) {
+                             if (s[clientId].status === 'streaming') {
+                                 console.warn(`SSE stream closed unexpectedly for ${clientId}. Setting status to idle.`); // Keep this warning
+                                 s[clientId].status = 'idle';
+                             }
+                             s[clientId].abortController = undefined;
                         }
                         return s;
                     });
-                    throw new Error(errorMsg); // Throw to be caught below
-                }
-                console.log(`SSE stream opened (${endpoint}) for Client ID: ${clientId}`);
-            },
-            onmessage: (event) => {
-                // Pass clientId to the handler
-                handleSSEMessage(event, clientId);
-            },
-            onclose: () => {
-                console.log(`SSE stream closed (${endpoint}) for Client ID: ${clientId}.`);
-                // State should be updated to 'idle' or 'error' by 'end' or 'error' events.
-                // Clear controller just in case 'end'/'error' didn't fire.
+                },
+                onerror: (err) => {
+                     if (controller.signal.aborted) { return; } // Don't treat abort as error
+                    console.error(`SSE stream error (${endpoint}) for Client ID ${clientId}:`, err); // Keep specific SSE error log
+                    const errorMsg = err instanceof Error ? err.message : String(err);
+                    globalError.set(`Stream connection error: ${errorMsg}`);
+                    conversationStates.update(s => { // Update specific conversation state
+                        if (s[clientId]) { s[clientId].status = 'error'; s[clientId].error = `Stream error: ${errorMsg}`; s[clientId].abortController = undefined; } return s;
+                    });
+                    // Don't throw from onerror, allow graceful closure. Error state is set.
+                },
+            });
+        } catch (error) {
+            // This catches errors from fetchEventSource setup or the explicit throw in onopen.
+            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                 // Ensure state reflects the error if not already set by onerror/onopen
                  conversationStates.update(s => {
-                    if (s[clientId]?.abortController === controller) { // Check if it's still the same controller
-                         if (s[clientId].status === 'streaming') { // If still streaming, means abnormal close
-                             console.warn(`SSE stream closed unexpectedly for ${clientId}. Setting status to idle.`);
-                             s[clientId].status = 'idle';
-                         }
-                         s[clientId].abortController = undefined;
-                    }
-                    return s;
-                });
-            },
-            onerror: (err) => {
-                // fetch-event-source handles aborts gracefully, check if it's a real error
-                 if (controller.signal.aborted) {
-                     console.log(`Stream intentionally aborted for Client ID: ${clientId}.`);
-                     // State cleanup should happen where abort was called or in finally block
-                     return; // Don't treat abort as an error
-                 }
-
-                console.error(`SSE stream error (${endpoint}) for Client ID ${clientId}:`, err);
-                const errorMsg = err instanceof Error ? err.message : String(err);
-                globalError.set(`Stream connection error: ${errorMsg}`); // Set global for connection issues
-                // Update specific conversation state
-                conversationStates.update(s => {
-                    if (s[clientId]) {
-                        s[clientId].status = 'error';
-                        s[clientId].error = `Stream error: ${errorMsg}`;
-                        s[clientId].abortController = undefined;
-                    }
-                    return s;
-                });
-                // Don't re-throw, allow graceful closure if possible
-            },
-        });
-    } catch (error: unknown) {
-         // Catch errors from fetchEventSource setup or onopen failure
-         if (!(error instanceof DOMException && error.name === 'AbortError')) {
-            console.error(`Stream setup (${endpoint}) failed for Client ID ${clientId}:`, error);
-            const errorMsg = error instanceof Error ? error.message : String(error);
-             if (!get(globalError)) { // Avoid overwriting more specific errors
-                 globalError.set(`Stream setup failed: ${errorMsg}`);
-             }
-             // Ensure state reflects the error
-             conversationStates.update(s => {
-                 if (s[clientId]) {
-                     if (s[clientId].status !== 'error') { // Don't overwrite specific SSE errors
+                     if (s[clientId] && s[clientId].status !== 'error') {
                          s[clientId].status = 'error';
-                         s[clientId].error = `Stream setup failed: ${errorMsg}`;
+                         s[clientId].error = `Stream setup failed: ${error instanceof Error ? error.message : String(error)}`;
+                         s[clientId].abortController = undefined;
                      }
-                     s[clientId].abortController = undefined;
-                 }
-                 return s;
-             });
-        } else {
-             console.log(`Stream setup aborted for Client ID: ${clientId}.`);
-             // State cleanup should happen where abort was called
+                     return s;
+                 });
+            }
+            // Re-throw non-abort errors so logExecution knows it failed.
+            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                 throw error;
+            }
         }
-    }
+    });
 }
+
 
 // --- Public API Functions ---
 
@@ -616,9 +566,8 @@ export const streamRun = async (
         const state = get(conversationStates)[clientId];
         if (state) {
             threadId = state.metadata.thread_id;
-            console.log(`API: streamRun called for existing Client ID ${clientId} (Thread ID: ${threadId})`);
         } else {
-            console.error(`API: streamRun called with non-existent clientId ${clientId}. This shouldn't happen.`);
+            console.error(`API: streamRun called with non-existent clientId ${clientId}.`); // Keep error log
             globalError.set(`Cannot send message: Invalid conversation state.`);
             return; // Prevent API call
         }
@@ -627,12 +576,11 @@ export const streamRun = async (
         // Create local metadata first.
         const newConversation = createNewConversation(); // Creates metadata in localStorage via managedConversations
         clientId = newConversation.id;
-        ensureConversationStateExists(newConversation); // Create the state entry in conversationStates
+        ensureConversationStateExists(newConversation); // Ensure state entry is created
         activeConversationId.set(clientId); // Make it active
         threadId = null; // No backend thread yet
-        console.log(`API: streamRun called for new chat. Created Client ID ${clientId}. No Thread ID yet.`);
 
-        // Add optimistic update *only* for this new chat case
+        // Add user message optimistically *only* when creating a new chat locally
         const userMessage: HumanMessage = { id: nanoid(8), sender: 'human', content: userInput, timestamp: Date.now() };
         conversationStates.update(s => {
             if (s[clientId!]) { // clientId is guaranteed to be set here
@@ -653,34 +601,34 @@ export const streamRun = async (
     };
 
     // Pass the confirmed clientId to performStreamRequest
-    // Add assertion as clientId is guaranteed to be a string here by the logic flow
-    await performStreamRequest('/runs/stream', requestBody, clientId!);
+    // Pass the confirmed clientId (guaranteed to be string here)
+    await performStreamRequest('/runs/stream', requestBody, clientId);
 };
 
-// fetchConstitutionContent remains the same
-export const fetchConstitutionContent = async (constitutionId: string): Promise<string> => {
-    console.log(`API: Fetching content for constitution ${constitutionId}`);
+export const fetchConstitutionContent = (constitutionId: string): Promise<string> => {
     const url = `${BASE_URL}/constitutions/${constitutionId}/content`;
-    try {
-        const response = await fetch(url, { headers: { 'Accept': 'text/plain', }, });
-        if (!response.ok) {
-            let errorMsg = `HTTP error! Status: ${response.status}`;
-            try { const errorText = await response.text(); errorMsg += ` - ${errorText}`; } catch (e) { /* Ignore */ }
-            throw new Error(errorMsg);
+    // Wrap the raw fetch call for logging, handle non-JSON response
+    return logExecution(`Fetch constitution content for ${constitutionId}`, async () => {
+        try {
+            const response = await fetch(url, { headers: { 'Accept': 'text/plain' } });
+            if (!response.ok) {
+                let errorMsg = `HTTP error! Status: ${response.status}`;
+                try { const errorText = await response.text(); errorMsg += ` - ${errorText}`; } catch (e) { /* Ignore */ }
+                throw new Error(errorMsg);
+            }
+            return await response.text();
+        } catch (error: unknown) {
+            // Set global error specifically for content fetch failure
+            globalError.set(error instanceof Error ? error.message : `Failed to load content for ${constitutionId}.`);
+            throw error; // Re-throw for logExecution
         }
-        return await response.text();
-    } catch (error: unknown) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`API Fetch Error (Content): ${url}`, error);
-        globalError.set(errorMsg || `Failed to load content for ${constitutionId}.`);
-        throw error;
-    }
+    });
 };
 
-// streamCompareRun needs similar refactoring if/when implemented fully
+// TODO: Refactor streamCompareRun similarly if implemented
 export const streamCompareRun = async (
     userInput: string,
-    threadId: string | null, // Base thread ID or null
+    threadId: string | null,
     compareSetsConfig: CompareSet[]
 ): Promise<void> => {
     // TODO: Refactor streamCompareRun
@@ -689,24 +637,19 @@ export const streamCompareRun = async (
     // - Pass relevant info (parent clientId, leg set_ids) to performStreamRequest
     // - performStreamRequest needs modification to handle compare endpoint specifics
     // - SSE handlers need modification to route based on set_id to the correct leg state
-    console.warn("streamCompareRun not fully refactored for new state model yet.");
-
-    const requestBody: CompareRunRequest = {
-        thread_id: threadId ?? undefined,
-        input: { type: 'human', content: userInput },
-        constitution_sets: compareSetsConfig.map(set => ({ id: set.id, constitution_ids: set.constitution_ids }))
-    };
-    console.log(`API: streamCompareRun called for ${threadId ? `Base Thread ID ${threadId}` : 'new comparison base'}.`);
-    // await performStreamRequest('/runs/compare/stream', requestBody, /* Need clientId */);
+    console.warn("streamCompareRun not fully implemented or refactored yet.");
+    // Placeholder for implementation
+    // Needs logic to manage compare session state, likely involving multiple clientIds or a parent session ID.
+    // const requestBody: CompareRunRequest = { ... };
+    // await performStreamRequest('/runs/compare/stream', requestBody, /* ??? */);
 };
 
-// deleteThread remains the same - operates on backend thread_id
-export const deleteThread = async (threadId: string): Promise<void> => {
-    console.log(`API: Deleting thread ${threadId}`);
-    // Use apiFetch helper, expecting 204 No Content on success
-    // No signal needed for simple delete
-    await apiFetch<void>(`${BASE_URL}/threads/${threadId}`, {
-        method: 'DELETE',
-    });
-    console.log(`API: Successfully requested deletion for thread ${threadId}`);
+export const deleteThread = (threadId: string): Promise<void> => {
+    // Wrap the apiFetch call for logging
+    return logExecution(`Delete thread ${threadId}`, () =>
+        apiFetch<void>(`${BASE_URL}/threads/${threadId}`, {
+            method: 'DELETE',
+        })
+        // Note: No need for .then() log here, logExecution handles failure logging.
+    );
 };

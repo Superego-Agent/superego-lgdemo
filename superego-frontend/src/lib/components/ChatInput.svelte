@@ -1,13 +1,9 @@
 <script lang="ts">
-  // Removed isLoading import
   import { scale } from "svelte/transition";
   import { createEventDispatcher } from "svelte";
 
-  // Import icons - Reverting to Send icon
   import IconSend from '~icons/fluent/send-24-regular';
-  // import IconEdit from '~icons/fluent/edit-24-regular'; // Using Edit icon for test
   import IconLoading from '~icons/fluent/arrow-sync-circle-24-regular';
-
 
   let userInput: string = "";
   let inputElement: HTMLTextAreaElement;
@@ -16,18 +12,14 @@
   /** Controls whether the input and button are disabled. Passed from parent. */
   export let disabled: boolean = false;
 
-  // Initialize dispatcher without explicit generic type for testing
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher<{ send: { text: string } }>();
 
   function handleSubmit() {
     const trimmedInput = userInput.trim();
-    // Use the passed 'disabled' prop instead of $isLoading
     if (!trimmedInput || disabled) {
-      console.log(`Submit prevented: input empty (${!trimmedInput}) or disabled (${disabled}).`);
       return;
     }
 
-    console.log("Dispatching send event with:", trimmedInput);
     dispatch("send", { text: trimmedInput });
 
     userInput = "";
@@ -84,7 +76,6 @@
     ></textarea>
   </div>
 
-  <!-- Use passed 'disabled' prop for button state -->
   <button
     type="submit"
     disabled={!userInput.trim() || disabled}
@@ -105,9 +96,7 @@
 
   .chat-input-form {
     display: flex;
-    padding: var(
-      --space-md
-    ); /* border-top: 1px solid var(--input-border); */ /* background-color: var(--bg-surface); */
+    padding: var(--space-md);
     gap: var(--space-md);
     transition: padding 0.2s ease;
     align-items: flex-end;
@@ -131,8 +120,8 @@
     width: 100%;
     padding: var(--space-md) var(--space-lg);
     padding-right: calc(var(--space-lg) + 10px);
-    border: none; /* REMOVED border */
-    background-color: transparent; /* Make textarea bg transparent */
+    border: none;
+    background-color: transparent;
     color: var(--text-primary);
     border-radius: var(--radius-lg);
     resize: none;
@@ -153,49 +142,41 @@
       0 0 0 2px rgba(157, 70, 255, 0.2);
   }
   textarea:focus {
-    outline: none; /* Remove default textarea focus outline */
+    outline: none;
   }
   textarea:disabled {
     background-color: var(--bg-surface);
     cursor: not-allowed;
     opacity: 0.7;
   }
-  /* Minimal button styling + ONLY CIRCULAR shape */
+
   button {
-      padding: 0; /* Remove padding for fixed size */
-      height: 44px; /* Set fixed height */
-      width: 44px; /* Set fixed width */
+      padding: 0;
+      height: 44px;
+      width: 44px;
       cursor: pointer;
-      align-self: flex-end; /* Keep alignment */
-      margin-bottom: var(--space-sm); /* Adjust margin as needed */
-      /* Basic appearance */
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: var(--radius-pill); /* Make it circular */
-      color: #333; /* Default text/icon color for basic button */
-      /* Ensure icon fits */
+      align-self: flex-end;
+      margin-bottom: var(--space-sm);
+      background-color: var(--button-bg, #eee); /* Fallback added */
+      border: 1px solid var(--button-border, #ccc); /* Fallback added */
+      border-radius: var(--radius-pill);
+      color: var(--button-text, #333); /* Fallback added */
       display: flex;
       align-items: center;
       justify-content: center;
-      line-height: 1; /* Prevent extra space */
+      line-height: 1;
+      transition: background-color 0.2s ease, opacity 0.2s ease; /* Added transition */
   }
    button:disabled {
        cursor: not-allowed;
-       opacity: 0.6;
-       background-color: #f5f5f5; /* Basic disabled background */
-       color: #999; /* Basic disabled text/icon color */
+       opacity: var(--button-disabled-opacity, 0.6); /* Fallback added */
+       background-color: var(--button-disabled-bg, #f5f5f5); /* Fallback added */
+       color: var(--button-disabled-text, #999); /* Fallback added */
    }
-   /* Remove hover/loading styles */
 
    .loading-icon-animate {
-       // Spinner styles are applied directly via the mixin if needed,
-       // but here it's just the animation class.
-       // The keyframes are included via the mixin file.
        animation: spin 1s linear infinite;
    }
-   // Keyframes are now included via mixin file.
 
-  @media (max-width: 768px) {
-    /* Existing mobile styles */
-  }
+  /* Removed commented-out media query */
 </style>
