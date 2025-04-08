@@ -13,7 +13,7 @@ from datetime import datetime # Added for timestamp handling in models
 
 # Third-party imports
 import aiosqlite # Keep for potential direct interaction if needed, though manager preferred
-from fastapi import FastAPI, HTTPException, Body, Path as FastApiPath, Request
+from fastapi import FastAPI, HTTPException, Body, Path as FastApiPath, Request, Response, status # Added Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel, Field
@@ -48,18 +48,11 @@ async def lifespan(app: FastAPI):
     global graph_app, checkpointer, inner_agent_app
     print("Backend server starting up...")
     try:
-        # Removed metadata_manager.init_db()
-
-        # Load models and create workflow (which initializes checkpointer)
         superego_model, inner_model = create_models()
         graph_app, checkpointer, inner_agent_app = await create_workflow(
             superego_model=superego_model,
             inner_model=inner_model
         )
-        # Langgraph's SqliteSaver manages its own connection lifecycle internally
-        # typically, but good practice to ensure it's handled if exposed.
-        # However, create_workflow now returns the checkpointer instance directly.
-
         if not checkpointer:
              print("Warning: Checkpointer was not initialized during startup.")
         if not graph_app:
@@ -74,13 +67,10 @@ async def lifespan(app: FastAPI):
         traceback.print_exc()
         raise RuntimeError("Failed to initialize backend components") from e
 
-    yield # Application runs here
+    yield 
 
     # --- Shutdown ---
     print("Backend server shutting down...")
-    # No explicit connection closing needed here if using `async with`
-    # within metadata_manager functions and LangGraph manages its checkpointer conn.
-    # If checkpointer connection was manually created/passed, close it here.
     if checkpointer and isinstance(checkpointer, AsyncSqliteSaver) and checkpointer.conn:
          try:
               print("Attempting to close checkpointer DB connection...")
@@ -109,8 +99,6 @@ class ConstitutionItem(BaseModel):
     title: str # Changed from 'name' to 'title' to match constitution_utils
     description: Optional[str] = None
 
-# ThreadItem and RenameThreadRequest removed - managed by frontend localStorage
-
 class HistoryMessage(BaseModel):
     id: str # Unique ID for the message within its history context
     sender: Literal['human', 'ai', 'tool_result', 'system']
@@ -124,8 +112,7 @@ class HistoryMessage(BaseModel):
 
 class HistoryResponse(BaseModel):
     messages: List[HistoryMessage]
-    thread_id: str # The checkpoint thread ID (string UUID)
-    # thread_name is removed - managed by frontend
+    thread_id: str
 
 class StreamRunInput(BaseModel):
     type: Literal["human"]
@@ -139,7 +126,7 @@ class StreamRunRequest(BaseModel):
     adherence_levels_text: Optional[str] = None # Added field for adherence levels
 
 class CompareRunSet(BaseModel):
-    id: str # User-defined ID for the set (e.g., 'strict_vs_default')
+    id: str
     constitution_ids: List[str]
 
 class CompareRunRequest(BaseModel):
@@ -148,8 +135,11 @@ class CompareRunRequest(BaseModel):
     input: StreamRunInput
     constitution_sets: List[CompareRunSet]
 
-
 # SSE Event Data Models (matching global.d.ts SSEEventData)
+
+class SSEThreadCreatedData(BaseModel):
+    thread_id: str 
+
 class SSEToolCallChunkData(BaseModel):
     id: Optional[str] = None
     name: Optional[str] = None
@@ -162,18 +152,19 @@ class SSEToolResultData(BaseModel):
     tool_call_id: Optional[str] = None
 
 class SSEEndData(BaseModel):
-    # Represents the checkpoint thread ID (string UUID) this run used/created
     thread_id: str
 
 class SSEEventData(BaseModel):
-    type: Literal["chunk", "ai_tool_chunk", "tool_result", "error", "end"]
+    # Added "thread_created" type
+    type: Literal["thread_created", "chunk", "ai_tool_chunk", "tool_result", "error", "end"]
     node: Optional[str] = None
-    data: Union[str, SSEToolCallChunkData, SSEToolResultData, SSEEndData]
+    # Added SSEThreadCreatedData to Union
+    data: Union[SSEThreadCreatedData, str, SSEToolCallChunkData, SSEToolResultData, SSEEndData]
     set_id: Optional[str] = None # For compare mode tracking
 
 # --- Helper Function for Standard Streaming ---
 async def stream_events(
-    checkpoint_thread_id: str, # The unique checkpoint ID (string UUID) for this specific run
+    thread_id: str, # The unique LangGraph thread ID (string UUID) for this specific run
     input_messages: List[BaseMessage],
     constitution_ids: List[str],
     run_app: Any, # The compiled LangGraph app to run
@@ -205,10 +196,10 @@ async def stream_events(
             ).model_dump_json())
 
 
-        # Prepare run config using the UNIQUE checkpoint_thread_id for this run
+        # Prepare run config using the UNIQUE thread_id for this run
         config = {
             "configurable": {
-                "thread_id": checkpoint_thread_id,
+                "thread_id": thread_id, # Use the passed thread_id here
                 "constitution_content": constitution_content_for_run,
                 "adherence_levels_text": adherence_levels_text or "" # Pass adherence text to graph config
             }
@@ -262,10 +253,24 @@ async def stream_events(
                  tool_chunks = getattr(chunk, 'tool_call_chunks', [])
                  if tool_chunks:
                      for tc_chunk in tool_chunks:
+                         # Ensure args is always sent as a string or None
+                         args_value = tc_chunk.get("args")
+                         args_str: Optional[str] = None
+                         if args_value is not None:
+                             if isinstance(args_value, str):
+                                 args_str = args_value
+                             else:
+                                 try:
+                                     # Attempt to JSON dump non-string args fragments
+                                     args_str = json.dumps(args_value)
+                                 except Exception:
+                                     # Fallback to simple string conversion if JSON fails
+                                     args_str = str(args_value)
+
                          chunk_data = SSEToolCallChunkData(
                              id=tc_chunk.get("id"),
                              name=tc_chunk.get("name"),
-                             args=tc_chunk.get("args")
+                             args=args_str # Use the explicitly stringified version
                          )
                          sse_payload_tool = SSEEventData(type="ai_tool_chunk", node=current_node_name, data=chunk_data, set_id=set_id)
                          yield ServerSentEvent(data=sse_payload_tool.model_dump_json())
@@ -298,19 +303,19 @@ async def stream_events(
                  yield ServerSentEvent(data=sse_payload.model_dump_json())
 
         # --- Stream End ---
-        # Pass the checkpoint_thread_id (string UUID) back to the frontend
-        yield ServerSentEvent(data=SSEEventData(type="end", node=current_node_name or "graph", data=SSEEndData(thread_id=checkpoint_thread_id), set_id=set_id).model_dump_json())
+        # Pass the thread_id (string UUID) back to the frontend
+        yield ServerSentEvent(data=SSEEventData(type="end", node=current_node_name or "graph", data=SSEEndData(thread_id=thread_id), set_id=set_id).model_dump_json())
 
         # Removed post-stream checkpoint update logic related to metadata DB
 
     except Exception as e:
-        print(f"Stream Error (Checkpoint Thread: {checkpoint_thread_id}, Set: {set_id}): {e}")
+        print(f"Stream Error (Thread ID: {thread_id}, Set: {set_id}): {e}")
         traceback.print_exc()
         try:
             error_data = f"Streaming error: {str(e)}"
-            # Ensure checkpoint_thread_id is sent even in error/end events
+            # Ensure thread_id is sent even in error/end events
             yield ServerSentEvent(data=SSEEventData(type="error", node=current_node_name or "graph", data=error_data, set_id=set_id).model_dump_json())
-            yield ServerSentEvent(data=SSEEventData(type="end", node="error", data=SSEEndData(thread_id=checkpoint_thread_id), set_id=set_id).model_dump_json()) # Send end on error too
+            yield ServerSentEvent(data=SSEEventData(type="end", node="error", data=SSEEndData(thread_id=thread_id), set_id=set_id).model_dump_json()) # Send end on error too
         except Exception as inner_e:
             print(f"Failed to send stream error event: {inner_e}")
 
@@ -488,52 +493,136 @@ async def get_thread_history_endpoint(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to load history.")
 
+
+@app.delete("/api/threads/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_thread_endpoint(
+    thread_id: str = FastApiPath(..., title="The LangGraph thread ID (UUID string) to delete")
+):
+    """Deletes all checkpoint data associated with a specific thread ID."""
+    if not checkpointer:
+        print("Error: Checkpointer not available for deleting thread.")
+        raise HTTPException(status_code=500, detail="Checkpointer service unavailable.")
+
+    if not isinstance(checkpointer, AsyncSqliteSaver):
+        print(f"Error: Checkpointer is not an AsyncSqliteSaver ({type(checkpointer)}), cannot delete thread directly.")
+        raise HTTPException(status_code=501, detail="Deletion not supported for this checkpointer type.")
+
+    print(f"Attempting to delete thread ID: {thread_id}")
+    try:
+        # Assuming the table name is 'checkpoints' as is common with SqliteSaver
+        # If using a different saver or custom tables, adjust the table name.
+        async with checkpointer.conn.cursor() as cursor:
+            # Delete from the main checkpoints table
+            await cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+            deleted_count = cursor.rowcount
+            print(f"Deleted {deleted_count} rows from checkpoints table for thread {thread_id}")
+
+            # Note: If other tables are linked via thread_id (e.g., 'writes'),
+            # they might need explicit deletion too, depending on DB schema/constraints.
+            # await cursor.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+
+        await checkpointer.conn.commit()
+        print(f"Successfully deleted data for thread ID: {thread_id}")
+
+        if deleted_count == 0:
+            # Optionally, return 404 if the thread didn't exist, although 204 is also acceptable idempotently.
+            # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Thread ID '{thread_id}' not found.")
+            print(f"Warning: No checkpoint data found for thread ID '{thread_id}' during deletion.")
+
+
+        # Return No Content on success (even if nothing was deleted)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    except aiosqlite.Error as e:
+        print(f"Database error deleting thread {thread_id}: {e}")
+        traceback.print_exc()
+        # Consider rollback if the DB supports it and commit fails partially
+        # await checkpointer.conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error deleting thread: {e}")
+    except Exception as e:
+        print(f"Unexpected error deleting thread {thread_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Unexpected error deleting thread: {e}")
+
+
+# --- Wrapper for Streaming with Initial Thread Creation Event ---
+async def stream_run_with_creation_event(
+    new_thread_id: str, # The newly generated thread_id
+    input_messages: List[BaseMessage],
+    constitution_ids: List[str],
+    run_app: Any,
+    adherence_levels_text: Optional[str] = None
+) -> AsyncGenerator[ServerSentEvent, None]:
+    """Yields a thread_created event first, then streams the rest."""
+    # 1. Yield the initial thread creation event
+    created_data = SSEThreadCreatedData(thread_id=new_thread_id)
+    sse_payload = SSEEventData(type="thread_created", node="setup", data=created_data)
+    yield ServerSentEvent(data=sse_payload.model_dump_json())
+    print(f"Sent thread_created event for Thread ID: {new_thread_id}")
+
+    # 2. Yield the rest of the events from the standard stream_events helper
+    async for event in stream_events(
+        thread_id=new_thread_id, # Use the new_thread_id for the actual run
+        input_messages=input_messages,
+        constitution_ids=constitution_ids,
+        run_app=run_app,
+        adherence_levels_text=adherence_levels_text,
+        set_id=None # Standard stream doesn't use set_id
+    ):
+        yield event
+
+
 # --- Run Endpoints ---
 
 @app.post("/api/runs/stream")
 async def run_stream_endpoint(request: StreamRunRequest):
     """Handles streaming runs for a single thread (normal chat)."""
-    checkpoint_thread_id = request.thread_id # This is the string UUID or None
-
     try:
-        # 1. Determine the checkpoint thread ID to use
-        if checkpoint_thread_id is None:
-            # Generate a new UUID for this run's checkpoint thread
-            checkpoint_thread_id = str(uuid.uuid4())
-            print(f"Received request for new thread. Generated Checkpoint Thread ID: {checkpoint_thread_id}")
-        else:
-            # Use the provided checkpoint thread ID
-            print(f"Received request to continue Checkpoint Thread ID: {checkpoint_thread_id}")
-            # Optional: Could verify if a checkpoint exists for this ID, but LangGraph handles it.
-
-        # 2. Prepare input messages
+        # 1. Prepare input messages (common step)
         if not request.input or not request.input.content:
              raise HTTPException(status_code=400, detail="Input content is required to start a stream.")
         input_messages = [HumanMessage(content=request.input.content)]
 
-        # 3. Return the SSE response stream
-        # Pass the determined checkpoint_thread_id and adherence text to the helper
-        return EventSourceResponse(stream_events(
-            checkpoint_thread_id=checkpoint_thread_id,
-            input_messages=input_messages,
-            constitution_ids=request.constitution_ids,
-            run_app=graph_app, # Use the main graph app
-            adherence_levels_text=request.adherence_levels_text # Pass from request
-        ))
+        # 2. Handle new vs. existing thread
+        if request.thread_id is None:
+            # New thread: Generate ID and use the wrapper stream
+            new_thread_id = str(uuid.uuid4())
+            print(f"Received request for new thread. Generated Thread ID: {new_thread_id}")
+            event_stream = stream_run_with_creation_event(
+                new_thread_id=new_thread_id,
+                input_messages=input_messages,
+                constitution_ids=request.constitution_ids,
+                run_app=graph_app,
+                adherence_levels_text=request.adherence_levels_text
+            )
+        else:
+            # Existing thread: Use the standard stream_events helper directly
+            existing_thread_id = request.thread_id
+            print(f"Received request to continue Thread ID: {existing_thread_id}")
+            event_stream = stream_events(
+                thread_id=existing_thread_id, # Pass the existing thread_id
+                input_messages=input_messages,
+                constitution_ids=request.constitution_ids,
+                run_app=graph_app,
+                adherence_levels_text=request.adherence_levels_text
+            )
+
+        # 3. Return the appropriate SSE response stream
+        return EventSourceResponse(event_stream)
 
     except HTTPException:
         raise # Re-raise validation or explicit HTTP errors
     except Exception as e:
-         print(f"Error setting up stream run for thread {request.thread_id}: {e}")
-         traceback.print_exc()
-         # Return an error response instead of EventSourceResponse if setup fails
-         raise HTTPException(status_code=500, detail="Failed to initiate stream.")
+        print(f"Error setting up stream run for thread {request.thread_id}: {e}")
+        traceback.print_exc()
+        # Return an error response instead of EventSourceResponse if setup fails
+        raise HTTPException(status_code=500, detail="Failed to initiate stream.")
 
 
 # --- Compare Streaming Helper and Endpoint ---
 
 async def stream_compare_events(
-    base_checkpoint_thread_id: Optional[str], # The base thread ID (UUID string) or None if new
+    base_thread_id: Optional[str], # The base thread ID (UUID string) or None if new
     input_message: BaseMessage,
     constitution_sets: List[CompareRunSet], # Use the Pydantic model directly
     include_inner_agent_only: bool = True # Flag to control inner agent run
@@ -541,44 +630,44 @@ async def stream_compare_events(
     """Runs multiple streams concurrently for comparison and multiplexes their events."""
     event_queue = asyncio.Queue()
     consumer_tasks = []
-    runs_to_perform: List[Tuple[str, List[str], str, Any]] = [] # (checkpoint_thread_id, constitution_ids, set_id, run_app)
+    runs_to_perform: List[Tuple[str, List[str], str, Any]] = [] # (thread_id, constitution_ids, set_id, run_app)
 
     # Generate a unique group ID for this comparison operation
     compare_group_id = str(uuid.uuid4())
 
     # Determine base thread ID for naming/grouping checkpoints
     # If starting a new comparison, generate a base UUID, otherwise use the provided one
-    effective_base_thread_id = base_checkpoint_thread_id or str(uuid.uuid4())
-    is_new_comparison_thread = base_checkpoint_thread_id is None
-    print(f"Compare: Base Checkpoint Thread ID: {effective_base_thread_id} (New: {is_new_comparison_thread})")
+    effective_base_thread_id = base_thread_id or str(uuid.uuid4())
+    is_new_comparison_thread = base_thread_id is None
+    print(f"Compare: Base Thread ID: {effective_base_thread_id} (New: {is_new_comparison_thread})")
 
     # Prepare Superego-involved runs
     for const_set in constitution_sets:
         set_id = const_set.id
-        # Create a unique checkpoint ID for this specific run within the comparison
-        checkpoint_thread_id = f"compare_{effective_base_thread_id}_{set_id}"
+        # Create a unique thread ID for this specific run within the comparison
+        run_thread_id = f"compare_{effective_base_thread_id}_{set_id}"
         runs_to_perform.append(
-            (checkpoint_thread_id, const_set.constitution_ids, set_id, graph_app)
+            (run_thread_id, const_set.constitution_ids, set_id, graph_app)
         )
 
     # Prepare Inner Agent Only run (if applicable)
     if include_inner_agent_only and inner_agent_app:
         inner_set_id = "inner_agent_only"
-        inner_checkpoint_thread_id = f"compare_{effective_base_thread_id}_{inner_set_id}"
+        inner_run_thread_id = f"compare_{effective_base_thread_id}_{inner_set_id}"
         runs_to_perform.append(
-            (inner_checkpoint_thread_id, [], inner_set_id, inner_agent_app)
+            (inner_run_thread_id, [], inner_set_id, inner_agent_app)
         )
     elif include_inner_agent_only:
          print("Warning: Inner agent app not available, skipping inner_agent_only comparison run.")
 
     active_stream_count = len(runs_to_perform)
-    print(f"Compare: Starting {active_stream_count} parallel runs based on Thread ID: {effective_base_thread_id}")
+    print(f"Compare: Starting {active_stream_count} parallel runs based on Base Thread ID: {effective_base_thread_id}")
 
     # Launch consumer tasks
-    for checkpoint_thread_id, constitution_ids, set_id, run_app in runs_to_perform:
-        print(f"Compare: Launching Set='{set_id}', Checkpoint Thread='{checkpoint_thread_id}'")
+    for run_thread_id, constitution_ids, set_id, run_app in runs_to_perform:
+        print(f"Compare: Launching Set='{set_id}', Thread ID='{run_thread_id}'")
         stream = stream_events(
-            checkpoint_thread_id=checkpoint_thread_id, # Pass the unique checkpoint ID for this run
+            thread_id=run_thread_id, # Pass the unique thread ID for this run
             input_messages=[input_message],
             constitution_ids=constitution_ids,
             run_app=run_app,
@@ -621,7 +710,7 @@ async def stream_compare_events(
 @app.post("/api/runs/compare/stream")
 async def run_compare_stream_endpoint(request: CompareRunRequest):
     """Handles streaming runs for comparing multiple constitution sets."""
-    base_checkpoint_thread_id = request.thread_id # String UUID or None
+    base_thread_id = request.thread_id # Use base_thread_id
 
     try:
         # 1. Validate input
@@ -636,7 +725,7 @@ async def run_compare_stream_endpoint(request: CompareRunRequest):
 
         # 3. Return the SSE response stream
         return EventSourceResponse(stream_compare_events(
-            base_checkpoint_thread_id=base_checkpoint_thread_id,
+            base_thread_id=base_thread_id, # Pass base_thread_id
             input_message=input_message,
             constitution_sets=request.constitution_sets,
             include_inner_agent_only=True # Assuming we always want inner agent if available

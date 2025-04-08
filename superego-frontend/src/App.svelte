@@ -1,34 +1,22 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    // Removed get, managedConversations, activeConversationId imports
-    import Sidebar from './lib/components/Sidebar.svelte';
-    import ChatInterface from './lib/components/ChatInterface.svelte';
-    import ThemeToggle from './lib/components/ThemeToggle.svelte';
-    import { theme } from './lib/stores/theme';
-    import { fetchConstitutions } from './lib/api';
-    import './lib/styles/theme.css';
-    import './lib/styles/dark-theme.css';
+import { onMount } from 'svelte';
+import Sidebar from './lib/components/Sidebar.svelte';
+import ChatInterface from './lib/components/ChatInterface.svelte';
+import ThemeToggle from './lib/components/ThemeToggle.svelte';
+import { theme } from './lib/stores/theme';
+import { fetchConstitutions } from './lib/api';
+import './lib/styles/theme.css';
+import './lib/styles/dark-theme.css';
 
-    // Handle theme updates reactively
-    $: if (typeof document !== 'undefined') {
-        document.documentElement.setAttribute('data-theme', $theme);
+onMount( async () => {
+    try {
+        await fetchConstitutions();
+        console.log('Fetched initial constitutions.');
+    } catch (error) {
+        console.error("App onMount Error: Failed to fetch initial constitutions:", error);
     }
+});
 
-    // Apply theme and fetch initial data on mount
-    onMount(async () => {
-        document.documentElement.setAttribute('data-theme', $theme);
-        try {
-            // Fetch essential data
-            await fetchConstitutions();
-            console.log('App mounted: Fetched initial constitutions.');
-
-            // Removed logic to auto-select most recent conversation
-
-        } catch (error) {
-            console.error("App onMount Error: Failed to fetch initial constitutions:", error);
-            // Error display is handled by the globalError store via apiFetch
-        }
-    });
 </script>
 
 <main class="app-layout">

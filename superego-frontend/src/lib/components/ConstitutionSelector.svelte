@@ -39,20 +39,16 @@
             // Remove constitution if unchecked
             delete $constitutionAdherenceLevels[id];
             // Trigger store update
-            constitutionAdherenceLevels.set($constitutionAdherenceLevels);
+            // Trigger store update using the update method
+            constitutionAdherenceLevels.update(currentLevels => {
+                delete currentLevels[id];
+                return currentLevels; // Return the modified object
+            });
         }
         // console.log('Adherence Levels:', $constitutionAdherenceLevels); // For debugging
     }
 
-    // Reactive statement to ensure 'none' is represented if no constitutions are selected
-    // This replaces the old activeConstitutionIds logic
-    $: {
-        const activeIds = Object.keys($constitutionAdherenceLevels);
-        // If you still need activeConstitutionIds store for other parts, update it here.
-        // Otherwise, this block might only be needed if 'none' representation is critical elsewhere.
-        // For now, we assume the primary state is constitutionAdherenceLevels.
-        // Example: activeConstitutionIds.set(activeIds.length > 0 ? activeIds : ['none']);
-    }
+    // Removed unnecessary reactive block that was likely leftover from previous logic
 
     // Function to show the info modal
     async function showInfo(constitution: ConstitutionItem) {
@@ -159,20 +155,20 @@
     <AddConstitutionModal on:close={() => showAddModal = false} />
 {/if}
 
-<style>
+<style lang="scss">
+    @use '../styles/mixins' as *;
+
     /* Remove fieldset and legend styles */
 
     .selector-card {
-        background-color: var(--bg-surface); /* Card background */
-        border: 1px solid var(--input-border);
-        border-radius: var(--radius-lg); /* Rounded corners */
-        overflow: hidden; /* Clip content during transition */
-        margin-bottom: var(--space-sm); /* Space below card */
-        box-shadow: var(--shadow-sm);
-        transition: box-shadow 0.2s ease;
-    }
-    .selector-card:hover {
-         box-shadow: var(--shadow-md);
+        @include base-card(); // Use mixin
+        overflow: hidden; // Keep specific overflow
+        margin-bottom: var(--space-sm); // Keep specific margin
+        transition: box-shadow 0.2s ease; // Keep specific transition
+
+        &:hover { // Keep hover effect separate if not in mixin
+             box-shadow: var(--shadow-md);
+        }
     }
 
     .selector-header {
@@ -207,8 +203,7 @@
         padding: var(--space-sm) var(--space-md);
         max-height: 350px; /* Further increased height */
         overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--primary-light) var(--bg-surface);
+        @include custom-scrollbar($track-bg: var(--bg-surface), $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
     }
     
     .add-constitution-container {
@@ -243,9 +238,7 @@
     .add-button:active {
         transform: scale(0.98);
     }
-    .options-container::-webkit-scrollbar { width: 6px; }
-    .options-container::-webkit-scrollbar-track { background: var(--bg-surface); }
-    .options-container::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
+    // Scrollbar styles handled by mixin above
 
     .options-wrapper {
         display: flex;
@@ -292,22 +285,15 @@
         margin-right: var(--space-xs);
     }
     .info-button {
-        background: none;
-        border: none;
-        padding: 0;
-        margin: 0;
-        color: var(--text-secondary);
-        cursor: pointer;
-        display: flex; /* Align icon nicely */
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0; /* Prevent button from shrinking */
-        opacity: 0.6;
-        transition: opacity 0.2s ease, color 0.2s ease;
-    }
-    .info-button:hover {
-        color: var(--primary);
-        opacity: 1;
+        @include icon-button($padding: 0); // Use mixin, override padding
+        flex-shrink: 0; // Keep specific flex-shrink
+        opacity: 0.6; // Keep specific initial opacity
+
+        &:hover { // Keep specific hover styles (only color/opacity change)
+            color: var(--primary);
+            opacity: 1;
+            background-color: transparent; // Prevent mixin hover background
+        }
     }
     
     /* Add constitution item styles */

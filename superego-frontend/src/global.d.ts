@@ -84,10 +84,10 @@ declare global {
 
     /** Request body for starting a normal streaming run. */
     interface StreamRunRequest {
-        thread_id: string | null; // Changed to string | null (UUID)
+        thread_id?: string | null; // Optional: Only sent for existing threads
         input: StreamRunInput;
-        constitution_ids?: string[];
-        adherence_levels_text?: string; // Added optional field for adherence levels
+        constitution_ids: string[];
+        adherence_levels_text?: string;
     }
 
     /** Defines a set of constitutions for comparison. */
@@ -99,13 +99,18 @@ declare global {
 
     /** Request body for starting a comparison streaming run. */
     interface CompareRunRequest {
-        thread_id: string | null; // Changed to string | null (UUID)
+        thread_id?: string | null; // Optional: Only sent for existing threads
         input: StreamRunInput;
         constitution_sets: CompareSet[];
     }
 
 
     // --- Server-Sent Event (SSE) Data Types ---
+
+    /** Structure for the initial thread creation event */
+    interface SSEThreadCreatedData {
+        thread_id: string; // The backend's newly created persistent thread ID
+    }
 
     /** Structure for tool call fragments streamed from the AI */
     interface SSEToolCallChunkData {
@@ -124,17 +129,34 @@ declare global {
 
     /** Structure for the final 'end' event payload */
     interface SSEEndData {
-        thread_id: string; // Changed to string (UUID)
+        thread_id: string; // Backend's definitive thread ID (UUID string)
     }
 
     /** Overall structure of data received via SSE */
     interface SSEEventData {
-        type: "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end";
+        type: "thread_created" | "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end";
         node?: string | null; // Graph node where event originated
         // Type of data depends on the 'type' field
-        data: string | SSEToolCallChunkData | SSEToolResultData | SSEEndData | any; // Allow flexibility for 'chunk' (string) or 'error' (any)
+        data: SSEThreadCreatedData | string | SSEToolCallChunkData | SSEToolResultData | SSEEndData | any; // Allow flexibility for 'chunk' (string) or 'error' (any)
         set_id?: string | null; // Identifier for compare mode sets
     }
+
+    // SSEMessageHandler type removed - will be redefined or inferred in api.ts if needed
+
+    // --- Other API Types ---
+    /** Request body for submitting a new constitution */
+    interface ConstitutionSubmission {
+        text: string;
+        is_private: boolean;
+    }
+
+    /** Response from submitting a new constitution */
+    interface SubmissionResponse {
+        status: string;
+        message: string;
+        email_sent: boolean;
+    }
+
 
     // --- Application State/Mode Types ---
     type AppMode = 'chat' | 'use' | 'compare'; // Still relevant if UI uses modes? Sidebar removed it.

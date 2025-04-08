@@ -3,18 +3,14 @@
 	import { elasticOut } from 'svelte/easing';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	// Uses types from global.d.ts
 
 	export let message: MessageType;
 
-   // --- Reactive Computations ---
 	$: sender = message.sender;
 	$: node = message.node;
 	$: isError = (sender === 'system' && (message as SystemMessage).isError) ||
 				(sender === 'tool_result' && (message as ToolResultMessage).is_error);
 	$: toolName = (sender === 'tool_result') ? (message as ToolResultMessage).tool_name : null;
-
-	// Use standard AIMessage type, access optional tool_calls
 	$: aiMessage = sender === 'ai' ? (message as AIMessage) : null;
 	$: toolResultMsg = sender === 'tool_result' ? (message as ToolResultMessage) : null;
 
@@ -24,131 +20,86 @@
 	    if (sender === 'ai' || sender === 'tool_result') {
 	        return node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 	    }
-	    if (sender === 'human') {
-	        return 'You';
-	    }
-	    return null;
+		if (sender === 'human') return 'You';
+		return null;
 	})();
 
-	$: titlePrefix = (() => {
-	    return '';
-	})();
-
-	// Main content rendering
-	$: renderedContent = (() => {
-		let rawContent = '';
-		if (sender === 'tool_result' && toolResultMsg) {
-		   // For tool results, extract just the content part
-		   let content = toolResultMsg.content ?? (isError ? 'Error occurred' : '(No result)');
-
-		   // Format the content string - handle various tool result formats
-		   if (content && typeof content === 'string') {
-		       // Try to extract content from common formats
-
-		       // Format: <<< Tool Result Tools (superego_decision) content='✅ Superego allowed the prompt.' ...
-		       // We want to extract just the value from content='...'
-		       const contentMatch = content.match(/content=['"]([^'"]+)['"]/);
-		       if (contentMatch && contentMatch[1]) {
-		           content = contentMatch[1];
-		       }
-		       // If we didn't find a content= match but it still has the Tool Result prefix
-		       else if (content.includes('Tool Result')) {
-		           // Clean up common prefixes
-		           content = content
-		               .replace(/<<< Tool Result Tools \([^)]+\)\s*/g, '')
-		               .replace(/<<< Tool Result\s*/g, '')
-		               .trim();
-		       }
-		   }
-
-		   return DOMPurify.sanitize(String(content)); // Sanitize the extracted content
-		} else if (typeof message.content === 'string') {
-		   rawContent = message.content; // Main text content for AI/Human/System
-	   } else if (Array.isArray(message.content)) {
-		   rawContent = message.content.map(part => (typeof part === 'object' && part?.type === 'text' ? part.text : String(part))).join('');
-	   } else {
-			rawContent = String(message.content ?? '');
+	function getRawContentText(content: MessageType['content']): string {
+		if (typeof content === 'string') {
+			return content;
+		} else if (Array.isArray(content)) {
+			return content.map(part => (typeof part === 'object' && part?.type === 'text' ? part.text : String(part))).join('');
 		}
-		// Render Markdown and sanitize for AI/Human/System main content
-		try {
-			// Use escapeHtml from this component scope
-			const html = marked.parse(rawContent, { gfm: true, breaks: true });
-			return DOMPurify.sanitize(String(html));
-		} catch (e) { console.error("Markdown parsing error:", e); return `<pre>${escapeHtml(rawContent)}</pre>`; }
-	})();
-
-	// HTML Escaping helper (needed for fallback)
-	function escapeHtml(unsafe: string): string {
-		if (!unsafe) return '';
-		// Ensure input is a string before calling replace
-		const str = String(unsafe);
-		return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+		return String(content ?? ''); 
 	}
 
-	// Tool call arguments formatting (handles string JSON or already parsed objects)
+	$: renderedContent = (() => {
+		if (sender === 'tool_result') {
+			const toolContent = String(toolResultMsg?.content ?? (isError ? 'Error occurred' : '(No result)'));
+			return DOMPurify.sanitize(toolContent);
+		} else {
+			const rawText = getRawContentText(message.content);
+			try {
+				const html = marked.parse(rawText, { gfm: true, breaks: true });
+				return DOMPurify.sanitize(String(html));
+			} catch (e) {
+				console.error("Markdown parsing error:", e);
+				return `<pre>${escapeHtml(rawText)}</pre>`;
+			}
+		}
+	})();
+
+	// Basic HTML escaping for safety
+	function escapeHtml(unsafe: string): string {
+		if (!unsafe) return '';
+		const str = String(unsafe);
+		return str.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+	}
+
 	function formatToolArgs(args: any): string {
 		if (args === null || args === undefined) {
-			return ""; // Handle null/undefined explicitly
+			return "";
 		}
 
 		if (typeof args === 'string') {
-			// If it's a string, try to parse it as JSON
 			try {
-				if (args.trim() === "") return ""; // Handle empty string
+				if (args.trim() === "") return "";
 				const parsed = JSON.parse(args);
-				// Successfully parsed, now stringify prettily
-				return JSON.stringify(parsed, null, 2);
+				return JSON.stringify(parsed, null, 2); 
 			} catch (e) {
-				// Parsing failed, assume it's just a plain string that needs escaping
 				console.warn("Failed to parse tool args string as JSON, escaping instead:", args);
-				return escapeHtml(args); // Use escapeHtml from this component
+				return escapeHtml(args);
 			}
 		} else if (typeof args === 'object') {
-			// If it's already an object (or array), stringify it prettily
 			try {
-				return JSON.stringify(args, null, 2);
+				return JSON.stringify(args, null, 2); 
 			} catch (e) {
-				// Should be rare, but handle potential circular references etc.
 				console.error("Failed to stringify tool args object:", args, e);
-				return escapeHtml(String(args)); // Fallback to string conversion and escaping
+				return escapeHtml(String(args)); 
 			}
 		} else {
-			// Handle other types (boolean, number) by converting to string and escaping
-			return escapeHtml(String(args)); // Use escapeHtml from this component
+			return escapeHtml(String(args));
 		}
 	}
 
-	// Card style and accent colors
-	$: cardAccentColor = (() => {
-		if (isError) return 'var(--error)';
-		if (node === 'superego') return 'var(--node-superego)';
-		if (node === 'inner_agent') return 'var(--node-inner-agent)';
-		if (node === 'tools' || sender === 'tool_result') return 'var(--node-tools)';
-		if (sender === 'human') return 'var(--human-border)';
-		if (sender === 'system') return 'var(--system-border)';
-		return 'var(--node-default)';
-	})();
+	const accentColorMap: Record<string, string> = {
+		superego: 'var(--node-superego)',
+		inner_agent: 'var(--node-inner-agent)',
+		tools: 'var(--node-tools)',
+		tool_result: 'var(--node-tools)', // Group tool results with tools
+		human: 'var(--human-border)',
+		system: 'var(--system-border)'
+	};
 
-	// Reactive style for title color
-	$: finalTitleColor = cardAccentColor;
+	$: cardAccentColor = isError
+		? 'var(--error)' 
+		: accentColorMap[node ?? ''] ?? accentColorMap[sender] ?? 'var(--node-default)'; 
 
-	// Entry animation setup
 	function getMessageAnimation(msgSender: string) {
-		if (msgSender === 'human') {
-			return {
-				y: -20,
-				x: 20,
-				duration: 300,
-				easing: elasticOut
-			};
-		} else {
-			return {
-				y: 20,
-				x: -20,
-				duration: 300,
-				easing: elasticOut
-			};
-		}
+		const common = { duration: 300, easing: elasticOut };
+		return msgSender === 'human'
+			? { ...common, y: -20, x: 20 } 
+			: { ...common, y: 20, x: -20 }; 
 	}
 
 	$: animProps = getMessageAnimation(sender);
@@ -157,9 +108,9 @@
 <div class="message-card-wrapper" in:fly|local={animProps}>
 	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
-			<div class="message-title" style:color={finalTitleColor}>
+			<div class="message-title" style:color={cardAccentColor}>
 				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
-					{titlePrefix} {title} {#if toolName && sender === 'tool_result'}({toolName}){/if}
+					{title}{#if toolName && sender === 'tool_result'} ({toolName}){/if}
 				</span>
 			</div>
 		{/if}
@@ -179,14 +130,12 @@
 			   {/each}
 		   </div>
 	   {/if}
-
-	   {#if message.set_id}
-			<div class="message-set-id">Set: {message.set_id}</div>
-		{/if}
 	</div>
 </div>
 
-<style>
+<style lang="scss">
+	@use '../styles/mixins' as *;
+
 	.message-card-wrapper {
 		width: 100%;
 		margin-bottom: var(--space-md);
@@ -194,42 +143,37 @@
 	}
 
 	.message-card {
-		border-radius: var(--radius-lg);
+		@include base-card($bg: var(--ai-bg), $radius: var(--radius-lg), $shadow: var(--shadow-md)); // Use mixin
 		padding: var(--space-md);
-		background-color: var(--ai-bg);
-		border: 1px solid var(--input-border);
-		max-width: min(60ch, 90%); /* Limit width to 60ch or 90%, whichever is smaller */
+		max-width: min(60ch, 90%);
 		position: relative;
 		overflow-wrap: break-word;
 		word-break: break-word;
 		color: var(--text-primary);
-		box-shadow: var(--shadow-md);
 		transition: all 0.2s ease;
-	}
 
-	.message-card:hover {
-		box-shadow: var(--shadow-lg);
-		transform: translateY(-1px);
+		&:hover {
+			box-shadow: var(--shadow-lg);
+			transform: translateY(-1px);
+		}
 	}
 
 	.message-card.human {
 		background-color: var(--human-bg);
 		margin-left: auto;
 		color: var(--text-primary);
-		/* Width remains flexible but capped at 60ch */
 	}
 
 	.message-card.ai, .message-card.tool_result {
 		background-color: var(--ai-bg);
 		margin-right: auto;
-		/* Width remains flexible but capped at 60ch */
 	}
 
 	.message-card.system {
 		background-color: var(--system-bg);
 		font-style: italic;
 		color: var(--text-primary);
-		max-width: 100%; /* System messages can still be full width */
+		max-width: 100%;
 	}
 
 	.message-card.system.error, .message-card.tool_result.error {
@@ -326,7 +270,6 @@
 		color: var(--secondary);
 	}
 
-   /* Styles for appended tool calls section */
    .tool-calls-separator {
 		border-top: 1px dashed var(--input-border);
 		margin-top: var(--space-md);

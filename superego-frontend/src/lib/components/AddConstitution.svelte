@@ -93,13 +93,16 @@
     </div>
 </div>
 
-<style>
+<style lang="scss">
+    @use '../styles/mixins' as *;
+
     .add-constitution {
         padding: 0;
         width: 100%;
         margin: 0;
         height: 100%;
         overflow-y: auto;
+        @include custom-scrollbar($track-bg: var(--bg-elevated)); // Use mixin, match modal content bg
     }
 
     h2 {

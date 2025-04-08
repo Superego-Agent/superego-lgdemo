@@ -25,7 +25,9 @@
     </div>
 </div>
 
-<style>
+<style lang="scss">
+    @use '../styles/mixins' as *;
+
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -40,29 +42,26 @@
     }
 
     .modal-content {
-        background-color: var(--bg-elevated);
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        @include base-card($bg: var(--bg-elevated), $radius: 8px, $shadow: 0 4px 15px rgba(0, 0, 0, 0.2)); // Use mixin with overrides
+        padding: 20px; // Keep specific padding
         position: relative;
-        max-width: 600px; /* Adjust as needed */
+        max-width: 600px;
         width: 90%;
-        max-height: 80vh; /* Limit height and allow scrolling if needed */
-        overflow-y: auto; /* Add scroll for overflow */
+        max-height: 80vh;
+        overflow-y: auto;
+        @include custom-scrollbar($track-bg: var(--bg-elevated)); // Use mixin, override track background
     }
 
     .close-button {
+        @include icon-button($padding: 0); // Use mixin, override padding
         position: absolute;
         top: 10px;
         right: 10px;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: var(--text-secondary);
-        cursor: pointer;
-        line-height: 1;
-    }
-    .close-button:hover {
-        color: var(--text-primary);
+        font-size: 1.5rem; // Keep specific size
+
+        &:hover { // Override mixin hover
+            color: var(--text-primary);
+            background-color: transparent; // Ensure no background on hover
+        }
     }
 </style>

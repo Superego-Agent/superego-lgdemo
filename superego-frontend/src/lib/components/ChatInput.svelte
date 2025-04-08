@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isLoading } from "../stores";
+  // Removed isLoading import
   import { scale } from "svelte/transition";
   import { createEventDispatcher } from "svelte";
 
@@ -13,13 +13,17 @@
   let inputElement: HTMLTextAreaElement;
   let isExpanded = false;
 
+  /** Controls whether the input and button are disabled. Passed from parent. */
+  export let disabled: boolean = false;
+
   // Initialize dispatcher without explicit generic type for testing
   const dispatch = createEventDispatcher();
 
   function handleSubmit() {
     const trimmedInput = userInput.trim();
-    if (!trimmedInput || $isLoading) {
-      console.log("Submit prevented: input empty or loading."); // Line 38 area
+    // Use the passed 'disabled' prop instead of $isLoading
+    if (!trimmedInput || disabled) {
+      console.log(`Submit prevented: input empty (${!trimmedInput}) or disabled (${disabled}).`);
       return;
     }
 
@@ -67,7 +71,7 @@
       bind:value={userInput}
       placeholder="Send a message..."
       rows={isExpanded ? 3 : 1}
-      disabled={$isLoading}
+      disabled={disabled}
       on:focus={handleFocus}
       on:blur={handleBlur}
       on:input={handleInput}
@@ -80,15 +84,15 @@
     ></textarea>
   </div>
 
-  <!-- Restore conditional logic and loading class -->
+  <!-- Use passed 'disabled' prop for button state -->
   <button
     type="submit"
-    disabled={!userInput.trim() || $isLoading}
-    class:loading={$isLoading}
+    disabled={!userInput.trim() || disabled}
+    class:loading={disabled}
     title="Send Message"
     in:scale|local={{ duration: 150, start: 0.8 }}>
 
-    {#if $isLoading}
+    {#if disabled}
       <IconLoading class="loading-icon-animate" />
     {:else}
       <IconSend />
@@ -96,7 +100,9 @@
   </button>
 </form>
 
-<style>
+<style lang="scss">
+  @use '../styles/mixins' as *;
+
   .chat-input-form {
     display: flex;
     padding: var(
@@ -136,19 +142,9 @@
     max-height: 150px;
     transition: all 0.2s ease;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-light) transparent;
+    @include custom-scrollbar($track-bg: transparent, $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
   }
-  textarea::-webkit-scrollbar {
-    width: 6px;
-  }
-  textarea::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  textarea::-webkit-scrollbar-thumb {
-    background-color: var(--primary-light);
-    border-radius: var(--radius-pill);
-  }
+
   .textarea-container:has(textarea:focus) {
     border-color: var(--input-focus);
     outline: none;
@@ -191,18 +187,14 @@
    }
    /* Remove hover/loading styles */
 
-  /* Keep loading animation definition */
    .loading-icon-animate {
+       // Spinner styles are applied directly via the mixin if needed,
+       // but here it's just the animation class.
+       // The keyframes are included via the mixin file.
        animation: spin 1s linear infinite;
    }
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
+   // Keyframes are now included via mixin file.
+
   @media (max-width: 768px) {
     /* Existing mobile styles */
   }

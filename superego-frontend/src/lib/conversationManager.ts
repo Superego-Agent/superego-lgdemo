@@ -1,6 +1,6 @@
 // src/lib/conversationManager.ts
 
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store'; // Import get
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid'; // Need to install uuid: npm install uuid @types/uuid
 
@@ -64,12 +64,11 @@ export const managedConversations: Writable<ConversationMetadata[]> = writable(l
 
 // Subscribe to changes in the store and save them back to localStorage
 managedConversations.subscribe(value => {
-    // Avoid saving the initial empty array if loaded state is empty
-    // This prevents overwriting potentially valid stored data on initial load if parsing failed
-    // A more robust approach might involve checking if the load was successful
-    if (value.length > 0 || localStorage.getItem(LOCAL_STORAGE_KEY)) {
-	    saveConversationsToStorage(value);
-    }
+    // Directly save the current value. The store is initialized with loaded data,
+    // so any subsequent value represents the state that should be persisted.
+    // Removed the check `if (value.length > 0 || localStorage.getItem(LOCAL_STORAGE_KEY))`
+    // as it could lead to data loss if loading failed but storage wasn't empty.
+	saveConversationsToStorage(value);
 });
 
 
@@ -112,20 +111,14 @@ export function deleteConversation(id: string) {
 
 /** Finds a conversation by its client-side ID */
 export function findConversationById(id: string): ConversationMetadata | undefined {
-    let found: ConversationMetadata | undefined;
-    managedConversations.subscribe(list => { // Use subscribe to get current value
-        found = list.find(conv => conv.id === id);
-    })(); // Immediately invoke to unsubscribe after getting value
-    return found;
+    // Use get for synchronous access to the store's current value
+    return get(managedConversations).find(conv => conv.id === id);
 }
 
 /** Finds a conversation by its backend thread_id */
 export function findConversationByThreadId(thread_id: string): ConversationMetadata | undefined {
-     let found: ConversationMetadata | undefined;
-    managedConversations.subscribe(list => {
-        found = list.find(conv => conv.thread_id === thread_id);
-    })();
-    return found;
+    // Use get for synchronous access
+    return get(managedConversations).find(conv => conv.thread_id === thread_id);
 }
 
 /**
@@ -134,13 +127,28 @@ export function findConversationByThreadId(thread_id: string): ConversationMetad
  */
 export function getOrCreateConversationForThread(thread_id: string, initialName: string = "Loaded Chat"): ConversationMetadata {
     let conversation = findConversationByThreadId(thread_id);
+
     if (!conversation) {
         console.warn(`No local metadata found for thread_id ${thread_id}. Creating new entry.`);
-        conversation = createNewConversation(initialName);
-        // Immediately update the thread_id for the newly created entry
-        updateConversation(conversation.id, { thread_id: thread_id });
-        // Need to get the updated object reference
-        conversation = findConversationById(conversation.id)!;
+        // Create the new conversation object directly with the thread_id
+        const newConversation: ConversationMetadata = {
+            id: uuidv4(),
+            name: initialName,
+            thread_id: thread_id, // Assign thread_id immediately
+            created_at: new Date().toISOString(),
+            last_updated_at: new Date().toISOString(),
+            last_used_constitution_ids: [],
+            preview: ""
+        };
+
+        // Add it to the store and re-sort
+        managedConversations.update(list =>
+            [newConversation, ...list].sort((a, b) =>
+                new Date(b.last_updated_at).getTime() - new Date(a.last_updated_at).getTime()
+            )
+        );
+        conversation = newConversation; // Assign the newly created object
     }
+    // If found initially, or after creation, return it
     return conversation;
 }
