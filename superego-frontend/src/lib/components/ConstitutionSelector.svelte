@@ -6,12 +6,14 @@
     import IconChevronDown from '~icons/fluent/chevron-down-24-regular'; // Icon for toggle
     import IconChevronUp from '~icons/fluent/chevron-up-24-regular'; // Icon for toggle
     import IconAdd from '~icons/fluent/add-24-regular'; // Icon for add button
+    import { activeConversationId, conversationStates } from '../stores'; // Import conversation state stores
     import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
     import AddConstitutionModal from './AddConstitutionModal.svelte';
     import { fetchConstitutionContent } from '../api';
 
     // Component State
     let isExpanded = true; // Start expanded
+    let previousStatus: string | undefined = undefined; // Track previous status for collapse logic
 
     // Info Modal State
     let showModal = false;
@@ -30,7 +32,7 @@
         | { type: 'global'; id: string; title: string; description?: string }
         | { type: 'local'; id: string; title: string; text: string; createdAt: string };
 
-    // Correct reactive declaration syntax (no type annotation here)
+    // Correct reactive declaration syntax (no type annotation here)s
     $: allDisplayConstitutions = [
         ...$availableConstitutions
             .filter(c => c.id !== 'none') // Filter out 'none' globally
@@ -46,10 +48,8 @@
             // Trigger store update
             constitutionAdherenceLevels.set($constitutionAdherenceLevels);
         } else {
-            // Remove constitution if unchecked
             delete $constitutionAdherenceLevels[id];
             // Trigger store update
-            // Trigger store update using the update method
             constitutionAdherenceLevels.update(currentLevels => {
                 delete currentLevels[id];
                 return currentLevels; // Return the modified object
@@ -88,6 +88,24 @@
         isExpanded = !isExpanded;
     }
 
+    // Reactive block to collapse the selector when a message starts streaming
+    $: {
+        const currentConversationId = $activeConversationId;
+        if (currentConversationId) {
+            const currentState = $conversationStates[currentConversationId];
+            const currentStatus = currentState?.status;
+
+            // Collapse if the status *just* changed to 'streaming'
+            // This indicates a message was sent and the response is starting
+            if (currentStatus === 'streaming' && previousStatus !== 'streaming') {
+                isExpanded = false;
+            }
+            previousStatus = currentStatus; // Update previous status for the next check
+        } else {
+            // Reset previous status if no conversation is active
+            previousStatus = undefined;
+        }
+    }
 </script>
 
 <div class="selector-card">

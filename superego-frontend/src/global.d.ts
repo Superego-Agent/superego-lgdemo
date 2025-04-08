@@ -85,17 +85,49 @@ declare global {
         // Add lastUpdatedAt?
     }
 
-    /** API request structure for referencing a constitution by ID */
-    interface ConstitutionRefById {
+    // --- API Request/Response Types ---
+
+    /**
+     * Represents a constitution selected by its ID (typically global/predefined)
+     * for sending to the backend in the streamRun request.
+     * Includes the user-specified adherence level and title.
+     */
+    interface BackendConstitutionRefById {
         id: string;
-        adherence_level?: number; // Optional adherence level (1-5)
+        title: string; // Title is needed for the backend report
+        adherence_level: number; // 1-5, now required
     }
 
-    /** API request structure for referencing a constitution by its text content */
-    interface ConstitutionRefByText {
+    /**
+     * Represents a local constitution provided with its full text
+     * for sending to the backend in the streamRun request.
+     * Includes the user-specified adherence level and title.
+     */
+    interface BackendConstitutionFullText {
+        // id is not strictly needed by the backend here, but title is
+        title: string;
         text: string;
-        adherence_level?: number; // Optional adherence level (1-5)
+        adherence_level: number; // 1-5, now required
     }
+
+    /**
+     * Union type for constitutions sent to the backend in the streamRun request.
+     */
+    type SelectedConstitution = BackendConstitutionRefById | BackendConstitutionFullText;
+
+
+    // --- Old types, commented out for reference, replaced by BackendConstitution... types for streamRun ---
+    // /** API request structure for referencing a constitution by ID */
+    // interface ConstitutionRefById {
+    //     id: string;
+    //     adherence_level?: number; // Optional adherence level (1-5)
+    // }
+    //
+    // /** API request structure for referencing a constitution by its text content */
+    // interface ConstitutionRefByText {
+    //     text: string;
+    //     adherence_level?: number; // Optional adherence level (1-5)
+    // }
 
     /** Input structure for starting a run */
     interface StreamRunInput {
@@ -107,16 +139,15 @@ declare global {
     interface StreamRunRequest {
         thread_id?: string | null; // Optional: Only sent for existing threads
         input: StreamRunInput;
-        // Updated to send either ID or text
-        constitutions: Array<ConstitutionRefById | ConstitutionRefByText>;
-        adherence_levels_text?: string;
+        constitutions: SelectedConstitution[]; // Use the new union type including title and adherence_level
+        // Removed: adherence_levels_text?: string; // This field is removed as per plan
     }
 
     /** Defines a set of constitutions for comparison. */
     interface CompareSet {
         id: string; // User-defined ID for the set (e.g., 'strict_vs_default')
-        // Updated to send either ID or text
-        constitutions: Array<ConstitutionRefById | ConstitutionRefByText>;
+        // This might need updating later if compare mode needs adherence levels + titles
+        constitutions: Array<{ id: string } | { text: string }>; // Simplified for now, assuming no adherence/title needed for compare yet
         // name?: string; // Optional name, not used by backend currently
     }
 

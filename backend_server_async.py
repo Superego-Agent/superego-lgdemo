@@ -95,12 +95,18 @@ app.add_middleware(
 # Ensure these match frontend expectations (src/global.d.ts)
 
 # Models for referencing constitutions in requests
+# These now match the structure sent from the frontend (BackendConstitutionRefById/FullText in global.d.ts)
 class ConstitutionRefById(BaseModel):
     id: str = Field(..., description="ID of a globally available constitution.")
+    title: str = Field(..., description="Title of the constitution (used for reporting).")
+    adherence_level: int = Field(..., ge=1, le=5, description="User-specified adherence level (1-5).")
 
-class ConstitutionRefByText(BaseModel):
+class ConstitutionFullText(BaseModel):
+    title: str = Field(..., description="Title of the local constitution (used for reporting).")
     text: str = Field(..., description="Raw text content of a locally defined constitution.")
+    adherence_level: int = Field(..., ge=1, le=5, description="User-specified adherence level (1-5).")
 
+# Model for listing available constitutions
 class ConstitutionItem(BaseModel):
     id: str
     title: str # Changed from 'name' to 'title' to match constitution_utils
@@ -129,14 +135,14 @@ class StreamRunRequest(BaseModel):
     # Now uses the string checkpoint thread ID (UUID)
     thread_id: Optional[str] = None
     input: StreamRunInput
-    # Accepts a list containing either IDs or raw text for constitutions
-    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]] = Field(default_factory=lambda: [ConstitutionRefById(id="none")], description="List of constitutions to apply, referenced by ID or provided as raw text.")
-    adherence_levels_text: Optional[str] = None # Added field for adherence levels
+    # Updated field to accept the new constitution models including title and adherence level
+    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]] = Field(..., description="List of selected constitutions (global by ID, local by text) with titles and adherence levels.")
+    # Removed: adherence_levels_text: Optional[str] = None # This field is no longer sent by the frontend
 
 class CompareRunSet(BaseModel):
     id: str
-    # Accepts a list containing either IDs or raw text for constitutions within a compare set
-    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]] = Field(..., description="List of constitutions (by ID or text) for this comparison set.")
+    # Updated to use the new constitution models, consistent with StreamRunRequest
+    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]] = Field(..., description="List of constitutions (global by ID, local by text) with titles and adherence levels for this comparison set.")
 
 class CompareRunRequest(BaseModel):
     # Now uses the string checkpoint thread ID (UUID)
@@ -173,12 +179,12 @@ class SSEEventData(BaseModel):
 async def stream_events(
     thread_id: str, # The unique LangGraph thread ID (string UUID) for this specific run
     input_messages: List[BaseMessage],
-    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]],
+    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]], # Updated type hint
     run_app: Any, # The compiled LangGraph app to run
-    adherence_levels_text: Optional[str] = None, # Added adherence text parameter
+    # Removed: adherence_levels_text: Optional[str] = None,
     set_id: Optional[str] = None # Identifier for compare mode sets
 ) -> AsyncGenerator[ServerSentEvent, None]:
-    """Generates Server-Sent Events for a single LangGraph run, processing constitutions by ID or text."""
+    """Generates Server-Sent Events for a single LangGraph run, processing constitutions, generating adherence report."""
     if not run_app or not checkpointer:
         error_data = "Graph app or checkpointer not initialized."
         yield ServerSentEvent(data=SSEEventData(type="error", node="setup", data=error_data, set_id=set_id).model_dump_json())
@@ -189,45 +195,77 @@ async def stream_events(
     # run_id_for_db removed
 
     try:
-        # --- Load constitution content from mixed list (ID or Text) ---
+        # --- Load constitution content and generate adherence report ---
         constitution_texts: List[str] = []
-        requested_ids: List[str] = []
-        loaded_ids: List[str] = []
+        adherence_report_lines: List[str] = []
         missing_ids: List[str] = []
 
+        # Check if any non-'none' constitutions were provided
+        valid_constitutions = [
+            c for c in constitutions
+            if not (isinstance(c, ConstitutionRefById) and c.id == "none")
+        ]
+
+        # Add header only if there are valid constitutions to report on
+        if valid_constitutions:
+             adherence_report_lines.append("# User-specified Adherence Levels")
+
         for ref in constitutions:
+            # Skip the special 'none' constitution placeholder if present
+            if isinstance(ref, ConstitutionRefById) and ref.id == "none":
+                continue
+
+            content = None
+            title = ref.title
+            level = ref.adherence_level
+
             if isinstance(ref, ConstitutionRefById):
-                if ref.id != "none": # Don't try to load 'none'
-                    requested_ids.append(ref.id)
-                    content = get_constitution_content(ref.id)
-                    if content is not None:
-                        constitution_texts.append(content)
-                        loaded_ids.append(ref.id)
-                    else:
-                        missing_ids.append(ref.id)
-            elif isinstance(ref, ConstitutionRefByText):
-                constitution_texts.append(ref.text)
-            else:
-                # Should not happen with Pydantic validation, but good to log
-                logging.warning(f"Unexpected constitution reference type in stream_events: {type(ref)}")
+                # ID-based constitution (global)
+                content = get_constitution_content(ref.id)
+                if content is not None:
+                    constitution_texts.append(content)
+                else:
+                    missing_ids.append(ref.id)
+                    # Skip reporting missing ones to avoid confusion in the report
+                    continue # Skip to next constitution if content not found
 
-        constitution_content_for_run = "\n\n---\n\n".join(constitution_texts)
+            elif isinstance(ref, ConstitutionFullText):
+                # Text-based constitution (local)
+                content = ref.text
+                constitution_texts.append(content)
+            # else: # Should not happen with Pydantic validation
 
-        # Report missing IDs
+            # Add to adherence report (only if content was successfully loaded/provided)
+            default_tag = " (Default)" if level == 3 else ""
+            adherence_report_lines.append(f"- {title}: {level}/5{default_tag}")
+
+
+        # Combine constitution texts
+        base_constitution_content = "\n\n---\n\n".join(constitution_texts)
+
+        # Combine adherence report lines
+        adherence_report_text = "\n".join(adherence_report_lines)
+
+        # Combine base content and adherence report
+        # Append report only if it has more than just the header (or if header wasn't added)
+        final_constitution_content = base_constitution_content
+        if len(adherence_report_lines) > (1 if valid_constitutions else 0):
+            final_constitution_content += f"\n\n---\n\n{adherence_report_text}"
+
+        # Report missing IDs (if any)
         if missing_ids:
             yield ServerSentEvent(data=SSEEventData(
                 type="error", node="setup", # Using 'error' type for warnings as well
                 data=f"Warning: Constitution ID(s) not found/loaded: {', '.join(missing_ids)}. Running without them.",
                 set_id=set_id
             ).model_dump_json())
-        # --- End Constitution Loading ---
+        # --- End Constitution Processing ---
 
         # Prepare run config using the UNIQUE thread_id for this run
         config = {
             "configurable": {
                 "thread_id": thread_id, # Use the passed thread_id here
-                "constitution_content": constitution_content_for_run,
-                "adherence_levels_text": adherence_levels_text or "" # Pass adherence text to graph config
+                "constitution_content": final_constitution_content # Pass the combined content + report
             }
         }
         stream_input = {'messages': input_messages}
@@ -576,9 +614,8 @@ async def delete_thread_endpoint(
 async def stream_run_with_creation_event(
     new_thread_id: str, # The newly generated thread_id
     input_messages: List[BaseMessage],
-    constitutions: List[Union[ConstitutionRefById, ConstitutionRefByText]],
-    run_app: Any,
-    adherence_levels_text: Optional[str] = None
+    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]], # Updated type hint
+    run_app: Any
 ) -> AsyncGenerator[ServerSentEvent, None]:
     """Yields a thread_created event first, then streams the rest."""
     # 1. Yield the initial thread creation event
@@ -591,9 +628,8 @@ async def stream_run_with_creation_event(
     async for event in stream_events(
         thread_id=new_thread_id, # Use the new_thread_id for the actual run
         input_messages=input_messages,
-        constitutions=constitutions,
+        constitutions=constitutions, # Pass updated constitutions list
         run_app=run_app,
-        adherence_levels_text=adherence_levels_text,
         set_id=None # Standard stream doesn't use set_id
     ):
         yield event
@@ -619,8 +655,7 @@ async def run_stream_endpoint(request: StreamRunRequest):
                 new_thread_id=new_thread_id,
                 input_messages=input_messages,
                 constitutions=request.constitutions, # Pass the new constitutions list
-                run_app=graph_app,
-                adherence_levels_text=request.adherence_levels_text
+                run_app=graph_app
             )
         else:
             # Existing thread: Use the standard stream_events helper directly
@@ -630,8 +665,7 @@ async def run_stream_endpoint(request: StreamRunRequest):
                 thread_id=existing_thread_id, # Pass the existing thread_id
                 input_messages=input_messages,
                 constitutions=request.constitutions, # Pass the new constitutions list
-                run_app=graph_app,
-                adherence_levels_text=request.adherence_levels_text
+                run_app=graph_app
             )
 
         # 3. Return the appropriate SSE response stream
@@ -657,8 +691,8 @@ async def stream_compare_events(
     """Runs multiple streams concurrently for comparison and multiplexes their events."""
     event_queue = asyncio.Queue()
     consumer_tasks = []
-    # Tuple now holds: (thread_id, List[Union[ConstitutionRefById, ConstitutionRefByText]], set_id, run_app)
-    runs_to_perform: List[Tuple[str, List[Union[ConstitutionRefById, ConstitutionRefByText]], str, Any]] = []
+    # Tuple now holds: (thread_id, List[Union[ConstitutionRefById, ConstitutionFullText]], set_id, run_app) - Update type hint if CompareRunSet changes
+    runs_to_perform: List[Tuple[str, List[Union[ConstitutionRefById, ConstitutionFullText]], str, Any]] = [] 
 
     # Generate a unique group ID for this comparison operation - currently unused, could be used for logging/grouping
     # compare_group_id = str(uuid.uuid4())
@@ -697,10 +731,23 @@ async def stream_compare_events(
         stream = stream_events(
             thread_id=run_thread_id, # Pass the unique thread ID for this run
             input_messages=[input_message],
-            constitutions=constitutions_for_run, # Pass the list of constitution refs
+            constitutions=constitutions_for_run, # Pass the list of constitution refs (still old type for compare)
             run_app=run_app,
             set_id=set_id # Pass set_id for frontend tracking
         )
+        # Need to define consume_and_forward_stream if it's not already defined
+        async def consume_and_forward_stream(stream: AsyncGenerator[ServerSentEvent, None], queue: asyncio.Queue):
+            """Helper coroutine to consume events from a stream and put them on a queue."""
+            try:
+                async for event in stream:
+                    await queue.put(event)
+            except Exception as e:
+                print(f"Error consuming stream: {e}")
+                # Put an error event on the queue? Or just signal completion?
+                # For now, just signal completion via None.
+            finally:
+                await queue.put(None) # Signal completion
+
         task = asyncio.create_task(consume_and_forward_stream(stream, event_queue))
         consumer_tasks.append(task)
 

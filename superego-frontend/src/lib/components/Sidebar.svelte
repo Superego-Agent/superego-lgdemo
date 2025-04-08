@@ -278,6 +278,7 @@
         transition: background-color 0.2s ease;
         border-radius: var(--radius-md);
         margin: 2px 0;
+        overflow: hidden; // Add this to clip overflowing content (like pushed buttons)
 
         &:hover {
             background-color: var(--bg-elevated);
@@ -289,6 +290,7 @@
             white-space: nowrap;
             padding-right: 5px;
             flex-grow: 1;
+            min-width: 0; // Add this to ensure ellipsis works correctly in flex context
         }
 
         .thread-actions {

@@ -625,24 +625,34 @@ export const streamRun = async (
     const localConstitutions = get(localConstitutionsStore);
     const globalConstitutions = get(availableConstitutions);
 
-    const constitutionsForRequest: Array<ConstitutionRefById | ConstitutionRefByText> = Object.keys(selectedConstitutionsMap)
+    // Use the new SelectedConstitution type from global.d.ts
+    const constitutionsForRequest: SelectedConstitution[] = Object.keys(selectedConstitutionsMap)
         .map(id => {
-            // Check if it's a local constitution first
             const adherenceLevel = selectedConstitutionsMap[id]; // Get the adherence level
+            if (!adherenceLevel || adherenceLevel < 1 || adherenceLevel > 5) {
+                console.warn(`Invalid adherence level (${adherenceLevel}) for constitution ID "${id}". Skipping.`);
+                return null; // Skip if adherence level is invalid
+            }
+
             // Check if it's a local constitution first
             const localMatch = localConstitutions.find(c => c.id === id);
             if (localMatch) {
-                // Send text and adherence level for local
-                return { text: localMatch.text, adherence_level: adherenceLevel };
+                // Send title, text, and adherence level for local
+                return { title: localMatch.title, text: localMatch.text, adherence_level: adherenceLevel };
             }
+
             // Check if it's a known global constitution
             const globalMatch = globalConstitutions.find(c => c.id === id);
             if (globalMatch) {
-                 // Send ID and adherence level for global
-                return { id: globalMatch.id, adherence_level: adherenceLevel };
+                 // Send id, title, and adherence level for global
+                return { id: globalMatch.id, title: globalMatch.title, adherence_level: adherenceLevel };
             }
+
             // If it's neither (e.g., 'none' or an orphaned ID), log a warning and skip
-            console.warn(`Selected constitution ID "${id}" not found in local or global lists. Skipping.`);
+            // The 'none' constitution should have id 'none' and won't be found in local/global lists.
+            if (id !== 'none') { // Don't warn for the special 'none' ID if it's selected
+                 console.warn(`Selected constitution ID "${id}" not found in local or global lists. Skipping.`);
+            }
             return null;
         })
         .filter(ref => ref !== null); // Filter out nulls - TS should infer the correct type after this
