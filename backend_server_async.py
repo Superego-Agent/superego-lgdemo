@@ -247,10 +247,11 @@ async def stream_events(
                         yield ServerSentEvent(data=sse_payload_text.model_dump_json())
                         last_yielded_text[yield_key] = text_content
 
-            # Tool Call Chunk Events
-            elif event_type == "on_chat_model_stream" and isinstance(event_data.get("chunk"), AIMessageChunk): # Need elif if combined
-                 chunk: AIMessageChunk = event_data["chunk"]
-                 tool_chunks = getattr(chunk, 'tool_call_chunks', [])
+            # Tool Call Chunk Events - Ensure this is 'if', not 'elif'
+            if event_type == "on_chat_model_stream" and isinstance(event_data.get("chunk"), AIMessageChunk):
+                 # Re-access chunk data as the previous 'if' might have consumed it conceptually
+                 chunk_for_tools: AIMessageChunk = event_data["chunk"]
+                 tool_chunks = getattr(chunk_for_tools, 'tool_call_chunks', [])
                  if tool_chunks:
                      for tc_chunk in tool_chunks:
                          # Ensure args is always sent as a string or None

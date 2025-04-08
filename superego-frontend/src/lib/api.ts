@@ -240,44 +240,51 @@ function _handleToolChunk(clientId: string, data: SSEToolCallChunkData, nodeId: 
              targetMsg.tool_calls = [];
          }
 
-         // Logic based on user-specified pattern:
-         // 1. Chunk with 'name' creates the call.
-         // 2. Subsequent chunks (only 'args') append to the *last* call.
+         // --- Refined Logic for Tool Chunk Handling & Reactivity ---
+         let newToolCalls: ToolCall[]; // Declare variable for the final tool_calls array
 
          if (data.name) {
-             // This is the initial chunk establishing the tool call
+             // Initial chunk: Create new tool call and add it to the existing ones.
              const newToolCall: ToolCall = {
-                 id: data.id || nanoid(6), // Use provided ID or generate one
+                 id: data.id || nanoid(6),
                  name: data.name,
-                 args: data.args || "" // Initialize args, might be empty in first chunk
+                 args: data.args || ""
              };
-             // Add the new tool call using array reassignment for reactivity
-             targetMsg.tool_calls = [...targetMsg.tool_calls, newToolCall];
+             newToolCalls = [...targetMsg.tool_calls, newToolCall];
          } else if (data.args) {
-             // This is a subsequent chunk with only args, append to the last tool call
+             // Subsequent chunk: Append args to the last tool call.
              const lastCallIndex = targetMsg.tool_calls.length - 1;
              if (lastCallIndex >= 0) {
                  const lastCall = targetMsg.tool_calls[lastCallIndex];
                  const updatedCall = {
                      ...lastCall,
-                     args: (lastCall.args || "") + (data.args || "") // Append args chunk
+                     args: (lastCall.args || "") + (data.args || "")
                  };
-                 // Replace the last element using array reassignment for reactivity
-                 targetMsg.tool_calls = [
+                 // Create the new array with the updated last call
+                 newToolCalls = [
                      ...targetMsg.tool_calls.slice(0, lastCallIndex),
                      updatedCall
                  ];
              } else {
-                 // This shouldn't happen if the initial chunk with 'name' was processed correctly
-                 console.warn("Received tool args chunk but no existing tool call found in the message.", { clientId, data, nodeId, setId });
+                 // Args chunk arrived before the initial name chunk (shouldn't happen with correct backend stream)
+                 console.warn("Received tool args chunk but no existing tool call found.", { clientId, data });
+                 newToolCalls = targetMsg.tool_calls; // Keep original array if error
              }
          } else {
-             // Chunk has neither name nor args - potentially an empty chunk or unexpected format
-             console.warn("Received ai_tool_chunk with no name or args.", { clientId, data, nodeId, setId });
+             // Chunk with no name or args
+             console.warn("Received ai_tool_chunk with no name or args.", { clientId, data });
+             newToolCalls = targetMsg.tool_calls; // Keep original array
          }
 
-         // Ensure the parent message object itself is updated in the state array for reactivity
-         state.messages[targetAiMsgIndexTool] = { ...targetMsg };
+         // Create a completely new message object with the new tool_calls array
+         const updatedMessage = {
+             ...targetMsg,
+             tool_calls: newToolCalls // Assign the newly constructed array
+         };
+
+         // Assign the new message object back into the state's messages array
+         state.messages[targetAiMsgIndexTool] = updatedMessage;
+         // --- End Refined Logic ---
 
          state.status = 'streaming'; // Ensure status is streaming
         return s;
@@ -423,15 +430,15 @@ function handleSSEMessage(event: EventSourceMessage, clientId: string | null) { 
             return;
         }
 
-        // Route to specific handlers
-        switch (type) {
-            case 'chunk':
-                _handleChunk(targetClientId!, eventData as string, currentNodeId, setId);
-                break;
-            case 'ai_tool_chunk':
-                _handleToolChunk(targetClientId!, eventData as SSEToolCallChunkData, currentNodeId, setId);
-                break;
-            case 'tool_result':
+          // Route to specific handlers
+          switch (type) {
+              case 'chunk':
+                  _handleChunk(targetClientId!, eventData as string, currentNodeId, setId);
+                  break;
+              case 'ai_tool_chunk':
+                  _handleToolChunk(targetClientId!, eventData as SSEToolCallChunkData, currentNodeId, setId);
+                  break;
+              case 'tool_result':
                 _handleToolResult(targetClientId!, eventData as SSEToolResultData, currentNodeId, setId);
                 break;
             case 'error':

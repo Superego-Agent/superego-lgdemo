@@ -3,6 +3,7 @@
 	import { elasticOut } from 'svelte/easing';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import ToolIcon from '~icons/fluent/wrench-24-regular'; // Use Fluent wrench icon
 
 	export let message: MessageType;
 
@@ -17,10 +18,15 @@
 	$: cardClasses = `message-card ${sender} ${node ? `node-${node.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
 
 	$: title = (() => {
-	    if (sender === 'ai' || sender === 'tool_result') {
-	        return node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-	    }
+		if (sender === 'ai') {
+			return node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? 'AI';
+		}
+		if (sender === 'tool_result') {
+			// Specific title format for tool results
+			return `Tool: ${toolName ?? 'Result'}`;
+		}
 		if (sender === 'human') return 'You';
+		if (sender === 'system') return 'System'; // Add title for system messages
 		return null;
 	})();
 
@@ -35,9 +41,23 @@
 
 	$: renderedContent = (() => {
 		if (sender === 'tool_result') {
-			const toolContent = String(toolResultMsg?.content ?? (isError ? 'Error occurred' : '(No result)'));
-			return DOMPurify.sanitize(toolContent);
+			// Attempt to extract only the core message from the tool result string
+			let rawContent = String(toolResultMsg?.content ?? (isError ? 'Error occurred' : '(No result)'));
+			let displayContent = rawContent; // Default to the full content
+
+			// Try to match the pattern "content='...'" at the start of the string
+			const match = rawContent.match(/^content='([^']*)'/);
+			if (match && match[1]) {
+				// If matched, use the content within the single quotes
+				displayContent = match[1];
+			} else {
+				// If the pattern doesn't match, log a warning and display the raw content as a fallback
+				console.warn("Tool result content did not match expected pattern. Displaying raw:", rawContent);
+			}
+			// Escape the extracted (or raw) content for safety before rendering
+			return escapeHtml(displayContent);
 		} else {
+			// Keep Markdown processing for other message types
 			const rawText = getRawContentText(message.content);
 			try {
 				const html = marked.parse(rawText, { gfm: true, breaks: true });
@@ -109,8 +129,12 @@
 	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
 			<div class="message-title" style:color={cardAccentColor}>
+				{#if sender === 'tool_result'}
+					<span class="tool-icon"><ToolIcon /></span>
+				{/if}
 				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
-					{title}{#if toolName && sender === 'tool_result'} ({toolName}){/if}
+					{title}
+					<!-- Removed the extra toolName display here as it's now in the title -->
 				</span>
 			</div>
 		{/if}
@@ -164,9 +188,16 @@
 		color: var(--text-primary);
 	}
 
-	.message-card.ai, .message-card.tool_result {
+	.message-card.ai {
 		background-color: var(--ai-bg);
 		margin-right: auto;
+	}
+
+	.message-card.tool_result {
+		// Slightly different background for tool results
+		background-color: color-mix(in srgb, var(--ai-bg) 90%, var(--bg-primary) 10%);
+		margin-right: auto;
+		/* Removed border-left */
 	}
 
 	.message-card.system {
@@ -188,8 +219,16 @@
 		font-size: 0.875rem;
 		display: flex;
 		align-items: center;
+		gap: var(--space-xs); // Add gap for icon
 		border-bottom: 1px solid var(--input-border);
 		width: calc(100% + 2 * var(--space-md));
+	}
+
+	.tool-icon {
+		display: inline-flex;
+		align-items: center;
+		font-size: 1.1em; // Adjust icon size if needed
+		opacity: 0.8;
 	}
 
 	.title-text {
