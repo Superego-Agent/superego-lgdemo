@@ -23,6 +23,13 @@ export const uiSessions = persisted<Record<string, UISessionState>>('superego_ui
  */
 export const activeSessionId: Writable<string | null> = writable(null);
 
+/**
+ * Central cache holding the latest known state and status for each thread.
+ * Keyed by threadId. NOT persisted.
+ */
+export const threadCacheStore: Writable<Record<string, ThreadCacheData>> = writable({});
+
+
 /** Store for displaying global errors */
 export const globalError: Writable<string | null> = writable(null);
 

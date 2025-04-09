@@ -6,7 +6,6 @@ from typing import List, Dict, Optional, Any, Literal, Union
 # Aligned with frontend expectations (src/global.d.ts) and refactor_plan.md
 
 # --- Constitution Representation ---
-# Matches frontend ConfiguredConstitutionModule
 class ConfiguredConstitutionModule(BaseModel):
     id: str
     title: str
@@ -14,28 +13,22 @@ class ConfiguredConstitutionModule(BaseModel):
     text: Optional[str] = None
 
 # --- API Request Payloads ---
-# Matches frontend RunConfig
 class RunConfig(BaseModel):
     configuredModules: List[ConfiguredConstitutionModule]
 
-# Matches frontend CheckpointConfigurable
 class CheckpointConfigurable(BaseModel):
     thread_id: Optional[str] = None # String UUID or null
     runConfig: RunConfig
 
-# Matches frontend StreamRunInput (within the overall request)
 class StreamRunInput(BaseModel):
     type: Literal["human"] # Assuming only human input for now
     content: str
 
-# Overall request body for /api/runs/stream
 class StreamRunRequest(BaseModel):
     input: StreamRunInput
     configurable: CheckpointConfigurable # Use the required structure
 
 # --- API Response Payloads ---
-# Matches frontend MessageType structure (needs careful implementation in history endpoint)
-# Base class (conceptual, not directly used in response model but guides implementation)
 class BaseApiMessageModel(BaseModel):
     type: Literal['human', 'ai', 'system', 'tool']
     content: Any # Can be string or structured content (like tool calls)
@@ -64,10 +57,8 @@ class ToolApiMessageModel(BaseApiMessageModel):
     name: Optional[str] = None # Optional name of the tool
     is_error: Optional[bool] = None # Added to match frontend
 
-# Union type for messages in history responses
 MessageTypeModel = Union[HumanApiMessageModel, AiApiMessageModel, SystemApiMessageModel, ToolApiMessageModel]
 
-# Matches frontend HistoryEntry
 class HistoryEntry(BaseModel):
     checkpoint_id: str # Checkpoint UUID string
     thread_id: str # Thread UUID string
@@ -75,7 +66,6 @@ class HistoryEntry(BaseModel):
     runConfig: RunConfig # Include the RunConfig used for this entry
 
 # --- Constitution Listing ---
-# Model for listing available constitutions
 class ConstitutionItem(BaseModel):
     id: str
     title: str
@@ -84,46 +74,41 @@ class ConstitutionItem(BaseModel):
 # --- SSE Event Data Models ---
 # Aligned with frontend global.d.ts SSEEventData
 
-class SSEThreadInfoData(BaseModel):
-    thread_id: str
+# SSEThreadInfoData removed as run_start contains the thread_id
+
+class SSEChunkData(BaseModel):
+    node: str
+    content: str
 
 class SSEToolCallChunkData(BaseModel):
+    node: str
     id: Optional[str] = None
     name: Optional[str] = None
     args: Optional[str] = None
 
 class SSEToolResultData(BaseModel):
+    node: str
     tool_name: str
-    result: str
+    content: str
     is_error: bool
     tool_call_id: Optional[str] = None
 
+class SSEErrorData(BaseModel):
+    node: str
+    error: str
+
 class SSEEndData(BaseModel):
+    node: str
     thread_id: str
-    checkpoint_id: Optional[str] = None # Add checkpoint_id as required by plan
+    checkpoint_id: Optional[str] = None
 
+class SSERunStartData(BaseModel):
+    thread_id: str
+    runConfig: RunConfig
+    initialMessages: List[MessageTypeModel]
+    node: str
 class SSEEventData(BaseModel):
-    type: Literal["thread_info", "chunk", "ai_tool_chunk", "tool_result", "error", "end"] # Use 'thread_info'
-    node: Optional[str] = None
-    thread_id: Optional[str] = None # Top-level thread_id for routing
-    data: Union[SSEThreadInfoData, str, SSEToolCallChunkData, SSEToolResultData, SSEEndData, Any] # Allow Any for error data
-    set_id: Optional[str] = None # For compare mode tracking (future)
+    type: Literal["run_start", "chunk", "ai_tool_chunk", "tool_result", "error", "end"]
+    thread_id: Optional[str] = None
+    data: Union[SSERunStartData, SSEChunkData, SSEToolCallChunkData, SSEToolResultData, SSEErrorData, SSEEndData]
 
-# --- Old/Obsolete Models (To be removed/ignored) ---
-# Define the old models here if they are still needed temporarily by other parts
-# of the backend, otherwise they can be fully deleted.
-# For now, let's define the ones used by the history endpoint before its refactor.
-class HistoryMessage(BaseModel):
-    id: str
-    sender: Literal['human', 'ai', 'tool_result', 'system']
-    content: Any
-    timestamp: Optional[int] = None
-    node: Optional[str] = None
-    set_id: Optional[str] = None
-    tool_name: Optional[str] = None
-    is_error: Optional[bool] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-
-class HistoryResponse(BaseModel):
-    messages: List[HistoryMessage]
-    thread_id: str

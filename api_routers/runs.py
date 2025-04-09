@@ -7,6 +7,7 @@ import logging
 from typing import List, Dict, Optional, Any, AsyncGenerator, Tuple
 from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
+from utils import prepare_sse_event # Import the missing helper
 
 # Langchain/Langgraph specific imports
 from langchain_core.messages import HumanMessage, BaseMessage, AIMessageChunk
@@ -26,8 +27,9 @@ router = APIRouter(
     tags=["runs"]
 )
 # Add attributes to hold instances passed from the main app
-router.graph_app_instance: Optional[Any] = None
-router.checkpointer_instance: Optional[BaseCheckpointSaver] = None
+# These attributes are set during app startup (lifespan event).
+router.graph_app_instance = None
+router.checkpointer_instance = None
 
 # --- Helper Function for Standard Streaming ---
 # Moved from backend_server_async.py
@@ -42,8 +44,9 @@ async def stream_events(
 ) -> AsyncGenerator[ServerSentEvent, None]:
     """Generates Server-Sent Events for a single LangGraph run."""
     if not run_app or not checkpointer:
-        error_data = "Graph app or checkpointer not initialized."
-        yield ServerSentEvent(data=SSEEventData(type="error", node="setup", data=error_data, set_id=set_id, thread_id=thread_id).model_dump_json())
+        error_msg = "Graph app or checkpointer not initialized."
+        error_data_payload = SSEErrorData(node="setup", error=error_msg)
+        yield await prepare_sse_event("error", data_payload=error_data_payload, thread_id=thread_id)
         return
 
     current_node_name: Optional[str] = None
@@ -79,12 +82,22 @@ async def stream_events(
             final_constitution_content += f"\n\n---\n\n{adherence_report_text}"
 
         if missing_ids:
-            yield ServerSentEvent(data=SSEEventData(
-                type="error", node="setup",
-                data=f"Warning: Constitution ID(s) not found/loaded: {', '.join(missing_ids)}. Running without them.",
-                set_id=set_id,
-                thread_id=thread_id
-            ).model_dump_json())
+            error_msg = f"Warning: Constitution ID(s) not found/loaded: {', '.join(missing_ids)}. Running without them."
+            error_data_payload = SSEErrorData(node="setup", error=error_msg)
+            yield await prepare_sse_event("error", data_payload=error_data_payload, thread_id=thread_id)
+
+        # --- Yield run_start event ---
+        # Prepare data for the run_start event
+        run_start_data = SSERunStartData(
+            thread_id=thread_id,
+            runConfig=run_config,
+            initialMessages=input_messages, # Pass the input messages directly
+            node="setup" # Add node field
+        )
+        # Use the helper to create and yield the event (removed node, set_id args)
+        start_event = await prepare_sse_event("run_start", data_payload=run_start_data, thread_id=thread_id)
+        yield start_event
+        # --- End run_start event ---
 
         config_for_run = configurable_metadata.model_dump()
         config_for_run["constitution_content"] = final_constitution_content
@@ -128,8 +141,9 @@ async def stream_events(
                 if text_content:
                     last_text = last_yielded_text.get(yield_key, "")
                     if text_content != last_text:
-                        sse_payload_text = SSEEventData(type="chunk", node=current_node_name, data=text_content, set_id=set_id, thread_id=thread_id)
-                        yield ServerSentEvent(data=sse_payload_text.model_dump_json())
+                        # Use helper for chunk event
+                        chunk_data_payload = SSEChunkData(node=current_node_name or "unknown_node", content=text_content)
+                        yield await prepare_sse_event("chunk", data_payload=chunk_data_payload, thread_id=thread_id)
                         last_yielded_text[yield_key] = text_content
 
             if event_type == "on_chat_model_stream" and isinstance(event_data.get("chunk"), AIMessageChunk):
@@ -146,12 +160,13 @@ async def stream_events(
                                  except Exception: args_str = str(args_value)
 
                          chunk_data = SSEToolCallChunkData(
+                             node=current_node_name or "unknown_node", # Add node field
                              id=tc_chunk.get("id"),
                              name=tc_chunk.get("name"),
                              args=args_str
                          )
-                         sse_payload_tool = SSEEventData(type="ai_tool_chunk", node=current_node_name, data=chunk_data, set_id=set_id, thread_id=thread_id)
-                         yield ServerSentEvent(data=sse_payload_tool.model_dump_json())
+                         # Use helper for ai_tool_chunk event
+                         yield await prepare_sse_event("ai_tool_chunk", data_payload=chunk_data, thread_id=thread_id)
 
             elif event_type == "on_tool_end":
                  tool_output = event_data.get("output")
@@ -165,60 +180,64 @@ async def stream_events(
                       possible_ids = [pid for pid in parent_ids if isinstance(pid, str)]
                       if possible_ids: tool_call_id = possible_ids[-1]
 
+                 # Construct cleaner payload: Use 'content' instead of 'result'
+                 # Ensure tool_call_id is correctly extracted and passed.
                  sse_payload_data = SSEToolResultData(
+                     node="tools", # Add node field
                      tool_name=tool_func_name or "unknown_tool",
-                     result=output_str,
+                     content=output_str, # Use 'content' field for the actual result
                      is_error=is_error,
-                     tool_call_id=tool_call_id
+                     tool_call_id=tool_call_id # Pass the extracted ID
                  )
-                 sse_payload = SSEEventData(type="tool_result", node="tools", data=sse_payload_data, set_id=set_id, thread_id=thread_id)
-                 yield ServerSentEvent(data=sse_payload.model_dump_json())
+                 # Use helper for tool_result event
+                 yield await prepare_sse_event("tool_result", data_payload=sse_payload_data, thread_id=thread_id)
 
-        end_data = SSEEndData(thread_id=thread_id, checkpoint_id=final_checkpoint_id)
-        yield ServerSentEvent(data=SSEEventData(type="end", node=current_node_name or "graph", data=end_data, set_id=set_id, thread_id=thread_id).model_dump_json())
+        # --- Yield end event using helper ---
+        end_data = SSEEndData(node=current_node_name or "graph", thread_id=thread_id, checkpoint_id=final_checkpoint_id) # Add node field
+        end_event = await prepare_sse_event("end", data_payload=end_data, thread_id=thread_id) # Removed node, set_id args
+        yield end_event
+        # --- End end event ---
 
     except Exception as e:
         print(f"Stream Error (Thread ID: {thread_id}, Set: {set_id}): {e}")
         traceback.print_exc()
-        try:
-            error_data = f"Streaming error: {str(e)}"
-            yield ServerSentEvent(data=SSEEventData(type="error", node=current_node_name or "graph", data=error_data, set_id=set_id, thread_id=thread_id).model_dump_json())
-            end_data_on_error = SSEEndData(thread_id=thread_id, checkpoint_id=final_checkpoint_id)
-            yield ServerSentEvent(data=SSEEventData(type="end", node="error", data=end_data_on_error, set_id=set_id, thread_id=thread_id).model_dump_json())
-        except Exception as inner_e:
-            print(f"Failed to send stream error event: {inner_e}")
+        # --- Yield error and end events using helper ---
+        error_msg = f"Streaming error: {str(e)}"
+        error_data_payload = SSEErrorData(node=current_node_name or "graph", error=error_msg)
+        error_event = await prepare_sse_event("error", data_payload=error_data_payload, thread_id=thread_id) # Removed node, set_id args
+        yield error_event
+
+        # Also yield the 'end' event after the error
+        end_data_on_error = SSEEndData(node="error", thread_id=thread_id, checkpoint_id=final_checkpoint_id) # Add node field
+        final_end_event = await prepare_sse_event("end", data_payload=end_data_on_error, thread_id=thread_id) # Removed node, set_id args
+        yield final_end_event
+        # --- End error/end events ---
 
 
-# --- Wrapper for Streaming with Initial Thread Info Event ---
-# Moved from backend_server_async.py
-async def stream_run_with_info_event(
+# --- Wrapper for Streaming  ---
+# This wrapper is now primarily just to handle the specific case of a *new* thread ID
+# It calls the main stream_events which now handles the run_start event itself.
+async def stream_run_for_new_thread(
     new_thread_id: str, # The newly generated thread_id
     input_messages: List[BaseMessage],
     run_config: RunConfig, # Use RunConfig
-    configurable_metadata: CheckpointConfigurable, # Pass full configurable
+    configurable_metadata: CheckpointConfigurable, 
     run_app: Any, # Passed via router attribute
     checkpointer: BaseCheckpointSaver # Passed via router attribute
 ) -> AsyncGenerator[ServerSentEvent, None]:
-    """Yields a thread_info event first, then streams the rest."""
-    # 1. Yield the initial thread info event
-    info_data = SSEThreadInfoData(thread_id=new_thread_id)
-    sse_payload = SSEEventData(type="thread_info", node="setup", data=info_data, thread_id=new_thread_id)
-    yield ServerSentEvent(data=sse_payload.model_dump_json())
-    print(f"Sent thread_info event for Thread ID: {new_thread_id}")
-
-    # 2. Yield the rest of the events from the standard stream_events helper
+    """Streams events for a newly created thread."""
+    # The run_start event is now handled within stream_events
+    print(f"Streaming for NEW Thread ID: {new_thread_id}")
     async for event in stream_events(
         thread_id=new_thread_id,
         input_messages=input_messages,
         run_config=run_config,
-        configurable_metadata=configurable_metadata,
+        configurable_metadata=configurable_metadata, 
         run_app=run_app,
-        checkpointer=checkpointer, # Pass checkpointer instance
+        checkpointer=checkpointer,
         set_id=None
     ):
         yield event
-
-
 # --- Run Endpoint ---
 # Moved from backend_server_async.py
 @router.post("/stream")
@@ -244,11 +263,12 @@ async def run_stream_endpoint(request: StreamRunRequest):
             new_thread_id = str(uuid.uuid4())
             print(f"Received request for new thread. Generated Thread ID: {new_thread_id}")
             configurable_data_with_id = configurable_data.model_copy(update={'thread_id': new_thread_id})
-            event_stream = stream_run_with_info_event(
+            # Call the renamed helper for new threads
+            event_stream = stream_run_for_new_thread(
                 new_thread_id=new_thread_id,
                 input_messages=input_messages,
                 run_config=run_config,
-                configurable_metadata=configurable_data_with_id,
+                configurable_metadata=configurable_data_with_id, # Pass the one with the ID set
                 run_app=graph_app, # Pass instance
                 checkpointer=checkpointer # Pass instance
             )

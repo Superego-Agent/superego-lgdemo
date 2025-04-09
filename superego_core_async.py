@@ -167,11 +167,8 @@ async def create_workflow(superego_model, inner_model) -> Tuple[Annotated[Any, "
     app = workflow.compile(checkpointer=checkpointer)
     inner_app = inner_workflow.compile(checkpointer=checkpointer)
 
-    def signal_handler(sig, frame):
-        print('\\nSignal received, exiting.')
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    # Removed custom signal handler (lines 170-175) as it conflicts with
+    # Uvicorn's signal management, especially with reload enabled.
+    # Uvicorn will handle SIGINT/SIGTERM for graceful shutdown.
 
     return app, checkpointer, inner_app

@@ -1,4 +1,3 @@
-
 declare global {
     interface UISessionState {
         sessionId: string;
@@ -33,14 +32,19 @@ declare global {
         runConfig: RunConfig;
     }
 
+    /** Wrapper object stored in the thread cache */
+    interface ThreadCacheData {
+        history: HistoryEntry | null;
+        isStreaming: boolean;
+        error: string | null;
+    }
+
     /** Represents a single constitution available for selection. */
     interface ConstitutionItem {
         id: string;
-        title: string; // Changed from name to title
+        title: string;
         description?: string;
     }
-
-    // ThreadItem removed
 
     interface BaseApiMessage {
         type: 'human' | 'ai' | 'system' | 'tool';
@@ -48,6 +52,7 @@ declare global {
         name?: string;
         tool_call_id?: string;
         additional_kwargs?: Record<string, any>;
+        nodeId: string;
     }
 
     interface HumanApiMessage extends BaseApiMessage {
@@ -58,7 +63,7 @@ declare global {
     interface AiApiMessage extends BaseApiMessage {
         type: 'ai';
         content: string | any;
-        tool_calls?: Array<{ id: string; name: string; args: Record<string, any>; }>;
+        tool_calls?: Array<{ id: string; name: string; args: string; }>;
         invalid_tool_calls?: any[];
     }
 
@@ -78,19 +83,13 @@ declare global {
     /** Represents message types received from the backend API. */
     type MessageType = HumanApiMessage | AiApiMessage | SystemApiMessage | ToolApiMessage;
 
-
-    // HistoryResponse removed
-
     /** Represents a constitution stored locally in localStorage */
     interface LocalConstitution {
-        id: string; // Unique local ID (e.g., UUID)
+        id: string;
         title: string;
         text: string;
-        createdAt: string; // ISO timestamp string
-        // Add lastUpdatedAt?
+        createdAt: string;
     }
-
-    // BackendConstitutionRefById, BackendConstitutionFullText, SelectedConstitution removed
 
     /** Input structure for starting a run */
     interface StreamRunInput {
@@ -98,51 +97,59 @@ declare global {
         content: string;
     }
 
-    // StreamRunRequest removed
-    // CompareSet removed
-    // CompareRunRequest removed
-
 
     // --- Server-Sent Event (SSE) Data Types ---
 
-    /** Structure for the event carrying the new thread ID */
-    interface SSEThreadInfoData {
-        thread_id: string; // The backend's newly created or confirmed persistent thread ID
+    /** Structure for text chunks */
+    interface SSEChunkData {
+        node: string;
+        content: string;
     }
-
-    // SSEThreadCreatedData removed as SSEThreadInfoData serves the purpose
 
     /** Structure for tool call fragments streamed from the AI */
     interface SSEToolCallChunkData {
-        id?: string | null; // Tool call ID, crucial for matching
-        name?: string | null; // Tool name fragment
-        args?: string | null; // Argument JSON string fragment
+        node: string;
+        id?: string | null;
+        name?: string | null;
+        args?: string | null;
     }
 
     /** Structure for completed tool results */
     interface SSEToolResultData {
+        node: string;
         tool_name: string;
-        result: string; // Stringified result
+        content: string;
         is_error: boolean;
-        tool_call_id?: string | null; // ID of the tool call that generated this
+        tool_call_id?: string | null;
+    }
+
+    /** Structure for error events */
+    interface SSEErrorData {
+        node: string;
+        error: string;
     }
 
     /** Structure for the final 'end' event payload */
     interface SSEEndData {
-        thread_id: string; // Backend's definitive thread ID (UUID string)
+        node: string;
+        thread_id: string;
+        checkpoint_id?: string | null;
+    }
+
+    /** Structure for the initial 'run_start' event payload */
+    interface SSERunStartData {
+        node: string;
+        thread_id: string;
+        runConfig: RunConfig;
+        initialMessages: MessageType[];
     }
 
     /** Overall structure of data received via SSE */
     interface SSEEventData {
-        type: "thread_info" | "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end"; // Added 'thread_info'
-        node?: string | null; // Graph node where event originated
-        thread_id?: string | null; // Added top-level thread_id for routing (CRITICAL)
-        // Type of data depends on the 'type' field
-        data: SSEThreadInfoData | string | SSEToolCallChunkData | SSEToolResultData | SSEEndData | any; // Added SSEThreadInfoData, allow flexibility for 'chunk' (string) or 'error' (any)
-        set_id?: string | null; // Identifier for compare mode sets (Future use)
+        type: "run_start" | "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end";
+        thread_id?: string | null;
+        data: SSERunStartData | SSEChunkData | SSEToolCallChunkData | SSEToolResultData | SSEErrorData | SSEEndData | any;
     }
-
-    // SSEMessageHandler type removed - will be redefined or inferred in api.ts if needed
 
     // --- Other API Types ---
     /** Request body for submitting a new constitution */
@@ -158,15 +165,6 @@ declare global {
         email_sent: boolean;
     }
 
-    /** Represents the state of a single conversation in the UI */
-    interface ConversationState {
-        metadata: ConversationMetadata; // From conversationManager
-        messages: MessageType[];
-        status: 'idle' | 'loading_history' | 'streaming' | 'error'; // Granular status
-        error?: string; // Error specific to this conversation
-        abortController?: AbortController; // Controller for ongoing fetch/stream
-    }
-    // ConversationState removed
 }
 
 // Ensures this file is treated as a module. Required for declare global.

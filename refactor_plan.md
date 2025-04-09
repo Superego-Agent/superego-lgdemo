@@ -21,10 +21,11 @@ This architecture adheres to the following strict principles:
 
 *   **Focus:** The primary goal is establishing the new state structure to enable future features, particularly a clean compare mode. Functionality should remain unchanged from the user's perspective *before* compare mode is explicitly built upon this new foundation.
 *   **Simplicity:** Code MUST be direct and functional. Avoid unnecessary complexity, deep conditional nesting, or OOP patterns where simpler procedural or functional approaches suffice. Keep it lean.
-*   **Minimalism:** This is a refactor for a research demo app, not a production system. Features and error handling beyond the absolute minimum required for the core goal WILL be omitted. **NO extraneous error handling** will be added without explicit discussion and justification – we are not building mountains of defensive code here.
+*   **Minimalism:** This is a refactor for a research demo app, not a production system. Features and error handling beyond the absolute minimum required for the core goal WILL be omitted. Handle realistic API/stream errors cleanly, but **NO extraneous defensive coding** for unlikely edge cases.
 *   **No Data Migration:** Existing `localStorage` data (`superego_conversations`) will be **ignored and discarded**. Users will start with a clean slate. No time will be wasted on migration code.
 *   **Strict Commenting Policy:** Comments are **ONLY** permitted if they provide permanent, essential clarification for non-obvious logic that cannot be made clearer through better naming or structure. **NO ephemeral comments, NO placeholder TODOs, NO explaining the obvious.** Adding comments requires extreme caution and justification. This is non-negotiable.
 *   **Derived State:** Minimize persisted frontend state. Avoid storing data that can be derived from fetched backend checkpoints (e.g., message history, run configurations). Leverage Svelte's derived stores to compute view-specific data dynamically from the source-of-truth checkpoint data when a session is active.
+*   **Types as Source of Truth:** Type definitions (`superego-frontend/src/global.d.ts` and `backend_models.py`) are the primary source of truth for data structures. They should be updated *first* when structures change, and code refactored to conform.
 
 ## 3. Architecture Overview
 
@@ -38,308 +39,133 @@ This architecture adheres to the following strict principles:
 *   **`UISession` (Frontend):** Represents a UI tab or view. It maps a frontend-generated `sessionId` to one or more backend `threadId`s that should be displayed within that tab. This allows for single-thread views (standard chat) and multi-thread views (compare mode).
 *   **`knownThreadIds` (Frontend):** A simple list stored in `localStorage` containing all `threadId`s that this specific client/browser has created or interacted with. Acts as a client-side index to filter relevant sessions/threads.
 
-### Data Structures (Interfaces - in `global.d.ts`)
+### Data Structures (Source of Truth: `superego-frontend/src/global.d.ts`)
+
+All frontend TypeScript interfaces and types related to state management, API communication, and SSE events are defined in `superego-frontend/src/global.d.ts`. This file serves as the single source of truth for these structures. Key interfaces include:
+
+*   `UISessionState`: Represents a UI tab/session and its associated backend `threadIds`.
+*   `HistoryEntry`: Represents the content of a backend checkpoint (messages, run config).
+*   `ThreadCacheData`: Wrapper object stored in the frontend cache, containing `HistoryEntry` plus frontend status flags (`isStreaming`, `error`).
+*   `MessageType`: Union type for different message structures.
+*   SSE Event Interfaces (`SSERunStartData`, `SSEChunkData`, etc.): Define the structure of data received via Server-Sent Events.
+
+**Principle:** Type definitions (`global.d.ts` and `backend_models.py`) should always be updated *first* when the data structure changes. Code should then be refactored to conform to the updated types.
+
+### Frontend State (`localStorage` & Stores)
 
 ```typescript
-// --- Core Frontend State ---
+// Relevant stores defined in src/lib/stores.ts
 
-/** Represents a single UI tab/view state stored in localStorage */
-interface UISessionState {
-    sessionId: string; // Frontend-generated UUID v4 (identifies the UI tab)
-    name: string;      // User-editable name for the session/tab
-    createdAt: string; // ISO timestamp string
-    lastUpdatedAt: string; // ISO timestamp string
-    threadIds: string[]; // List of LangGraph backend thread IDs displayed in this session
-}
+// Persisted Stores (using svelte-persisted-store)
+export const knownThreadIds: Writable<string[]>; // Index of known thread IDs
+export const uiSessions: Writable<Record<string, UISessionState>>; // Maps UI session ID to state (including thread IDs)
 
-// --- Constitution Representation ---
-
-/**
- * Represents a constitution module configured with an adherence level for use.
- * Used in frontend state and sent to/received from the backend.
- */
-interface ConfiguredConstitutionModule {
-    /** Unique identifier (global ID or frontend-generated for local). */
-    id: string;
-    /** Title of the module. */
-    title: string;
-    /** Adherence level (1-5). */
-    adherence_level: number;
-    /** Full text of the module (optional; if missing, backend fetches using ID). */
-    text?: string;
-}
-
-// --- API Request Payloads ---
-
-/** Represents the configuration for a specific agent run attempt. */
-interface RunConfig {
-    /** Array of constitution modules configured for this run. */
-    configuredModules: ConfiguredModule[];
-    // Potentially other run-specific parameters...
-}
-
-/**
- * Represents the structure of the 'configurable' object passed TO the backend API
- * and persisted within the checkpoint's config field.
- */
-interface CheckpointConfigurable {
-    thread_id: string | null; // LangGraph thread ID (null for new thread)
-    runConfig: RunConfig;     // The config used for this run (defined above)
-    // Other potential custom keys...
-}
-
-// --- API Response Payloads ---
-
-/**
- * Represents the data structure returned by backend endpoints fetching checkpoint data
- * (e.g., /api/threads/{thread_id}/history, /api/threads/{thread_id}/latest).
- * Messages directly use the aligned frontend MessageType.
- */
-interface HistoryEntry {
-    checkpoint_id: string; // Unique ID of the checkpoint
-    thread_id: string;     // ID of the conversation thread
-    values: {
-        /** Message history up to this point, using the aligned MessageType[]. */
-        messages: MessageType[]; // Assumes MessageType is aligned with backend structure
-    };
-    runConfig: RunConfig; // Configuration used for the run leading to this state
-}
-
-// --- Message Representation ---
-
-/**
- * Represents the different types of messages in the application.
- * IMPORTANT: This definition in `global.d.ts` MUST be modified to align closely
- * with the structure of serialized LangChain messages stored in backend checkpoints
- * (e.g., using `type` instead of `sender`, adjusting tool call structure).
- * Example (Conceptual - requires verification against backend):
- *
- * interface BaseApiMessage {
- *   type: 'human' | 'ai' | 'system' | 'tool';
- *   content: string | any;
- *   name?: string; // For tool messages or AI messages
- *   tool_call_id?: string; // For tool messages
- *   // For AI messages:
- *   tool_calls?: Array<{ id: string; name: string; args: Record<string, any>; }>;
- *   invalid_tool_calls?: any[];
- *   additional_kwargs?: Record<string, any>;
- * }
- * // Define HumanApiMessage, AiApiMessage, ToolApiMessage, SystemApiMessage extending BaseApiMessage
- * type MessageType = HumanApiMessage | AiApiMessage | ToolApiMessage | SystemApiMessage;
- */
-// Existing MessageType definition in global.d.ts needs modification.
-
-```
-
-### Frontend State (`localStorage`)
-
-```typescript
-// Using 'svelte-persisted-store' for automatic localStorage synchronization.
-import { persisted } from 'svelte-persisted-store';
-import { writable } from 'svelte/store';
-import type { Writable } from 'svelte/store';
-
-/**
- * List of all LangGraph thread IDs known to this client. Acts as an index.
- * Synced with localStorage key 'superego_knownThreads'.
- */
-export const knownThreadIds = persisted<string[]>('superego_knownThreads', []);
-
-/**
- * Holds state for ALL UI sessions/tabs, keyed by sessionId.
- * Maps UI tabs to backend thread IDs.
- * Synced with localStorage key 'superego_uiSessions'.
- */
-export const uiSessions = persisted<Record<string, UISessionState>>('superego_uiSessions', {});
-
-/**
- * Tracks the sessionId of the currently viewed session/tab (NOT persisted).
- */
-export const activeSessionId: Writable<string | null> = writable(null);
+// Non-Persisted Stores
+export const activeSessionId: Writable<string | null>; // ID of the currently viewed UI session
+export const threadCacheStore: Writable<Record<string, ThreadCacheData>>; // In-memory cache for thread data + status
+export const globalError: Writable<string | null>; // Global error message display
 ```
 
 ### Backend State (Checkpointer)
 
 *   The backend utilizes a LangGraph checkpointer (e.g., `AsyncSqliteSaver`) configured to persist graph state.
-*   Checkpoints store the graph state (`values`, including messages), internal execution `metadata`, and the `configurable` dictionary passed during invocation (containing `thread_id`, `agentRunId`, `frontendConfig`).
+*   Checkpoints store the graph state (`values`, including messages), internal execution `metadata`, and the `configurable` dictionary passed during invocation (containing `thread_id`, `runConfig`).
 *   Checkpoints are grouped by `threadId`.
 
 ## 4. Backend API Requirements
 
 *   **/api/runs/stream Endpoint:**
-    *   **MUST** accept a request body containing `input` (user message) and `configurable` (type `CheckpointConfigurable`).
-    *   The `configurable` object **MUST** contain:
-        *   `thread_id: string | null`: The target conversation thread. If `null`, the backend MUST generate a new `threadId`.
-        *   `runConfig: RunConfig`: The configuration object provided by the frontend for this run.
-    *   The backend **MUST** pass this entire `configurable` object when invoking the LangGraph graph (`.stream()` or `.invoke()`) so it gets persisted with the checkpoint.
-    *   The backend **MUST** return the generated or provided `threadId` in SSE events (e.g., in a `thread_info` event or within each event's metadata).
-    *   The backend **MUST** return the final `checkpoint_id` of the run in the `end` SSE event (useful for identifying the final state).
-    *   The backend graph logic **MUST** be responsible for deriving the final concatenated constitution string from the `runConfig.configuredModules` array at runtime if needed (e.g., for system prompts).
+    *   Accepts `input` and `configurable` (`CheckpointConfigurable`).
+    *   `configurable` MUST contain `thread_id: string | null` and `runConfig: RunConfig`.
+    *   Backend MUST pass `configurable` to LangGraph invocation.
+    *   Backend MUST return `thread_id` in all subsequent SSE events.
+    *   **SSE `run_start` Event:** Backend MUST send this first. It MUST contain `thread_id`, `runConfig`, `initialMessages`, and `node`. (The separate `thread_info` event is eliminated).
+    *   **SSE Structure:** Subsequent events (`chunk`, `ai_tool_chunk`, `tool_result`, `error`, `end`) MUST include `node` in their `data` payload.
+    *   **Tool Result Structure:** `tool_result` data MUST use `content` field and include `tool_call_id`.
+    *   **SSE `end` Event:** MUST include final `checkpoint_id` in its `data` payload.
+    *   Backend graph logic MUST derive concatenated constitution string from `runConfig` if needed.
 *   **/api/threads/{thread_id}/latest Endpoint:**
-    *   **MUST** accept a `thread_id` (string UUID).
-    *   **MUST** fetch the latest checkpoint for the given `thread_id`.
-    *   **MUST** return a single `HistoryEntry` object.
-    *   The returned `HistoryEntry` **MUST** include:
-        *   `checkpoint_id`: The ID of the latest checkpoint.
-        *   `thread_id`: The ID of the thread.
-        *   `values`: Containing `messages` (the full message list up to this checkpoint).
-        *   `runConfig`: Extracted from the checkpoint's `config.configurable.runConfig`.
-    *   The `messages` array within `values` **MUST** conform to the frontend's `MessageType` structure (i.e., backend performs necessary mapping/adaptation from raw checkpoint message format).
+    *   Accepts `thread_id`.
+    *   Fetches latest checkpoint.
+    *   Returns a single `HistoryEntry` object (including `checkpoint_id`, `thread_id`, `values.messages`, `runConfig`).
+    *   `messages` array MUST conform to frontend `MessageType` structure (including `nodeId`).
 *   **/api/threads/{thread_id}/history Endpoint:**
-    *   **MUST** accept a `thread_id` (string UUID).
-    *   **MUST** fetch all relevant checkpoints for the given `thread_id`, ordered chronologically.
-    *   **MUST** return a list of `HistoryEntry` objects (`HistoryEntry[]`).
-    *   Each returned `HistoryEntry` **MUST** conform to the structure defined for the `/latest` endpoint (containing `checkpoint_id`, `thread_id`, `values.messages`, `runConfig`, with messages adapted to `MessageType`).
+    *   Accepts `thread_id`.
+    *   Fetches all relevant checkpoints.
+    *   Returns `HistoryEntry[]`.
+    *   Each `HistoryEntry` MUST conform to the structure defined for `/latest`.
 
-## 5. Frontend Workflow Examples
+## 5. Frontend Workflow Examples (Conceptual - Reflecting `ThreadCacheData`)
 
-*   **New Session:**
-    1.  User clicks "New Session".
-    2.  `sessionManager.createNewSession` creates a `UISessionState` with a unique `sessionId` and `threadIds: []`.
-    3.  Adds the new session to `uiSessions`.
-    4.  Sets `activeSessionId`. (UI updates to show empty state).
-*   **Start First Run (Sending First Message in a New Session):**
-    1.  `ChatInterface` gets the active `UISessionState` (which has `threadIds: []`).
-    2.  Get `RunConfig` (selected `configuredModules`).
-    3.  Construct `CheckpointConfigurable` payload with `thread_id: null` and the `runConfig`.
-    4.  Call backend `/api/runs/stream` API with the payload.
-    5.  Backend generates a new `threadId`, runs graph, saves checkpoints.
-    6.  On receiving the `thread_info` SSE event (or similar event containing the new `threadId`):
-        *   Add the new `threadId` to the `knownThreadIds` store.
-        *   Update the current `UISessionState` in `uiSessions` to include the new `threadId` in its `threadIds` list.
-    7.  On receiving the `end` SSE event (containing the final `checkpoint_id`):
-        *   Optionally trigger a fetch to `/api/threads/{new_threadId}/latest` to get the final `HistoryEntry` (though optimistic updates from SSE chunks might suffice).
-        *   UI displays the messages received via SSE.
-*   **Start Subsequent Run (Single Thread Session):**
-    1.  `ChatInterface` gets active `UISessionState` (has one `threadId`).
-    2.  Get `RunConfig` (selected `configuredModules`).
-    3.  Construct `CheckpointConfigurable` payload with the existing `thread_id` and the `runConfig`.
-    4.  Call backend `/api/runs/stream` API with the payload.
-    5.  Backend continues the thread, saves new checkpoints.
-    6.  UI updates based on SSE events. On `end` event, optionally fetch `/latest` for final state confirmation.
-*   **Start Run (Compare Mode Session - Conceptual):**
-    *   *Assumption:* Compare mode runs each configuration on a **separate `threadId`**.
-    1.  `ChatInterface` gets active `UISessionState` (has multiple `threadIds`, e.g., `threadId_A`, `threadId_B`).
-    2.  Get `RunConfig` for leg A (`runConfig_A`) and leg B (`runConfig_B`).
-    3.  Construct `CheckpointConfigurable` payload A (`thread_id: threadId_A`, `runConfig: runConfig_A`).
-    4.  Construct `CheckpointConfigurable` payload B (`thread_id: threadId_B`, `runConfig: runConfig_B`).
-    5.  Call backend `/api/runs/stream` API with payload A.
-    6.  Call backend `/api/runs/stream` API with payload B.
-    7.  UI handles two independent SSE streams, routing updates to the correct display column based on the `threadId` received in events.
-    8.  On `end` events, optionally fetch `/latest` for each thread.
-*   **Receive SSE Event:**
-    1.  Events **MUST** contain `threadId`.
-    2.  Frontend routes event data based on `threadId` to update the relevant part of the UI (e.g., specific message list in single view or specific column in compare view).
-    3.  UI updates optimistically based on message chunks.
-*   **Switching Tabs (Activating a Session):**
-    1.  User clicks a session in the sidebar.
-    2.  Update `activeSessionId` store.
-    3.  `ChatInterface` (or relevant component) reacts to `activeSessionId` change:
-        *   Gets the corresponding `UISessionState` from `uiSessions`.
-        *   Gets the `threadIds` from the session state.
-        *   If `threadIds` exist:
-            *   For each `threadId`, call backend `/api/threads/{thread_id}/latest` endpoint.
-            *   Store the received `HistoryEntry` objects temporarily (e.g., in a non-persisted store or component state).
-            *   Render the message history view(s) using the `messages` array from the fetched `HistoryEntry`(s). Display `runConfig` details as needed.
-        *   If `threadIds` is empty, display an empty chat state.
+*   **New Session:** (Unchanged) Create `UISessionState`, add to `uiSessions`, set `activeSessionId`.
+*   **Start First Run:**
+    1.  Get `RunConfig`. Construct `CheckpointConfigurable` (`thread_id: null`).
+    2.  Call `api.streamRun`.
+    3.  On receiving `run_start`: `api.ts` initializes `threadCacheStore` entry for the new `threadId` with `ThreadCacheData` (populating `history`, setting `isStreaming: true`, `error: null`). Calls `addKnownThreadId`, `addThreadToSession`.
+    4.  On receiving stream updates (`chunk`, etc.): `api.ts` retrieves `ThreadCacheData`, clones `history`, calls `streamProcessor` mutator, updates `history` in the store entry (keeping `isStreaming: true`).
+    5.  On receiving `end`: `api.ts` calls `getLatestHistory` (which fetches final state and updates the store entry, setting `isStreaming: false`).
+*   **Start Subsequent Run:** Similar, but `CheckpointConfigurable` uses existing `thread_id`. `api.ts` updates existing `threadCacheStore` entry.
+*   **Switching Tabs:**
+    1.  Update `activeSessionId`.
+    2.  `ChatInterface` gets `UISessionState`, gets `threadIds`.
+    3.  For each `threadId`: Check `threadCacheStore`. If `history` is null, `api.getLatestHistory(threadId)` is triggered (updates store).
+    4.  Render UI using data derived from `threadCacheStore`.
 
-## 6. Implementation Notes (High-Level)
+## 6. Implementation Plan (Next Steps)
 
-*   **Interfaces (`src/global.d.ts`):**
-    *   Define `UISessionState`, `ConfiguredModule`, `RunConfig`, `CheckpointConfigurable`, `HistoryEntry`.
-    *   **CRITICAL:** Modify the existing `MessageType` union (and constituent interfaces like `HumanMessage`, `AIMessage`, etc.) to align with the backend's serialized message structure (e.g., use `type` instead of `sender`, expect top-level `tool_calls`, remove frontend-only fields like `id`, `timestamp`).
-*   **Libraries:** Use `svelte-persisted-store` for `uiSessions` and `knownThreadIds`. Use `uuid` for generating `sessionId`.
-*   **Stores (`src/lib/stores.ts`):**
-    *   Implement `uiSessions`, `activeSessionId`, `knownThreadIds` using `svelte-persisted-store`.
-    *   Remove old stores related to `conversationStates`, `activeConstitutionIds`, `constitutionAdherenceLevels`, etc.
-    *   Add a non-persisted, writable store `historyCacheStore: Writable<Record<string, HistoryEntry>>` to `stores.ts`. This acts as an in-memory cache holding the latest known `HistoryEntry` for each `threadId` interacted with.
-*   **State Management Functions (`src/lib/sessionManager.ts` or similar):**
-    *   Create functions for managing `uiSessions` (create, rename, delete, update `threadIds`).
-    *   Create functions for managing `knownThreadIds`.
-    *   Remove old `conversationManager.ts`.
-*   **UI Components:**
-    *   `Sidebar`: List sessions from `uiSessions`. Handle creation of new `UISessionState` entries. Set `activeSessionId` on selection.
-    *   `ChatInterface` / `CompareInterface`:
-        *   React to `activeSessionId` changes.
-        *   Fetch `HistoryEntry` data from `/api/threads/{thread_id}/latest` for the active `threadIds`.
-        *   Render messages directly using the `messages` array (now aligned `MessageType[]`) from the fetched `HistoryEntry`(s).
-        *   Display `runConfig` details (e.g., applied constitutions) from the fetched `HistoryEntry`(s).
-        *   Handle message sending (`handleSend`) by constructing the `CheckpointConfigurable` payload (with `RunConfig`) and calling the `/api/runs/stream` API.
-        *   Handle SSE events, routing based on `threadId`.
-    *   `ConstitutionSelector`, etc.: Provide data needed to construct the `RunConfig` (specifically the `configuredModules: ConfiguredModule[]`).
-*   **API Calls (`src/lib/api.ts`):**
-    *   Update `streamRun` function to construct and send the `CheckpointConfigurable` payload.
-    *   Implement `getLatestHistory(threadId)` function to call `/api/threads/{thread_id}/latest` and return a typed `HistoryEntry`.
-    *   Implement `getFullHistory(threadId)` function to call `/api/threads/{thread_id}/history` and return typed `HistoryEntry[]`.
-    *   Remove message transformation logic from API fetching functions.
-    *   **Stream Processing Logic (`src/lib/streamProcessor.ts` - NEW):**
-        *   **Goal:** Provide pure, stateless functions to process intermediate SSE events (`chunk`, `ai_tool_chunk`, `tool_result`) based on the current state of a thread's `HistoryEntry` from the cache, returning a *new, updated* `HistoryEntry` object reflecting the optimistic change.
-        *   **Approach:**
-            *   Create `streamProcessor.ts`.
-            *   Implement pure functions like:
-                *   `handleChunk(currentEntry: HistoryEntry | undefined, chunkData: string, event: SSEEventData): HistoryEntry` - Takes the current entry (or undefined if it's the very first event for a new message), appends the chunk to the content of the last message (creating a new message object if necessary), and returns a *new* `HistoryEntry` object with the updated messages array.
-                *   `handleToolChunk(currentEntry: HistoryEntry, toolChunkData: SSEToolCallChunkData, event: SSEEventData): HistoryEntry` - Takes the current entry, finds the last AI message, updates its `tool_calls` array based on the chunk data (parsing args incrementally if needed), and returns a *new* `HistoryEntry` object.
-                *   `handleToolResult(currentEntry: HistoryEntry, toolResultData: SSEToolResultData, event: SSEEventData): HistoryEntry` - Takes the current entry, creates a new `ToolApiMessage`, adds it to the messages array, and returns a *new* `HistoryEntry` object.
-            *   These functions encapsulate the complex logic of message construction without managing state themselves.
-    *   **API Integration (`api.ts` - `streamRun`):**
-        *   The internal `onmessage` handler within `streamRun` orchestrates optimistic updates:
-            1.  Receives an intermediate SSE event for a specific `threadId`.
-            2.  Gets the current `historyCacheStore` value using `get(historyCacheStore)`.
-            3.  Retrieves the specific `HistoryEntry` for the event's `threadId` from the cache (`currentEntry = cache[threadId]`).
-            4.  Calls the appropriate pure function from `streamProcessor.ts` with `currentEntry` and event data.
-            5.  Receives the `newEntry` (a new `HistoryEntry` object) back.
-            6.  Updates the central cache immutably: `historyCacheStore.update(cache => ({ ...cache, [threadId]: newEntry }));`
-        *   The `onEnd` callback triggers `getLatestHistory(threadId)` to fetch the final state, which overwrites the `historyCacheStore` entry. Log discrepancies between optimistic and final state.
-    *   **Refactoring Order:** Implement changes in the following order:
-        1.  Backend API Verification (Already Done).
-        2.  Define `historyCacheStore` in `stores.ts`.
-        3.  Implement Stream Processing pure functions (`streamProcessor.ts`).
-        4.  Integrate stream processing logic into `api.ts` (`streamRun`'s `onmessage` handler).
-        5.  Refactor UI Components (`ChatInterface.svelte`, `ConstitutionSelector.svelte`).
-    *   **UI Component Logic (`ChatInterface.svelte`, etc.):**
-        *   **Active Threads Determination:** A top-level component (e.g., `App.svelte`) derives the `activeThreadIds: string[]` by subscribing to `activeSessionId` and `uiSessions`.
-        *   **Props:** The `activeThreadIds` array is passed down as props to display components (e.g., `<ChatView threadId={activeThreadIds[0]} />`).
-        *   **Subscription & Data Selection:** Display components receive `threadId`(s) via props, subscribe to `historyCacheStore`, and use reactive declarations (`$:`) to select the relevant `HistoryEntry` from the cache: `$: entry = $historyCacheStore[threadId];`.
-        *   **Rendering:** Components render messages (`entry?.values?.messages`), config (`entry?.runConfig`), etc., based on the selected `entry`.
-        *   **Fetching:** If `entry` is initially undefined for a required `threadId`, the component triggers `getLatestHistory(threadId)` to populate the cache.
-    *   **Testing:** Focus on core workflows: creating sessions, sending messages, fetching initial history, real-time display via cache updates, correct state overwrite on end/error, discrepancy logging, persistence of session info, switching sessions, (Future) multiple components displaying different threads simultaneously.
+This section outlines the immediate tasks required to implement the refined state management approach.
 
-## 7. Refactor Log
+**Guiding Principles Reminder:**
+*   Update type definitions (`global.d.ts`, `backend_models.py`) first. (Done for this phase)
+*   Implement changes step-by-step, verifying as you go.
+*   Adhere strictly to commenting policy (no ephemeral/obvious comments).
+*   Handle realistic errors cleanly, avoid excessive defensive coding.
 
-*   **2025-04-09:**
-    *   Updated `superego-frontend/src/global.d.ts`:
-        *   Added new interfaces: `UISessionState`, `ConfiguredConstitutionModule`, `RunConfig`, `CheckpointConfigurable`, `HistoryEntry`.
-        *   Replaced old `MessageType` and related interfaces with backend-aligned `BaseApiMessage`, `HumanApiMessage`, `AiApiMessage`, `SystemApiMessage`, `ToolApiMessage`, and updated `MessageType` union.
-        *   Removed obsolete types: `ThreadItem`, `HistoryResponse`, `StreamRunRequest`, `CompareRunRequest`, `ConversationState`, `BackendConstitutionRefById`, `BackendConstitutionFullText`, `SelectedConstitution`.
-        *   Fixed syntax error related to commented-out `ConversationState`.
-    *   Refactored state management:
-        *   Updated `superego-frontend/src/lib/stores.ts` to export simple `persisted` stores (`uiSessions`, `knownThreadIds`) and a `writable` store (`activeSessionId`).
-        *   Created `superego-frontend/src/lib/sessionManager.ts` containing functions (`createNewSession`, `renameSession`, `deleteSession`, `addThreadToSession`, etc.) to manage the state in the stores.
-        *   Removed old `conversationManager.ts`.
-    *   Improved logging utilities in `superego-frontend/src/lib/utils.ts`:
-        *   Added `logOperationStatus` helper for synchronous operations returning a boolean status.
-        *   Standardized logging prefixes (`[OK]`, `[FAIL]`) in both `logOperationStatus` and the existing async `logExecution` helper.
-        *   Updated `sessionManager.ts` to use the shared `logOperationStatus` helper.
-    *   Updated `superego-frontend/src/lib/components/Sidebar.svelte`:
-        *   Refactored to import and use the simple stores from `stores.ts` and management functions from `sessionManager.ts`.
-        *   Updated logic for displaying sessions, creating, renaming, deleting, and selecting sessions.
-        *   Removed call to non-existent `deleteThread` API function.
-    *   Updated `superego-frontend/src/lib/api.ts`:
-        *   Removed old API functions (`fetchHistory`, `fetchConstitutions`, `submitConstitution`, `fetchConstitutionContent`, `deleteThread`, old `streamRun`).
-        *   Implemented `getLatestHistory` and `getFullHistory` functions.
-        *   Implemented new `streamRun` function accepting `userInput`, `runConfig`, and `callbacks`, sending the `CheckpointConfigurable` payload, and handling SSE routing via `thread_id`.
-        *   Corrected store imports and removed unnecessary type imports.
-    *   Updated `superego-frontend/src/global.d.ts`:
-        *   Added `SSEThreadInfoData` type.
-        *   Refined `SSEEventData` to include `thread_info` type and top-level `thread_id`.
-        *   Removed obsolete `SSEThreadCreatedData`.
-    *   Restored `superego-frontend/src/lib/stores.ts` to include refactored stores (`uiSessions`, `knownThreadIds`, `activeSessionId`) and `globalError`.
-*   **2025-04-09 (Plan Adjustment):** Paused refactoring of UI components (`ChatInterface`, `ConstitutionSelector`). Prioritizing verification of backend API alignment with `refactor_plan.md` requirements before proceeding with component implementation.
-*   **2025-04-09 (API Verification):** Verified backend API endpoints (`api_routers/runs.py`, `api_routers/threads.py`) against Section 4 requirements. Confirmed alignment for `/api/runs/stream` (accepts `configurable`, returns `thread_id` & `checkpoint_id` in SSE, derives constitution), `/api/threads/{thread_id}/latest`, and `/api/threads/{thread_id}/history` (return correct `HistoryEntry` structure with adapted messages and `runConfig`). Backend API is ready for frontend component refactoring.
-*   **2025-04-09 (State Plan Refinement):** Discussed and refined the frontend state management and stream processing strategy. Iterated through several approaches (separate streaming store, active entry store) before settling on the final plan documented in Section 6:
-    *   Use a central `historyCacheStore` (Record<string, HistoryEntry>).
-    *   Implement pure functions in `streamProcessor.ts` to calculate optimistic updates.
-    *   Update the cache directly from `api.ts` during streaming.
-    *   Overwrite cache with final state fetched via `getLatestHistory` on stream end.
-    *   UI components subscribe to the cache and select data based on `threadId` props.
-    *   Confirmed refactoring order: Cache -> Processor -> API Integration -> UI Components.
+**Implementation Tasks:**
+
+1.  **Update Type Definitions (Done):**
+    *   `global.d.ts`: Added `ThreadCacheData`, removed `SSEThreadInfoData` and `"thread_info"` type.
+    *   `backend_models.py`: Removed `SSEThreadInfoData` model and `"thread_info"` type.
+
+2.  **Update Stores (`src/lib/stores.ts`):**
+    *   Rename `historyCacheStore` to `threadCacheStore`.
+    *   Update its type signature to `Writable<Record<string, ThreadCacheData>>`.
+
+3.  **Update API Layer (`src/lib/api.ts`):**
+    *   Update store references to `threadCacheStore`.
+    *   Refactor `getLatestHistory` to update `ThreadCacheData` in the store (managing `history`, `isStreaming`, `error`).
+    *   Refactor SSE event handlers (`handleRunStartEvent`, `handleStreamUpdateEvent`, `handleErrorEvent`, `handleEndEvent`) to work with `ThreadCacheData`.
+    *   Remove `handleThreadInfoEvent`.
+    *   Implement **type-safe event dispatch** using a typed handler map.
+    *   Ensure `isStreaming` and `error` flags are managed robustly for relevant scenarios.
+    *   Remove unnecessary comments.
+
+4.  **Update Stream Processor (`src/lib/streamProcessor.ts`):**
+    *   Ensure mutator functions (`handleChunk`, `handleToolChunk`, `handleToolResult`) correctly accept and modify the `HistoryEntry` object (passed from `api.ts` which extracts it from `ThreadCacheData.history`).
+
+5.  **Create `ChatView.svelte` Component:**
+    *   Accept `threadId` prop.
+    *   Import `threadCacheStore`.
+    *   Reactively derive `history`, `isStreaming`, `error` from the store for the given `threadId`.
+    *   Render UI based on derived state (messages, initial error, streaming indicator). Implicitly handle initial loading state.
+
+6.  **Refactor `ChatInterface.svelte` Component:**
+    *   Remove local history state management.
+    *   Remove direct message rendering.
+    *   Import and instantiate `<ChatView {threadId} />`.
+    *   Update `handleSend`: Keep `api.streamRun` call (for now), remove callbacks.
+    *   Clean up unused code.
+
+7.  **Refactor `ConstitutionSelector.svelte`:** (Lower priority, can be deferred)
+    *   Update component to manage its state and provide the selected `configuredModules` array needed to construct the `RunConfig` in `ChatInterface.svelte`. Remove the placeholder in `ChatInterface.handleSend`.
+
+8.  **Testing:** Thoroughly test the core workflows after completing the above steps.
+
+**Future Considerations:**
+*   Rename `HistoryEntry` to `CheckpointState` for clarity.
+*   Refactor `handleSend` logic out of `ChatInterface.svelte` (e.g., using event dispatch or a dedicated service).
+
+## 7. Refactor Log (Pruned)
+
+*   Previous refactoring steps completed up to implementing the initial stream processing logic (`streamProcessor.ts`) and integrating it into `api.ts` using the original `historyCacheStore` and map dispatch approach. Type definitions and backend SSE structure were aligned.
+*   **Next Phase:** Implement the refined caching (`ThreadCacheData`), type-safe dispatch, and UI component refactoring outlined in Section 6.

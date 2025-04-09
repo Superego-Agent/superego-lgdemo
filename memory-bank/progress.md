@@ -1,4 +1,4 @@
-# Progress: Superego LangGraph Agent (As of 2025-04-09 Evening)
+# Progress: Superego LangGraph Agent (As of 2025-04-09 Late Evening)
 
 ## 1. What Works / Completed
 
@@ -14,21 +14,25 @@
     *   Logging utilities (`utils.ts`) improved.
     *   API interaction layer (`api.ts`) refactored (`getLatestHistory`, `getFullHistory`, `streamRun`).
     *   SSE types (`global.d.ts`) updated.
-*   **Backend API Verification & Cleanup:**
+*   **Backend API Implementation & Refinement:**
     *   Verified backend API endpoints match `refactor_plan.md`.
     *   Refactored `backend_server_async.py` to use FastAPI routers.
+    *   Added `prepare_sse_event` helper to `utils.py`.
+    *   Updated `api_routers/runs.py` to send required `run_start` SSE event using the helper.
+    *   Updated `backend_models.py` with `SSERunStartData`.
 *   **Plan Documentation:**
-    *   Updated `refactor_plan.md` with the refined state management strategy (`historyCacheStore`, direct optimistic updates) and refactoring order.
-    *   Updated `activeContext.md` to reflect the current plan and learnings.
+    *   Updated `refactor_plan.md` with the refined state management strategy (`historyCacheStore`, `run_start` event requirement) and refactoring order.
+    *   Updated `activeContext.md` to reflect the current plan, progress, and learnings.
+*   **Frontend State Foundation:**
+    *   Added `historyCacheStore` to `src/lib/stores.ts`.
 
 ## 2. What's Left / In Progress
 
-*   **Frontend State Refactor (In Progress - Following Revised Order):**
-    1.  **Define `historyCacheStore`:** Add store to `stores.ts`. (Next Step)
-    2.  **Implement Stream Processor:** Create `streamProcessor.ts` with pure functions for handling intermediate SSE events.
-    3.  **Integrate API:** Update `api.ts` (`streamRun`) to use `streamProcessor` and update `historyCacheStore`.
-    4.  **Refactor UI Components:** Update `ChatInterface.svelte`, `ConstitutionSelector.svelte`, etc., to use the cache and new logic.
-*   **Testing:** Thoroughly test the refactored frontend workflows.
+*   **Frontend State Refactor (In Progress - Handoff):**
+    1.  **Implement Stream Processor:** Create `src/lib/streamProcessor.ts` with pure functions (`handleChunk`, `handleToolChunk`, `handleToolResult`) expecting valid `HistoryEntry` input. **(Next Step - Handed Off)**
+    2.  **Integrate API:** Update `api.ts` (`streamRun`) to handle `run_start` event, initialize cache, call processor functions, update cache, and fetch final state on end.
+    3.  **Refactor UI Components:** Update `ChatInterface.svelte`, `ConstitutionSelector.svelte`, etc., to use the cache and new API logic.
+*   **Testing:** Thoroughly test the refactored frontend workflows once implemented.
 *   **Compare Mode (Frontend):** Design and implement. Blocked by core refactor.
 *   **Configuration CRUD (Future):** UI/API for managing constitutions.
 *   **Output Superego (Future):** Implement output screening agent.
@@ -49,4 +53,4 @@
 *   **Tool Naming:** Corrected Superego tool name to `superego_decision`.
 *   **Focus on Research Transparency:** User experience goals remain focused on observability.
 *   **Backend API Structure:** Confirmed use of FastAPI routers.
-*   **State Management Refinement:** Iterated through several approaches (separate streaming store, active entry store) before settling on the `historyCacheStore` with direct optimistic updates and UI components deriving state via props/cache subscription, based on user feedback emphasizing simplicity and avoiding unnecessary stores.
+*   **State Management Refinement:** Iterated through several approaches before settling on the `historyCacheStore` with direct optimistic updates, UI components deriving state via props/cache subscription, and backend sending `run_start` event with `runConfig` for reliable initialization.
