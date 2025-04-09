@@ -10,7 +10,8 @@
     // Form State
     let constitutionTitle = '';
     let constitutionText = '';
-    let submitForReview = false; // Replaces isPrivate, default false
+    let submitForReview = false; // Checkbox to enable submission
+    let isPrivate = true; // Toggle for privacy, default true, shown only if submitForReview is true
     let selectedTemplateId: string | null = null; // For the template dropdown
 
     // Submission State
@@ -79,8 +80,9 @@
             // 2. Optionally submit for review
             if (submitForReview) {
                 const response = await submitConstitution({
+                    title: constitutionTitle, // Send the title
                     text: constitutionText,
-                    is_private: false // Submit for review implies potential public use
+                    isPrivate: isPrivate // Send the state of the privacy toggle
                 });
                 submitApiSuccess = response.status === 'success';
                 submitApiMessage = response.message || (submitApiSuccess ? 'Submitted for review.' : 'Submission failed.');
@@ -169,8 +171,19 @@
         </div>
 
         {#if submitForReview}
+            <!-- Privacy Toggle - shown only when submitting for review -->
+            <div class="privacy-toggle review-toggle">
+                 <label>
+                     <input
+                         type="checkbox"
+                         bind:checked={isPrivate}
+                         disabled={isSubmitting}
+                     />
+                     Keep this submission private (won't be listed publicly if approved)
+                 </label>
+            </div>
             <p class="review-note">
-                If approved, this constitution may become publicly available.
+                If approved {isPrivate ? 'privately' : 'publicly'}, this constitution may be used by others.
             </p>
         {/if}
 

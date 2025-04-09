@@ -16,7 +16,7 @@ import aiosqlite # Keep for potential direct interaction if needed, though manag
 from fastapi import FastAPI, HTTPException, Body, Path as FastApiPath, Request, Response, status # Added Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr # Added EmailStr for potential future use
 
 # Langchain/Langgraph specific imports
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, AIMessageChunk
@@ -174,6 +174,13 @@ class SSEEventData(BaseModel):
     node: Optional[str] = None
     data: Union[SSEThreadCreatedData, str, SSEToolCallChunkData, SSEToolResultData, SSEEndData]
     set_id: Optional[str] = None # For compare mode tracking
+
+# Model for submitting a constitution for review
+class SubmitConstitutionRequest(BaseModel):
+    title: str = Field(..., description="Title of the constitution being submitted.")
+    text: str = Field(..., description="Full text content of the constitution being submitted.")
+    isPrivate: bool = Field(..., description="Whether the submitted constitution should be kept private.")
+    # submitter_email: Optional[EmailStr] = Field(None, description="Optional email of the submitter.") # Example for future extension
 
 # --- Helper Function for Standard Streaming ---
 async def stream_events(
@@ -434,6 +441,30 @@ async def get_constitution_content_endpoint(
         logging.error(f"Error getting content for constitution {constitution_id}: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to load content for constitution '{constitution_id}'.")
+
+@app.post("/api/constitutions/submit", status_code=status.HTTP_202_ACCEPTED)
+async def submit_constitution_for_review(
+    submission: SubmitConstitutionRequest = Body(...)
+):
+    """
+    Accepts a constitution submission for potential global review.
+    Currently logs the submission details.
+    """
+    # TODO: Implement actual storage/review mechanism (e.g., save to DB, notify admins)
+    logging.info(f"Received constitution submission for review:")
+    logging.info(f"  Title: {submission.title}")
+    logging.info(f"  Text Length: {len(submission.text)} characters")
+    logging.info(f"  Is Private: {submission.isPrivate}")
+    # Optionally log the text itself, be mindful of log size/sensitivity
+    # logging.debug(f"  Text: {submission.text[:200]}...") # Log snippet
+
+    # You could add logic here to:
+    # 1. Validate the constitution format/content further.
+    # 2. Save the submission to a database table (e.g., 'submitted_constitutions').
+    # 3. Send a notification (email, Slack, etc.) to reviewers.
+    # 4. Return a unique ID for the submission if needed.
+
+    return {"message": "Constitution submitted for review."}
 
 
 # Removed /api/threads and /api/threads/{thread_id}/rename endpoints
