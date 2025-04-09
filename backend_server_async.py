@@ -60,7 +60,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
 
 # Ensure critical OAuth variables are set
 if not all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SECRET_KEY]):
-    print("FATAL: Missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or SECRET_KEY in environment variables.")
+    print("Missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or SECRET_KEY in environment variables.")
     # sys.exit(1) # Consider exiting in production, but allow running locally for testing other parts
 
 # Google OAuth Scopes - Requesting email and profile info
