@@ -4,12 +4,43 @@ import Sidebar from './lib/components/Sidebar.svelte';
 import ChatInterface from './lib/components/ChatInterface.svelte';
 import ThemeToggle from './lib/components/ThemeToggle.svelte';
 import { theme } from './lib/stores/theme';
-import { fetchConstitutions } from './lib/api';
+import { fetchConstitutions, fetchCurrentUser, logoutUser } from './lib/api'; // Import fetchCurrentUser and logoutUser
+import authStore from './lib/stores/authStore'; // Import the auth store
 import { loadLocalConstitutions } from './lib/localConstitutions'; // Import the new function
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
+// --- Logout Handler ---
+async function handleLogout() {
+    try {
+        await logoutUser();
+        authStore.clearUser(); // Clear user state in the store
+        console.log('User logged out successfully.');
+        // Optionally redirect or refresh if needed, but clearing store should update UI
+    } catch (error) {
+        console.error('Logout failed:', error);
+        // Optionally show an error message to the user
+    }
+}
+
 onMount( async () => {
+    // Check authentication status first
+    try {
+        const user = await fetchCurrentUser();
+        if (user) {
+            authStore.setUser(user);
+            console.log('User authenticated:', user.email);
+        } else {
+            authStore.clearUser(); // Ensure state is cleared if not authenticated
+            console.log('User not authenticated.');
+        }
+    } catch (error) {
+        // Non-401 errors during auth check
+        console.error("App onMount Error: Failed to check authentication status:", error);
+        authStore.setError('Failed to check login status.'); // Set error state in store
+    }
+
+    // Then load constitutions
     try {
         // Load both global and local constitutions
         await Promise.all([
@@ -31,10 +62,32 @@ onMount( async () => {
             <span class="logo-text">Superego</span>
             <span class="subtitle">Demo</span>
         </h1>
+
+        <!-- Auth Section -->
+        <div class="auth-section">
+            {#if $authStore.isLoading}
+                <span>Loading user...</span>
+            {:else if $authStore.isAuthenticated && $authStore.user}
+                <div class="user-info">
+                    {#if $authStore.user.picture}
+                        <img src={$authStore.user.picture} alt="User avatar" class="user-avatar" referrerpolicy="no-referrer" />
+                    {/if}
+                    <span class="user-name">{$authStore.user.name || $authStore.user.email}</span>
+                    <button on:click={handleLogout} class="logout-button">Logout</button>
+                </div>
+            {:else}
+                <a href="{authStore.getBackendUrl()}/api/auth/google/login" class="login-button">Login with Google</a>
+            {/if}
+            {#if $authStore.error}
+                 <span class="auth-error">Error: {$authStore.error}</span>
+            {/if}
+        </div>
+        <!-- End Auth Section -->
+
         <div class="theme-toggle-container">
             <ThemeToggle />
         </div>
-        
+
     </div>
     <div class="app-content">
         <Sidebar />
@@ -129,8 +182,73 @@ onMount( async () => {
         }
     }
 
+    .auth-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto; /* Push auth section towards the right */
+        margin-right: 16px; /* Add some space before theme toggle */
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .user-name {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        max-width: 150px; /* Prevent long names/emails from breaking layout */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .login-button, .logout-button {
+        padding: 6px 12px;
+        font-size: 0.85em;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        text-decoration: none;
+        transition: background-color 0.2s, color 0.2s;
+        white-space: nowrap;
+    }
+
+    .login-button {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+    }
+    .login-button:hover {
+        background-color: var(--primary-light);
+    }
+
+    .logout-button {
+        background-color: var(--bg-surface);
+        color: var(--text-secondary);
+        border: 1px solid var(--input-border);
+    }
+    .logout-button:hover {
+        background-color: var(--bg-elevated);
+        border-color: var(--text-secondary);
+    }
+
+    .auth-error {
+        color: var(--error-text);
+        font-size: 0.8em;
+    }
+
+
     .theme-toggle-container {
-        margin-left: auto;
+        /* margin-left: auto; Removed, auth-section now handles this */
     }
 
     @media (max-width: 768px) {

@@ -29,10 +29,12 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
 
 // --- Core API Fetch Helper ---
 async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-    globalError.set(null); 
+    globalError.set(null);
 
     try {
-        const response = await fetch(url, {
+        // Ensure credentials ('include') is always set for sending cookies
+        const fetchOptions: RequestInit = {
+            credentials: 'include', // Crucial for sending session_token cookie
             ...options,
             signal, // Pass signal if provided
             headers: {
@@ -40,7 +42,9 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
                 'Accept': 'application/json',
                 ...options.headers,
             },
-        });
+        };
+
+        const response = await fetch(url, fetchOptions);
         // Removed console.log(`[apiFetch] Received response...`)
         if (!response.ok) {
             // Removed console.log(`[apiFetch] Response not OK...`)
@@ -725,5 +729,40 @@ export const deleteThread = (threadId: string): Promise<void> => {
             method: 'DELETE',
         })
         // Note: No need for .then() log here, logExecution handles failure logging.
+    );
+};
+
+
+// --- Authentication API Functions ---
+
+/** Fetches the current user's info from the backend. Returns UserInfo or null if not authenticated. */
+export const fetchCurrentUser = async (signal?: AbortSignal): Promise<UserInfo | null> => {
+    // Don't wrap this in logExecution by default, as 401 is expected
+    // Also, don't clear globalError here, let the caller decide.
+    try {
+        const userInfo = await apiFetch<UserInfo>(`${BASE_URL}/users/me`, {}, signal);
+        return userInfo;
+    } catch (error: unknown) {
+        // Specifically check for 401 Unauthorized - this means user is not logged in, which is not a "global" error.
+        if (error instanceof Error && error.message.includes('Status: 401')) {
+            console.log("User not authenticated (401 received from /users/me).");
+            return null; // Expected case for logged-out user
+        }
+        // For other errors (network, 500, etc.), log it and re-throw
+        console.error('API Error fetching current user:', error);
+        // Optionally set globalError here if desired for non-401 errors during auth check
+        // globalError.set(error instanceof Error ? error.message : 'Failed to check login status.');
+        throw error; // Re-throw other errors
+    }
+};
+
+/** Logs the user out by calling the backend endpoint. */
+export const logoutUser = (): Promise<{ message: string }> => {
+    // Wrap in logExecution for consistent logging/error handling
+    return logExecution("Logout user", () =>
+        apiFetch<{ message: string }>(`${BASE_URL}/auth/logout`, {
+            method: 'POST',
+            // No body needed
+        })
     );
 };

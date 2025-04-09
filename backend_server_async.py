@@ -10,14 +10,25 @@ import logging # Import logging module
 import requests # Added for Mailgun API call
 from contextlib import asynccontextmanager
 from typing import List, Dict, Optional, Any, Literal, Union, AsyncGenerator, Tuple
-from datetime import datetime # Added for timestamp handling in models
+from datetime import datetime, timedelta, timezone # Added timedelta, timezone for JWT
 
 # Third-party imports
 import aiosqlite # Keep for potential direct interaction if needed, though manager preferred
-from fastapi import FastAPI, HTTPException, Body, Path as FastApiPath, Request, Response, status # Added Response, status
+from fastapi import FastAPI, HTTPException, Body, Path as FastApiPath, Request, Response, status, Depends # Added Response, status, Depends
+from fastapi.responses import RedirectResponse # Added for redirects
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel, Field, EmailStr # Added EmailStr for potential future use
+from starlette.middleware.sessions import SessionMiddleware # For storing state during OAuth flow
+from starlette.requests import Request as StarletteRequest # For type hinting in callback
+
+# Authentication / OAuth imports
+from dotenv import load_dotenv # To load .env file
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from jose import jwt, JWTError # Import directly from jose, also import JWTError
+# from jwt import PyJWTError # PyJWTError is specific to PyJWT, use JWTError from jose
 
 # Langchain/Langgraph specific imports
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, AIMessageChunk
@@ -36,6 +47,33 @@ except ImportError as e:
     print("Ensure backend_server_async.py is run from the correct directory or superego-lgdemo modules are in PYTHONPATH.")
     import sys
     sys.exit(1)
+
+# --- Load Environment Variables ---
+load_dotenv() # Load variables from .env file
+
+# --- Authentication / OAuth Configuration ---
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+SECRET_KEY = os.getenv("SECRET_KEY") # For signing JWTs
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
+
+# Ensure critical OAuth variables are set
+if not all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SECRET_KEY]):
+    print("FATAL: Missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or SECRET_KEY in environment variables.")
+    # sys.exit(1) # Consider exiting in production, but allow running locally for testing other parts
+
+# Google OAuth Scopes - Requesting email and profile info
+SCOPES = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid' # Standard OIDC scope
+]
+# The URL the user will be redirected to *from Google* after authentication
+# Must match one of the Authorized redirect URIs in Google Cloud Console
+REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
+# The URL of your frontend app, where the user is sent *after* successful login in the callback
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173") # Default to Vite dev server
 
 # --- Globals ---
 graph_app: Any = None
@@ -83,16 +121,53 @@ async def lifespan(app: FastAPI):
 # --- FastAPI App ---
 app = FastAPI(title="Superego Backend", lifespan=lifespan)
 
+# --- Session Middleware (Required for OAuth state) ---
+# Add a *different* secret key for session middleware state. It can be the same as SECRET_KEY
+# but using a separate one is slightly better practice if you have complex middleware needs.
+# For simplicity here, we'll reuse SECRET_KEY if it exists, otherwise warn.
+SESSION_MIDDLEWARE_KEY = SECRET_KEY or "fallback_session_key_please_set_secret_key"
+if not SECRET_KEY:
+    print("Warning: SECRET_KEY not set, using insecure fallback for session middleware.")
+app.add_middleware(SessionMiddleware, secret_key=SESSION_MIDDLEWARE_KEY)
+
+
 # --- CORS ---
+# Ensure your frontend origin is allowed, especially if running on a different port
+# For development, allowing localhost:5173 is crucial.
+# Using ["*"] is convenient for local dev but be more specific in production.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # allow_credentials=True, # Original - Keep this one
     allow_methods=["*"],
     allow_headers=["*"],
+    # Allow cookies to be sent with requests (needed for JWT session)
+    allow_credentials=True, # Duplicate - Remove this one
 )
 
+
+# --- JWT Helper Functions ---
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Creates a JWT access token."""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        # Default expiration time
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 # --- Pydantic Models ---
+# Add models for user info if needed
+class UserInfo(BaseModel):
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    # Add other fields you might get from Google profile
+
 # Ensure these match frontend expectations (src/global.d.ts)
 
 # Models for referencing constitutions in requests
@@ -468,8 +543,6 @@ async def submit_constitution_for_review(
     email_sent_successfully = False
     email_error_message = ""
     
-    logging.info(f"Mailgun API Key: {mailgun_api_key}")
-    logging.info(f"Mailgun Domain: {mailgun_domain}")
     if mailgun_api_key and mailgun_domain:
         subject = f"New Constitution Submitted: {submission.title}"
         body = (
@@ -903,6 +976,186 @@ async def run_compare_stream_endpoint(request: CompareRunRequest):
          print(f"Error setting up compare run for thread {request.thread_id}: {e}")
          traceback.print_exc()
          raise HTTPException(status_code=500, detail="Failed to initiate comparison stream.")
+
+
+# --- Authentication Endpoints ---
+
+@app.get("/api/auth/google/login")
+async def auth_google_login(request: Request):
+    """
+    Initiates the Google OAuth 2.0 login flow by redirecting the user to Google.
+    Stores the OAuth state in the session.
+    """
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="Google OAuth credentials not configured.")
+
+    # Create the flow instance for the request using from_client_config
+    flow = Flow.from_client_config(
+        client_config={
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [REDIRECT_URI],
+                "javascript_origins": [FRONTEND_URL.rstrip('/')] # Optional but good practice
+            }
+        },
+        scopes=SCOPES,
+        redirect_uri=REDIRECT_URI
+    )
+
+    # Generate the authorization URL and state
+    authorization_url, state = flow.authorization_url(
+        access_type='offline', # Request refresh token
+        include_granted_scopes='true',
+        prompt='consent' # Force consent screen for refresh token on first login
+    )
+
+    # Store the state in the session to prevent CSRF attacks
+    request.session['oauth_state'] = state
+    logging.info(f"Redirecting user to Google for login. State: {state}")
+
+    # Redirect the user's browser to Google's authorization page
+    return RedirectResponse(authorization_url)
+
+
+@app.get("/api/auth/google/callback")
+async def auth_google_callback(request: StarletteRequest):
+    """
+    Handles the callback from Google after user authentication.
+    Exchanges the authorization code for tokens, fetches user info, creates a JWT,
+    sets it as a cookie, and redirects back to the frontend.
+    """
+    # Check for state mismatch (CSRF protection)
+    state = request.session.get('oauth_state')
+    if not state or state != request.query_params.get('state'):
+        logging.error("OAuth state mismatch or missing state.")
+        raise HTTPException(status_code=401, detail="Invalid OAuth state.")
+    request.session.pop('oauth_state', None) # Consume the state
+
+    # Check for errors from Google
+    error = request.query_params.get('error')
+    if error:
+        logging.error(f"Google OAuth error: {error}")
+        raise HTTPException(status_code=401, detail=f"Google OAuth error: {error}")
+
+    # Get the authorization code from the query parameters
+    code = request.query_params.get('code')
+    if not code:
+        logging.error("Missing authorization code in Google callback.")
+        raise HTTPException(status_code=400, detail="Missing authorization code.")
+
+    # Recreate the flow instance using from_client_config
+    flow = Flow.from_client_config(
+         client_config={
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [REDIRECT_URI],
+            }
+        },
+        scopes=SCOPES,
+        redirect_uri=REDIRECT_URI
+    )
+
+    try:
+        # Exchange the authorization code for credentials (access token, refresh token, etc.)
+        logging.info("Exchanging authorization code for tokens...")
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+        logging.info("Tokens obtained successfully.")
+
+        # Use credentials to get user info (requires requests library)
+        # Note: google-auth library can sometimes handle this, but requests is explicit
+        userinfo_response = requests.get(
+            'https://www.googleapis.com/oauth2/v1/userinfo',
+            headers={'Authorization': f'Bearer {credentials.token}'}
+        )
+        userinfo_response.raise_for_status() # Raise exception for bad status codes
+        user_info = userinfo_response.json()
+        logging.info(f"User info obtained: {user_info.get('email')}")
+
+        # --- User Handling (Example) ---
+        # Here you would typically:
+        # 1. Check if the user exists in your database based on user_info['email'] or user_info['sub'] (Google ID).
+        # 2. If they exist, update their info (e.g., name, picture, last login).
+        # 3. If they don't exist, create a new user record.
+        # For this example, we'll just use the email in the JWT.
+        user_email = user_info.get('email')
+        if not user_email:
+             raise HTTPException(status_code=500, detail="Could not retrieve user email from Google.")
+
+        # --- Create JWT ---
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user_email, "name": user_info.get("name"), "picture": user_info.get("picture")}, # 'sub' (subject) is standard for user ID
+            expires_delta=access_token_expires
+        )
+        logging.info(f"JWT created for user: {user_email}")
+
+        # --- Set Cookie and Redirect ---
+        response = RedirectResponse(url=FRONTEND_URL) # Redirect back to the frontend app
+        response.set_cookie(
+            key="session_token",
+            value=access_token,
+            httponly=True, # Cookie not accessible via JavaScript
+            secure=FRONTEND_URL.startswith("https"), # Send only over HTTPS if frontend is HTTPS
+            samesite="lax", # Good default for CSRF protection
+            max_age=int(access_token_expires.total_seconds()) # Set cookie expiration
+        )
+        logging.info(f"Session cookie set. Redirecting to {FRONTEND_URL}")
+        return response
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Network error during token exchange or user info fetch: {e}")
+        raise HTTPException(status_code=503, detail="Network error communicating with Google.")
+    except Exception as e:
+        logging.error(f"Error during Google OAuth callback: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An internal error occurred during authentication: {e}")
+
+
+# --- Example Protected Endpoint ---
+# Dependency to get the current user from the JWT cookie
+async def get_current_user(request: Request) -> UserInfo:
+    """Dependency to extract and verify JWT from cookie, returning user info."""
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"}, # Though we use cookies, this is standard
+        )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: Optional[str] = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        # You could fetch user details from DB here using the email/sub
+        user_data = UserInfo(email=email, name=payload.get("name"), picture=payload.get("picture"))
+        return user_data
+    except JWTError as e: # Use JWTError from jose
+        logging.warning(f"JWT validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Could not validate credentials: {e}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+@app.get("/api/users/me", response_model=UserInfo)
+async def read_users_me(current_user: UserInfo = Depends(get_current_user)):
+    """Returns the information of the currently authenticated user."""
+    return current_user
+
+@app.post("/api/auth/logout")
+async def logout(response: Response):
+    """Clears the session token cookie."""
+    logging.info("User logging out.")
+    response.delete_cookie(key="session_token", httponly=True, secure=FRONTEND_URL.startswith("https"), samesite="lax")
+    return {"message": "Successfully logged out"}
 
 
 # --- Main Execution ---

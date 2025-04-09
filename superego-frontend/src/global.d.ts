@@ -211,6 +211,12 @@ declare global {
         email_sent: boolean;
     }
 
+    /** User information obtained from the backend after authentication */
+    interface UserInfo {
+        email?: string | null; // Optional email
+        name?: string | null; // Optional name
+        picture?: string | null; // Optional URL to profile picture
+    }
 
     // --- Application State/Mode Types ---
     type AppMode = 'chat' | 'use' | 'compare'; // Still relevant if UI uses modes? Sidebar removed it.

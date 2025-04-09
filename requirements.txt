@@ -22,4 +22,11 @@ uvicorn>=0.27.0,<1.0.0
 mcp>=1.6.0
 
 # HTTP Requests library
-requests=>=2.31.0,<3.0.0
+requests>=2.31.0,<3.0.0
+
+# Authentication & Authorization
+google-auth-oauthlib>=1.0.0,<2.0.0
+python-jose[cryptography]>=3.3.0,<4.0.0
+python-dotenv>=1.0.0,<2.0.0
+itsdangerous>=2.0.0,<3.0.0 # Added for Starlette SessionMiddleware
+email-validator>=2.0.0,<3.0.0 # Added for Pydantic EmailStr validation
