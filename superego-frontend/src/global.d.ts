@@ -1,7 +1,38 @@
-// src/global.d.ts
 
-// Make interfaces available globally
 declare global {
+    interface UISessionState {
+        sessionId: string;
+        name: string;
+        createdAt: string;
+        lastUpdatedAt: string;
+        threadIds: string[];
+    }
+
+    interface ConfiguredConstitutionModule {
+        id: string;
+        title: string;
+        adherence_level: number;
+        text?: string;
+    }
+
+    interface RunConfig {
+        configuredModules: ConfiguredConstitutionModule[];
+    }
+
+    interface CheckpointConfigurable {
+        thread_id: string | null;
+        runConfig: RunConfig;
+    }
+
+    interface HistoryEntry {
+        checkpoint_id: string;
+        thread_id: string;
+        values: {
+            messages: MessageType[];
+        };
+        runConfig: RunConfig;
+    }
+
     /** Represents a single constitution available for selection. */
     interface ConstitutionItem {
         id: string;
@@ -9,72 +40,46 @@ declare global {
         description?: string;
     }
 
-    /** Represents a chat thread (user-facing conversation) in the list. */
-    // TODO: This interface might be obsolete now that conversationManager.ts handles metadata.
-    // If kept, thread_id should align with backend expectations (likely string UUID).
-    interface ThreadItem {
-        thread_id: string; // Assuming backend uses string UUIDs now
-        name: string;
-        last_updated?: string | Date;
+    // ThreadItem removed
+
+    interface BaseApiMessage {
+        type: 'human' | 'ai' | 'system' | 'tool';
+        content: string | any;
+        name?: string;
+        tool_call_id?: string;
+        additional_kwargs?: Record<string, any>;
     }
 
-    /** Base structure for messages displayed in the UI */
-    interface BaseMessage {
-        id: string; // Unique ID for the message/event sequence
-        sender: 'human' | 'ai' | 'tool_result' | 'system';
-        content: string | Array<{type: string, text?: string}> | any; // Flexible content
-        node?: string | null; // Originating node in the graph
-        set_id?: string | null; // ID for compare mode sets
-        timestamp: number; // Unix timestamp (ms)
+    interface HumanApiMessage extends BaseApiMessage {
+        type: 'human';
+        content: string;
     }
 
-    /** Tool call structure potentially stored within AIMessage for display */
-    interface ToolCall {
-        id: string; // May be temporary during streaming if backend doesn't send early
-        name: string;
-        args: string; // Accumulated arguments string (likely JSON eventually)
+    interface AiApiMessage extends BaseApiMessage {
+        type: 'ai';
+        content: string | any;
+        tool_calls?: Array<{ id: string; name: string; args: Record<string, any>; }>;
+        invalid_tool_calls?: any[];
     }
 
-    /** AI message - potentially includes structured tool_calls */
-    interface AIMessage extends BaseMessage {
-        sender: 'ai';
-        tool_calls?: ToolCall[]; // Optional array for structured tool calls
+    interface SystemApiMessage extends BaseApiMessage {
+        type: 'system';
+        content: string;
     }
 
-    /** Human messages */
-    interface HumanMessage extends BaseMessage {
-        sender: 'human';
+    interface ToolApiMessage extends BaseApiMessage {
+        type: 'tool';
+        content: string | any;
+        tool_call_id: string;
+        name?: string;
+        is_error?: boolean;
     }
 
-    /** System/Error messages */
-    interface SystemMessage extends BaseMessage {
-        sender: 'system';
-        isError?: boolean;
-    }
-
-    /** Tool Result messages */
-    interface ToolResultMessage extends BaseMessage {
-        sender: 'tool_result';
-        content: string; // Result content (usually stringified JSON or text)
-        tool_name: string;
-        is_error: boolean;
-        tool_call_id?: string | null; // Optional ID linking back to the initiating tool call
-    }
-
-    /** Represents any message type in the frontend chat display. */
-    type MessageType = HumanMessage | AIMessage | ToolResultMessage | SystemMessage;
+    /** Represents message types received from the backend API. */
+    type MessageType = HumanApiMessage | AiApiMessage | SystemApiMessage | ToolApiMessage;
 
 
-    // --- API Response/Request Types ---
-
-    /** Response when fetching history for a thread. */
-    interface HistoryResponse {
-        messages: MessageType[];
-        thread_id: string; // Changed to string (UUID)
-        thread_name?: string; // The user-defined name of the thread
-    }
-
-    // NewThreadResponse is removed
+    // HistoryResponse removed
 
     /** Represents a constitution stored locally in localStorage */
     interface LocalConstitution {
@@ -85,49 +90,7 @@ declare global {
         // Add lastUpdatedAt?
     }
 
-    // --- API Request/Response Types ---
-
-    /**
-     * Represents a constitution selected by its ID (typically global/predefined)
-     * for sending to the backend in the streamRun request.
-     * Includes the user-specified adherence level and title.
-     */
-    interface BackendConstitutionRefById {
-        id: string;
-        title: string; // Title is needed for the backend report
-        adherence_level: number; // 1-5, now required
-    }
-
-    /**
-     * Represents a local constitution provided with its full text
-     * for sending to the backend in the streamRun request.
-     * Includes the user-specified adherence level and title.
-     */
-    interface BackendConstitutionFullText {
-        // id is not strictly needed by the backend here, but title is
-        title: string;
-        text: string;
-        adherence_level: number; // 1-5, now required
-    }
-
-    /**
-     * Union type for constitutions sent to the backend in the streamRun request.
-     */
-    type SelectedConstitution = BackendConstitutionRefById | BackendConstitutionFullText;
-
-
-    // --- Old types, commented out for reference, replaced by BackendConstitution... types for streamRun ---
-    // /** API request structure for referencing a constitution by ID */
-    // interface ConstitutionRefById {
-    //     id: string;
-    //     adherence_level?: number; // Optional adherence level (1-5)
-    // }
-    //
-    // /** API request structure for referencing a constitution by its text content */
-    // interface ConstitutionRefByText {
-    //     text: string;
-    //     adherence_level?: number; // Optional adherence level (1-5)
-    // }
+    // BackendConstitutionRefById, BackendConstitutionFullText, SelectedConstitution removed
 
     /** Input structure for starting a run */
     interface StreamRunInput {
@@ -135,36 +98,19 @@ declare global {
         content: string;
     }
 
-    /** Request body for starting a normal streaming run. */
-    interface StreamRunRequest {
-        thread_id?: string | null; // Optional: Only sent for existing threads
-        input: StreamRunInput;
-        constitutions: SelectedConstitution[]; // Use the new union type including title and adherence_level
-        // Removed: adherence_levels_text?: string; // This field is removed as per plan
-    }
-
-    /** Defines a set of constitutions for comparison. */
-    interface CompareSet {
-        id: string; // User-defined ID for the set (e.g., 'strict_vs_default')
-        // This might need updating later if compare mode needs adherence levels + titles
-        constitutions: Array<{ id: string } | { text: string }>; // Simplified for now, assuming no adherence/title needed for compare yet
-        // name?: string; // Optional name, not used by backend currently
-    }
-
-    /** Request body for starting a comparison streaming run. */
-    interface CompareRunRequest {
-        thread_id?: string | null; // Optional: Only sent for existing threads
-        input: StreamRunInput;
-        constitution_sets: CompareSet[];
-    }
+    // StreamRunRequest removed
+    // CompareSet removed
+    // CompareRunRequest removed
 
 
     // --- Server-Sent Event (SSE) Data Types ---
 
-    /** Structure for the initial thread creation event */
-    interface SSEThreadCreatedData {
-        thread_id: string; // The backend's newly created persistent thread ID
+    /** Structure for the event carrying the new thread ID */
+    interface SSEThreadInfoData {
+        thread_id: string; // The backend's newly created or confirmed persistent thread ID
     }
+
+    // SSEThreadCreatedData removed as SSEThreadInfoData serves the purpose
 
     /** Structure for tool call fragments streamed from the AI */
     interface SSEToolCallChunkData {
@@ -188,11 +134,12 @@ declare global {
 
     /** Overall structure of data received via SSE */
     interface SSEEventData {
-        type: "thread_created" | "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end";
+        type: "thread_info" | "chunk" | "ai_tool_chunk" | "tool_result" | "error" | "end"; // Added 'thread_info'
         node?: string | null; // Graph node where event originated
+        thread_id?: string | null; // Added top-level thread_id for routing (CRITICAL)
         // Type of data depends on the 'type' field
-        data: SSEThreadCreatedData | string | SSEToolCallChunkData | SSEToolResultData | SSEEndData | any; // Allow flexibility for 'chunk' (string) or 'error' (any)
-        set_id?: string | null; // Identifier for compare mode sets
+        data: SSEThreadInfoData | string | SSEToolCallChunkData | SSEToolResultData | SSEEndData | any; // Added SSEThreadInfoData, allow flexibility for 'chunk' (string) or 'error' (any)
+        set_id?: string | null; // Identifier for compare mode sets (Future use)
     }
 
     // SSEMessageHandler type removed - will be redefined or inferred in api.ts if needed
@@ -211,10 +158,6 @@ declare global {
         email_sent: boolean;
     }
 
-
-    // --- Application State/Mode Types ---
-    type AppMode = 'chat' | 'use' | 'compare'; // Still relevant if UI uses modes? Sidebar removed it.
-
     /** Represents the state of a single conversation in the UI */
     interface ConversationState {
         metadata: ConversationMetadata; // From conversationManager
@@ -223,6 +166,7 @@ declare global {
         error?: string; // Error specific to this conversation
         abortController?: AbortController; // Controller for ongoing fetch/stream
     }
+    // ConversationState removed
 }
 
 // Ensures this file is treated as a module. Required for declare global.

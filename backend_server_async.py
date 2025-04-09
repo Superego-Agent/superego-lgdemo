@@ -3,43 +3,58 @@
 # Standard library imports
 import os
 import uuid
-import json
+import json # Keep temporarily, might be removable
 import asyncio
 import traceback
-import logging # Import logging module
+import logging
 from contextlib import asynccontextmanager
-from typing import List, Dict, Optional, Any, Literal, Union, AsyncGenerator, Tuple
-from datetime import datetime # Added for timestamp handling in models
+from typing import List, Dict, Optional, Any # Keep Any for graph_app type hint
 
 # Third-party imports
-import aiosqlite # Keep for potential direct interaction if needed, though manager preferred
-from fastapi import FastAPI, HTTPException, Body, Path as FastApiPath, Request, Response, status # Added Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from sse_starlette.sse import EventSourceResponse, ServerSentEvent
-from pydantic import BaseModel, Field
+# from sse_starlette.sse import EventSourceResponse, ServerSentEvent # Likely removable
 
 # Langchain/Langgraph specific imports
-from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, AIMessageChunk
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from langgraph.checkpoint.base import CheckpointTuple, BaseCheckpointSaver # Import BaseCheckpointSaver for type hint
+# from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, AIMessageChunk # Likely removable
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver # Keep for lifespan type check
+from langgraph.checkpoint.base import CheckpointTuple, BaseCheckpointSaver # Keep for checkpointer type hint
 
 # Project-specific imports
 try:
-    from config import CONFIG # Assumed to exist and be configured
-    # Import get_constitution_content as well
-    from constitution_utils import get_available_constitutions, get_combined_constitution_content, get_constitution_content
-    from superego_core_async import create_models, create_workflow # Assumed to exist
-    # Removed metadata_manager import
+    from config import CONFIG # Keep temporarily
+    # Import only get_constitution_content if get_available_constitutions is only used in the router
+    from constitution_utils import get_available_constitutions, get_constitution_content # Keep temporarily
+    from superego_core_async import create_models, create_workflow # Keep for lifespan
 except ImportError as e:
     print(f"Error importing project modules: {e}")
     print("Ensure backend_server_async.py is run from the correct directory or superego-lgdemo modules are in PYTHONPATH.")
     import sys
     sys.exit(1)
 
+# Import models from the new file (Remove obsolete ones)
+# Keep models needed by routers if they aren't imported within the routers themselves.
+# Assuming routers handle their own model imports. Let's remove models not directly used here.
+# Re-checking... models are likely needed for type hints passed around. Keep them for now.
+from backend_models import (
+    ConfiguredConstitutionModule, RunConfig, CheckpointConfigurable, StreamRunInput,
+    StreamRunRequest, BaseApiMessageModel, HumanApiMessageModel, AiApiMessageModel,
+    SystemApiMessageModel, ToolApiMessageModel, MessageTypeModel, HistoryEntry,
+    ConstitutionItem, SSEThreadInfoData, SSEToolCallChunkData, SSEToolResultData,
+    SSEEndData, SSEEventData # Removed HistoryMessage, HistoryResponse
+)
+
+# Import Routers
+from api_routers import runs as runs_router
+from api_routers import threads as threads_router
+from api_routers import constitutions as constitutions_router
+
+
 # --- Globals ---
 graph_app: Any = None
 checkpointer: Optional[BaseCheckpointSaver] = None # Use BaseCheckpointSaver hint
 inner_agent_app: Any = None
+
 
 # --- Lifespan Management ---
 @asynccontextmanager
@@ -62,12 +77,24 @@ async def lifespan(app: FastAPI):
 
 
         print("Models, graph, and databases initialized successfully.")
+
+        # Pass instances to routers after they are created
+        # This ensures routers have access to the necessary components
+        if graph_app:
+            runs_router.router.graph_app_instance = graph_app
+            print("Passed graph_app instance to runs_router.")
+        if checkpointer:
+            runs_router.router.checkpointer_instance = checkpointer
+            threads_router.router.checkpointer_instance = checkpointer
+            # Assuming constitutions_router doesn't need checkpointer based on its likely function
+            print("Passed checkpointer instance to runs_router and threads_router.")
+
     except Exception as e:
         print(f"FATAL: Error during startup: {e}")
         traceback.print_exc()
         raise RuntimeError("Failed to initialize backend components") from e
 
-    yield 
+    yield
 
     # --- Shutdown ---
     print("Backend server shutting down...")
@@ -79,8 +106,11 @@ async def lifespan(app: FastAPI):
          except Exception as e:
               print(f"Warning: Error closing checkpointer connection: {e}")
 
+
 # --- FastAPI App ---
+# Pass the lifespan manager to the FastAPI app instance
 app = FastAPI(title="Superego Backend", lifespan=lifespan)
+
 
 # --- CORS ---
 app.add_middleware(
@@ -91,727 +121,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Pydantic Models ---
-# Ensure these match frontend expectations (src/global.d.ts)
 
-# Models for referencing constitutions in requests
-# These now match the structure sent from the frontend (BackendConstitutionRefById/FullText in global.d.ts)
-class ConstitutionRefById(BaseModel):
-    id: str = Field(..., description="ID of a globally available constitution.")
-    title: str = Field(..., description="Title of the constitution (used for reporting).")
-    adherence_level: int = Field(..., ge=1, le=5, description="User-specified adherence level (1-5).")
-
-class ConstitutionFullText(BaseModel):
-    title: str = Field(..., description="Title of the local constitution (used for reporting).")
-    text: str = Field(..., description="Raw text content of a locally defined constitution.")
-    adherence_level: int = Field(..., ge=1, le=5, description="User-specified adherence level (1-5).")
-
-# Model for listing available constitutions
-class ConstitutionItem(BaseModel):
-    id: str
-    title: str # Changed from 'name' to 'title' to match constitution_utils
-    description: Optional[str] = None
-
-class HistoryMessage(BaseModel):
-    id: str # Unique ID for the message within its history context
-    sender: Literal['human', 'ai', 'tool_result', 'system']
-    content: Any # Allow flexibility, will be serialized
-    timestamp: Optional[int] = None
-    node: Optional[str] = None
-    set_id: Optional[str] = None # Keep for compare mode differentiation in frontend
-    tool_name: Optional[str] = None # Specific to tool_result sender
-    is_error: Optional[bool] = None # Specific to tool_result or system sender
-    tool_calls: Optional[List[Dict[str, Any]]] = None # Specific to ai sender
-
-class HistoryResponse(BaseModel):
-    messages: List[HistoryMessage]
-    thread_id: str
-
-class StreamRunInput(BaseModel):
-    type: Literal["human"]
-    content: str
-
-class StreamRunRequest(BaseModel):
-    # Now uses the string checkpoint thread ID (UUID)
-    thread_id: Optional[str] = None
-    input: StreamRunInput
-    # Updated field to accept the new constitution models including title and adherence level
-    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]] = Field(..., description="List of selected constitutions (global by ID, local by text) with titles and adherence levels.")
-    # Removed: adherence_levels_text: Optional[str] = None # This field is no longer sent by the frontend
-
-class CompareRunSet(BaseModel):
-    id: str
-    # Updated to use the new constitution models, consistent with StreamRunRequest
-    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]] = Field(..., description="List of constitutions (global by ID, local by text) with titles and adherence levels for this comparison set.")
-
-class CompareRunRequest(BaseModel):
-    # Now uses the string checkpoint thread ID (UUID)
-    thread_id: Optional[str] = None
-    input: StreamRunInput
-    constitution_sets: List[CompareRunSet]
-
-# SSE Event Data Models (matching global.d.ts SSEEventData)
-
-class SSEThreadCreatedData(BaseModel):
-    thread_id: str 
-
-class SSEToolCallChunkData(BaseModel):
-    id: Optional[str] = None
-    name: Optional[str] = None
-    args: Optional[str] = None
-
-class SSEToolResultData(BaseModel):
-    tool_name: str
-    result: str
-    is_error: bool
-    tool_call_id: Optional[str] = None
-
-class SSEEndData(BaseModel):
-    thread_id: str
-
-class SSEEventData(BaseModel):
-    type: Literal["thread_created", "chunk", "ai_tool_chunk", "tool_result", "error", "end"]
-    node: Optional[str] = None
-    data: Union[SSEThreadCreatedData, str, SSEToolCallChunkData, SSEToolResultData, SSEEndData]
-    set_id: Optional[str] = None # For compare mode tracking
-
-# --- Helper Function for Standard Streaming ---
-async def stream_events(
-    thread_id: str, # The unique LangGraph thread ID (string UUID) for this specific run
-    input_messages: List[BaseMessage],
-    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]], # Updated type hint
-    run_app: Any, # The compiled LangGraph app to run
-    # Removed: adherence_levels_text: Optional[str] = None,
-    set_id: Optional[str] = None # Identifier for compare mode sets
-) -> AsyncGenerator[ServerSentEvent, None]:
-    """Generates Server-Sent Events for a single LangGraph run, processing constitutions, generating adherence report."""
-    if not run_app or not checkpointer:
-        error_data = "Graph app or checkpointer not initialized."
-        yield ServerSentEvent(data=SSEEventData(type="error", node="setup", data=error_data, set_id=set_id).model_dump_json())
-        return
-
-    current_node_name: Optional[str] = None
-    last_yielded_text: Dict[Tuple[Optional[str], Optional[str]], str] = {}
-    # run_id_for_db removed
-
-    try:
-        # --- Load constitution content and generate adherence report ---
-        constitution_texts: List[str] = []
-        adherence_report_lines: List[str] = []
-        missing_ids: List[str] = []
-
-        # Check if any non-'none' constitutions were provided
-        valid_constitutions = [
-            c for c in constitutions
-            if not (isinstance(c, ConstitutionRefById) and c.id == "none")
-        ]
-
-        # Add header only if there are valid constitutions to report on
-        if valid_constitutions:
-             adherence_report_lines.append("# User-specified Adherence Levels")
-
-        for ref in constitutions:
-            # Skip the special 'none' constitution placeholder if present
-            if isinstance(ref, ConstitutionRefById) and ref.id == "none":
-                continue
-
-            content = None
-            title = ref.title
-            level = ref.adherence_level
-
-            if isinstance(ref, ConstitutionRefById):
-                # ID-based constitution (global)
-                content = get_constitution_content(ref.id)
-                if content is not None:
-                    constitution_texts.append(content)
-                else:
-                    missing_ids.append(ref.id)
-                    # Skip reporting missing ones to avoid confusion in the report
-                    continue # Skip to next constitution if content not found
-
-            elif isinstance(ref, ConstitutionFullText):
-                # Text-based constitution (local)
-                content = ref.text
-                constitution_texts.append(content)
-            # else: # Should not happen with Pydantic validation
-
-            # Add to adherence report (only if content was successfully loaded/provided)
-            default_tag = " (Default)" if level == 3 else ""
-            adherence_report_lines.append(f"- {title}: {level}/5{default_tag}")
-
-
-        # Combine constitution texts
-        base_constitution_content = "\n\n---\n\n".join(constitution_texts)
-
-        # Combine adherence report lines
-        adherence_report_text = "\n".join(adherence_report_lines)
-
-        # Combine base content and adherence report
-        # Append report only if it has more than just the header (or if header wasn't added)
-        final_constitution_content = base_constitution_content
-        if len(adherence_report_lines) > (1 if valid_constitutions else 0):
-            final_constitution_content += f"\n\n---\n\n{adherence_report_text}"
-
-        # Report missing IDs (if any)
-        if missing_ids:
-            yield ServerSentEvent(data=SSEEventData(
-                type="error", node="setup", # Using 'error' type for warnings as well
-                data=f"Warning: Constitution ID(s) not found/loaded: {', '.join(missing_ids)}. Running without them.",
-                set_id=set_id
-            ).model_dump_json())
-        # --- End Constitution Processing ---
-
-        # Prepare run config using the UNIQUE thread_id for this run
-        config = {
-            "configurable": {
-                "thread_id": thread_id, # Use the passed thread_id here
-                "constitution_content": final_constitution_content # Pass the combined content + report
-            }
-        }
-        stream_input = {'messages': input_messages}
-
-        # Stream events from the LangGraph app
-        stream = run_app.astream_events(stream_input, config=config, version="v1")
-
-        async for event in stream:
-            event_type = event.get("event")
-            event_name = event.get("name")
-            tags = event.get("tags", [])
-            event_data = event.get("data", {})
-
-            # --- Track Current Node ---
-            potential_node_tags = [tag for tag in tags if tag in ["superego", "inner_agent", "tools"]]
-            if event_name in ["superego", "inner_agent", "tools"]:
-                 current_node_name = event_name
-            elif potential_node_tags:
-                 current_node_name = potential_node_tags[-1] # Use the last relevant tag found
-
-            yield_key = (current_node_name, set_id) # Key for deduplicating text chunks
-
-            # --- Process Different Event Types ---
-            # (Chunk, Tool Chunk, Tool Result processing logic remains largely the same as before)
-            # Text Chunk Events
-            if event_type == "on_chat_model_stream" and isinstance(event_data.get("chunk"), AIMessageChunk):
-                chunk: AIMessageChunk = event_data["chunk"]
-                text_content = ""
-                if isinstance(chunk.content, str):
-                    text_content = chunk.content
-                elif isinstance(chunk.content, list):
-                    for item in chunk.content:
-                        if isinstance(item, dict):
-                            if item.get("type") == "text":
-                                text_content += item.get("text", "")
-                            elif item.get("type") == "content_block_delta" and item.get("delta", {}).get("type") == "text_delta":
-                                 text_content += item.get("delta", {}).get("text", "")
-
-                if text_content:
-                    last_text = last_yielded_text.get(yield_key, "")
-                    if text_content != last_text:
-                        sse_payload_text = SSEEventData(type="chunk", node=current_node_name, data=text_content, set_id=set_id)
-                        yield ServerSentEvent(data=sse_payload_text.model_dump_json())
-                        last_yielded_text[yield_key] = text_content
-
-            # Tool Call Chunk Events - Ensure this is 'if', not 'elif'
-            if event_type == "on_chat_model_stream" and isinstance(event_data.get("chunk"), AIMessageChunk):
-                 # Re-access chunk data as the previous 'if' might have consumed it conceptually
-                 chunk_for_tools: AIMessageChunk = event_data["chunk"]
-                 tool_chunks = getattr(chunk_for_tools, 'tool_call_chunks', [])
-                 if tool_chunks:
-                     for tc_chunk in tool_chunks:
-                         # Ensure args is always sent as a string or None
-                         args_value = tc_chunk.get("args")
-                         args_str: Optional[str] = None
-                         if args_value is not None:
-                             if isinstance(args_value, str):
-                                 args_str = args_value
-                             else:
-                                 try:
-                                     # Attempt to JSON dump non-string args fragments
-                                     args_str = json.dumps(args_value)
-                                 except Exception:
-                                     # Fallback to simple string conversion if JSON fails
-                                     args_str = str(args_value)
-
-                         chunk_data = SSEToolCallChunkData(
-                             id=tc_chunk.get("id"),
-                             name=tc_chunk.get("name"),
-                             args=args_str # Use the explicitly stringified version
-                         )
-                         sse_payload_tool = SSEEventData(type="ai_tool_chunk", node=current_node_name, data=chunk_data, set_id=set_id)
-                         yield ServerSentEvent(data=sse_payload_tool.model_dump_json())
-
-
-            # Tool Result Events
-            elif event_type == "on_tool_end":
-                 tool_output = event_data.get("output")
-                 try:
-                      output_str = json.dumps(tool_output) if not isinstance(tool_output, str) else tool_output
-                 except Exception:
-                      output_str = str(tool_output)
-
-                 tool_func_name = event.get("name")
-                 is_error = isinstance(tool_output, Exception)
-                 tool_call_id = None
-                 parent_ids = event_data.get("parent_run_ids")
-                 if isinstance(parent_ids, list):
-                      possible_ids = [pid for pid in parent_ids if isinstance(pid, str)]
-                      if possible_ids:
-                         tool_call_id = possible_ids[-1]
-
-                 sse_payload_data = SSEToolResultData(
-                     tool_name=tool_func_name or "unknown_tool",
-                     result=output_str,
-                     is_error=is_error,
-                     tool_call_id=tool_call_id
-                 )
-                 sse_payload = SSEEventData(type="tool_result", node="tools", data=sse_payload_data, set_id=set_id)
-                 yield ServerSentEvent(data=sse_payload.model_dump_json())
-
-        # --- Stream End ---
-        # Pass the thread_id (string UUID) back to the frontend
-        yield ServerSentEvent(data=SSEEventData(type="end", node=current_node_name or "graph", data=SSEEndData(thread_id=thread_id), set_id=set_id).model_dump_json())
-
-        # Removed post-stream checkpoint update logic related to metadata DB
-
-    except Exception as e:
-        print(f"Stream Error (Thread ID: {thread_id}, Set: {set_id}): {e}")
-        traceback.print_exc()
-        try:
-            error_data = f"Streaming error: {str(e)}"
-            # Ensure thread_id is sent even in error/end events
-            yield ServerSentEvent(data=SSEEventData(type="error", node=current_node_name or "graph", data=error_data, set_id=set_id).model_dump_json())
-            yield ServerSentEvent(data=SSEEventData(type="end", node="error", data=SSEEndData(thread_id=thread_id), set_id=set_id).model_dump_json()) # Send end on error too
-        except Exception as inner_e:
-            print(f"Failed to send stream error event: {inner_e}")
-
-
-# --- API Endpoints ---
-
-@app.get("/api/constitutions", response_model=List[ConstitutionItem])
-async def get_constitutions_endpoint():
-    """Returns a list of available constitutions with title and description."""
-    try:
-        # get_available_constitutions now returns the desired structure with 'title'
-        constitutions_dict = get_available_constitutions()
-
-        response_items = []
-        for const_id, metadata in constitutions_dict.items():
-            if isinstance(metadata, dict):
-                # Use 'title' from the metadata provided by the updated utility function
-                response_items.append(ConstitutionItem(
-                    id=const_id,
-                    title=metadata.get('title', const_id.replace('_', ' ').title()), # Fallback if title missing
-                    description=metadata.get('description')
-                ))
-            else:
-                # This case should be less likely now with error handling in get_available_constitutions
-                logging.warning(f"Constitution '{const_id}' has unexpected data format: {metadata}. Skipping.")
-        return response_items
-    except Exception as e:
-        logging.error(f"Error loading constitutions in endpoint: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to load constitutions: {str(e)}")
-
-
-@app.get("/api/constitutions/{constitution_id}/content", response_model=str)
-async def get_constitution_content_endpoint(
-    constitution_id: str = FastApiPath(..., title="The ID of the constitution")
-):
-    """Returns the raw text content of a single constitution."""
-    try:
-        # Use the existing utility function to get content (handles 'none' and invalid IDs)
-        content = get_constitution_content(constitution_id)
-        if content is None:
-            # Utility function returns None if ID is invalid or file not found
-            raise HTTPException(status_code=404, detail=f"Constitution '{constitution_id}' not found or invalid.")
-        # Return content directly as a string (FastAPI handles text/plain response)
-        # Forcing text/plain might be better if FastAPI defaults to JSON for string response_model
-        from fastapi.responses import PlainTextResponse
-        return PlainTextResponse(content=content)
-    except HTTPException:
-        raise # Re-raise explicit HTTP exceptions
-    except Exception as e:
-        logging.error(f"Error getting content for constitution {constitution_id}: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to load content for constitution '{constitution_id}'.")
-
-
-# Removed /api/threads and /api/threads/{thread_id}/rename endpoints
-
-@app.get("/api/threads/{thread_id}/history", response_model=HistoryResponse)
-async def get_thread_history_endpoint(
-    thread_id: str = FastApiPath(..., title="The checkpoint thread ID (UUID string)")
-):
-    """Retrieves the message history for a specific checkpoint thread ID."""
-    if not checkpointer:
-        print("Error: Checkpointer not available for getting history.")
-        raise HTTPException(status_code=500, detail="Checkpointer service unavailable.")
-
-    try:
-        # Directly use the provided string thread_id with the checkpointer
-        print(f"Fetching history using Checkpoint Thread ID: {thread_id}")
-        config = {"configurable": {"thread_id": thread_id}}
-        checkpoint_tuple: Optional[CheckpointTuple] = await checkpointer.aget_tuple(config)
-
-        # Process messages from the checkpoint tuple
-        history_messages: List[HistoryMessage] = []
-        if not checkpoint_tuple:
-             print(f"No checkpoint found for thread_id: {thread_id}")
-             # Return empty history but indicate the requested thread_id
-             return HistoryResponse(messages=[], thread_id=thread_id)
-
-        if checkpoint_tuple and checkpoint_tuple.checkpoint:
-             messages_from_state = checkpoint_tuple.checkpoint.get("channel_values", {}).get("messages", [])
-             # ... (message processing logic - human, ai, tool - copied from previous version) ...
-             # --- Timestamp Handling ---
-             ts_value = checkpoint_tuple.checkpoint.get("ts")
-             base_timestamp_ms = None
-             if ts_value and hasattr(ts_value, 'timestamp') and callable(ts_value.timestamp):
-                  try:
-                     base_timestamp_ms = int(ts_value.timestamp() * 1000)
-                  except (TypeError, ValueError) as ts_err:
-                      print(f"Warning: Could not convert timestamp '{ts_value}' ({type(ts_value)}) to UNIX ms for thread {thread_id}: {ts_err}")
-
-             # --- Message Loop ---
-             for i, msg in enumerate(messages_from_state):
-                 sender: Optional[Literal['human', 'ai', 'tool_result', 'system']] = None
-                 node: Optional[str] = None
-                 formatted_content: Optional[str] = None
-                 tool_name: Optional[str] = None
-                 is_error: Optional[bool] = None
-
-                 if isinstance(msg, HumanMessage):
-                     sender = "human"
-                     node = getattr(msg, 'name', None)
-                     formatted_content = str(msg.content) if msg.content is not None else ""
-                 elif isinstance(msg, AIMessage):
-                     sender = "ai"
-                     node = getattr(msg, 'name', 'ai')
-                     raw_content = msg.content
-                     content_str = ""
-                     if isinstance(raw_content, list):
-                         for item in raw_content:
-                             if isinstance(item, dict) and item.get("type") == "text":
-                                 content_str += item.get("text", "")
-                     elif isinstance(raw_content, str): content_str = raw_content
-                     elif raw_content is not None: content_str = str(raw_content)
-
-                     tool_calls_str = ""
-                     if tool_calls := getattr(msg, "tool_calls", None):
-                         tool_calls_str = "\n".join([
-                             f"-> Called Tool: {tc.get('name', 'N/A')}({json.dumps(tc.get('args', {}))})"
-                             for tc in tool_calls if isinstance(tc, dict)
-                         ])
-
-                     if content_str and tool_calls_str: formatted_content = f"{content_str}\n{tool_calls_str}"
-                     elif content_str: formatted_content = content_str
-                     elif tool_calls_str: formatted_content = tool_calls_str # Keep this line for now, might remove if content should always be empty for pure tool calls
-                     else: formatted_content = ""
-
-                     # Prepare tool_calls structure for the response model
-                     response_tool_calls = None
-                     if tool_calls := getattr(msg, "tool_calls", None):
-                         # Ensure it's a list of dicts before assigning
-                         if isinstance(tool_calls, list) and all(isinstance(tc, dict) for tc in tool_calls):
-                             response_tool_calls = tool_calls
-                         else:
-                             print(f"Warning: Unexpected tool_calls format in history for msg {i}: {tool_calls}")
-
-                     # If there are tool calls, maybe clear the formatted_content?
-                     # Decide if an AI message that *only* calls tools should have empty content.
-                     # For now, let's keep content_str but NOT add tool_calls_str to it.
-                     formatted_content = content_str # Use only the text content
-
-                 elif isinstance(msg, ToolMessage):
-                     sender = "tool_result"
-                     node = "tools"
-                     tool_name = getattr(msg, 'name', 'unknown_tool')
-                     is_error = isinstance(msg.content, Exception)
-                     if isinstance(msg.content, str): formatted_content = msg.content
-                     elif msg.content is None: formatted_content = ""
-                     else:
-                         try: formatted_content = json.dumps(msg.content)
-                         except TypeError: formatted_content = str(msg.content)
-
-                 if sender and formatted_content is not None:
-                     msg_timestamp = base_timestamp_ms + i if base_timestamp_ms is not None else None
-                     history_messages.append(HistoryMessage(
-                         id=f"{thread_id}-{i}", # Use checkpoint ID (thread_id) in message ID
-                         sender=sender,
-                         content=formatted_content,
-                         timestamp=msg_timestamp,
-                         node=node,
-                         tool_name=tool_name, # Only relevant for tool_result
-                         is_error=is_error, # Relevant for tool_result or system
-                         tool_calls=response_tool_calls if sender == 'ai' else None # Add the structured tool_calls
-                         # set_id is not typically stored in checkpoint messages, omit or derive if needed
-                     ))
-             # --- End Message Loop ---
-
-        # Return history with the string thread_id used for lookup
-        return HistoryResponse(messages=history_messages, thread_id=thread_id)
-
-    except HTTPException:
-        raise # Re-raise validation or explicit HTTP errors
-    except Exception as e:
-        print(f"Error getting history for thread {thread_id}: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Failed to load history.")
-
-
-@app.delete("/api/threads/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_thread_endpoint(
-    thread_id: str = FastApiPath(..., title="The LangGraph thread ID (UUID string) to delete")
-):
-    """Deletes all checkpoint data associated with a specific thread ID."""
-    if not checkpointer:
-        print("Error: Checkpointer not available for deleting thread.")
-        raise HTTPException(status_code=500, detail="Checkpointer service unavailable.")
-
-    if not isinstance(checkpointer, AsyncSqliteSaver):
-        print(f"Error: Checkpointer is not an AsyncSqliteSaver ({type(checkpointer)}), cannot delete thread directly.")
-        raise HTTPException(status_code=501, detail="Deletion not supported for this checkpointer type.")
-
-    print(f"Attempting to delete thread ID: {thread_id}")
-    try:
-        # Assuming the table name is 'checkpoints' as is common with SqliteSaver
-        # If using a different saver or custom tables, adjust the table name.
-        async with checkpointer.conn.cursor() as cursor:
-            # Delete from the main checkpoints table
-            await cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
-            deleted_count = cursor.rowcount
-            print(f"Deleted {deleted_count} rows from checkpoints table for thread {thread_id}")
-
-            # Note: If other tables are linked via thread_id (e.g., 'writes'),
-            # they might need explicit deletion too, depending on DB schema/constraints.
-            # await cursor.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
-
-        await checkpointer.conn.commit()
-        print(f"Successfully deleted data for thread ID: {thread_id}")
-
-        if deleted_count == 0:
-            # Optionally, return 404 if the thread didn't exist, although 204 is also acceptable idempotently.
-            # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Thread ID '{thread_id}' not found.")
-            print(f"Warning: No checkpoint data found for thread ID '{thread_id}' during deletion.")
-
-
-        # Return No Content on success (even if nothing was deleted)
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    except aiosqlite.Error as e:
-        print(f"Database error deleting thread {thread_id}: {e}")
-        traceback.print_exc()
-        # Consider rollback if the DB supports it and commit fails partially
-        # await checkpointer.conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error deleting thread: {e}")
-    except Exception as e:
-        print(f"Unexpected error deleting thread {thread_id}: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Unexpected error deleting thread: {e}")
-
-
-# --- Wrapper for Streaming with Initial Thread Creation Event ---
-async def stream_run_with_creation_event(
-    new_thread_id: str, # The newly generated thread_id
-    input_messages: List[BaseMessage],
-    constitutions: List[Union[ConstitutionRefById, ConstitutionFullText]], # Updated type hint
-    run_app: Any
-) -> AsyncGenerator[ServerSentEvent, None]:
-    """Yields a thread_created event first, then streams the rest."""
-    # 1. Yield the initial thread creation event
-    created_data = SSEThreadCreatedData(thread_id=new_thread_id)
-    sse_payload = SSEEventData(type="thread_created", node="setup", data=created_data)
-    yield ServerSentEvent(data=sse_payload.model_dump_json())
-    print(f"Sent thread_created event for Thread ID: {new_thread_id}")
-
-    # 2. Yield the rest of the events from the standard stream_events helper
-    async for event in stream_events(
-        thread_id=new_thread_id, # Use the new_thread_id for the actual run
-        input_messages=input_messages,
-        constitutions=constitutions, # Pass updated constitutions list
-        run_app=run_app,
-        set_id=None # Standard stream doesn't use set_id
-    ):
-        yield event
-
-
-# --- Run Endpoints ---
-
-@app.post("/api/runs/stream")
-async def run_stream_endpoint(request: StreamRunRequest):
-    """Handles streaming runs for a single thread (normal chat)."""
-    try:
-        # 1. Prepare input messages (common step)
-        if not request.input or not request.input.content:
-             raise HTTPException(status_code=400, detail="Input content is required to start a stream.")
-        input_messages = [HumanMessage(content=request.input.content)]
-
-        # 2. Handle new vs. existing thread
-        if request.thread_id is None:
-            # New thread: Generate ID and use the wrapper stream
-            new_thread_id = str(uuid.uuid4())
-            print(f"Received request for new thread. Generated Thread ID: {new_thread_id}")
-            event_stream = stream_run_with_creation_event(
-                new_thread_id=new_thread_id,
-                input_messages=input_messages,
-                constitutions=request.constitutions, # Pass the new constitutions list
-                run_app=graph_app
-            )
-        else:
-            # Existing thread: Use the standard stream_events helper directly
-            existing_thread_id = request.thread_id
-            print(f"Received request to continue Thread ID: {existing_thread_id}")
-            event_stream = stream_events(
-                thread_id=existing_thread_id, # Pass the existing thread_id
-                input_messages=input_messages,
-                constitutions=request.constitutions, # Pass the new constitutions list
-                run_app=graph_app
-            )
-
-        # 3. Return the appropriate SSE response stream
-        return EventSourceResponse(event_stream)
-
-    except HTTPException:
-        raise # Re-raise validation or explicit HTTP errors
-    except Exception as e:
-        print(f"Error setting up stream run for thread {request.thread_id}: {e}")
-        traceback.print_exc()
-        # Return an error response instead of EventSourceResponse if setup fails
-        raise HTTPException(status_code=500, detail="Failed to initiate stream.")
-
-
-# --- Compare Streaming Helper and Endpoint ---
-
-async def stream_compare_events(
-    base_thread_id: Optional[str], # The base thread ID (UUID string) or None if new
-    input_message: BaseMessage,
-    constitution_sets: List[CompareRunSet], # Use the Pydantic model directly
-    include_inner_agent_only: bool = True # Flag to control inner agent run
-) -> AsyncGenerator[ServerSentEvent, None]:
-    """Runs multiple streams concurrently for comparison and multiplexes their events."""
-    event_queue = asyncio.Queue()
-    consumer_tasks = []
-    # Tuple now holds: (thread_id, List[Union[ConstitutionRefById, ConstitutionFullText]], set_id, run_app) - Update type hint if CompareRunSet changes
-    runs_to_perform: List[Tuple[str, List[Union[ConstitutionRefById, ConstitutionFullText]], str, Any]] = [] 
-
-    # Generate a unique group ID for this comparison operation - currently unused, could be used for logging/grouping
-    # compare_group_id = str(uuid.uuid4())
-
-    # Determine base thread ID for naming/grouping checkpoints
-    # If starting a new comparison, generate a base UUID, otherwise use the provided one
-    effective_base_thread_id = base_thread_id or str(uuid.uuid4())
-    is_new_comparison_thread = base_thread_id is None
-    print(f"Compare: Base Thread ID: {effective_base_thread_id} (New: {is_new_comparison_thread})")
-
-    # Prepare Superego-involved runs
-    for const_set in constitution_sets:
-        set_id = const_set.id
-        # Create a unique thread ID for this specific run within the comparison
-        run_thread_id = f"compare_{effective_base_thread_id}_{set_id}"
-        runs_to_perform.append(
-            (run_thread_id, const_set.constitutions, set_id, graph_app) # Use const_set.constitutions
-        )
-
-    # Prepare Inner Agent Only run (if applicable)
-    if include_inner_agent_only and inner_agent_app:
-        inner_set_id = "inner_agent_only"
-        inner_run_thread_id = f"compare_{effective_base_thread_id}_{inner_set_id}"
-        runs_to_perform.append(
-            (inner_run_thread_id, [], inner_set_id, inner_agent_app)
-        )
-    elif include_inner_agent_only:
-         print("Warning: Inner agent app not available, skipping inner_agent_only comparison run.")
-
-    active_stream_count = len(runs_to_perform)
-    print(f"Compare: Starting {active_stream_count} parallel runs based on Base Thread ID: {effective_base_thread_id}")
-
-    # Launch consumer tasks
-    for run_thread_id, constitutions_for_run, set_id, run_app in runs_to_perform:
-        print(f"Compare: Launching Set='{set_id}', Thread ID='{run_thread_id}'")
-        stream = stream_events(
-            thread_id=run_thread_id, # Pass the unique thread ID for this run
-            input_messages=[input_message],
-            constitutions=constitutions_for_run, # Pass the list of constitution refs (still old type for compare)
-            run_app=run_app,
-            set_id=set_id # Pass set_id for frontend tracking
-        )
-        # Need to define consume_and_forward_stream if it's not already defined
-        async def consume_and_forward_stream(stream: AsyncGenerator[ServerSentEvent, None], queue: asyncio.Queue):
-            """Helper coroutine to consume events from a stream and put them on a queue."""
-            try:
-                async for event in stream:
-                    await queue.put(event)
-            except Exception as e:
-                print(f"Error consuming stream: {e}")
-                # Put an error event on the queue? Or just signal completion?
-                # For now, just signal completion via None.
-            finally:
-                await queue.put(None) # Signal completion
-
-        task = asyncio.create_task(consume_and_forward_stream(stream, event_queue))
-        consumer_tasks.append(task)
-
-    # Multiplex events from the queue
-    finished_streams = 0
-    while finished_streams < active_stream_count:
-        try:
-            event = await event_queue.get()
-            if event is None:
-                finished_streams += 1
-                continue
-            yield event
-            event_queue.task_done()
-        except asyncio.CancelledError:
-             print("Compare event streaming cancelled.")
-             break
-        except Exception as e:
-            print(f"Error processing compare event queue: {e}")
-            # Yield a generic error for the comparison itself
-            yield ServerSentEvent(data=SSEEventData(
-                type="error", node="compare_multiplexer", data=f"Compare error: {e}"
-            ).model_dump_json())
-            # Signal end with the *base* thread ID so frontend knows the overall operation ended
-            yield ServerSentEvent(data=SSEEventData(
-                type="end", node="error", data=SSEEndData(thread_id=effective_base_thread_id)
-            ).model_dump_json())
-
-
-    print(f"Compare streaming finished for base Thread ID {effective_base_thread_id}.")
-    for task in consumer_tasks:
-         if not task.done(): task.cancel()
-    await asyncio.gather(*consumer_tasks, return_exceptions=True)
-
-
-@app.post("/api/runs/compare/stream")
-async def run_compare_stream_endpoint(request: CompareRunRequest):
-    """Handles streaming runs for comparing multiple constitution sets."""
-    base_thread_id = request.thread_id # Use base_thread_id
-
-    try:
-        # 1. Validate input
-        if not request.input or not request.input.content:
-             raise HTTPException(status_code=400, detail="Input content is required for comparison.")
-        # Allow empty constitution_sets if inner_agent_app exists
-        if not request.constitution_sets and not inner_agent_app:
-             raise HTTPException(status_code=400, detail="At least one constitution set (or inner agent) is required for comparison.")
-
-        # 2. Prepare input message
-        input_message = HumanMessage(content=request.input.content)
-
-        # 3. Return the SSE response stream
-        return EventSourceResponse(stream_compare_events(
-            base_thread_id=base_thread_id, # Pass base_thread_id
-            input_message=input_message,
-            constitution_sets=request.constitution_sets,
-            include_inner_agent_only=True # Assuming we always want inner agent if available
-        ))
-
-    except HTTPException:
-        raise # Re-raise validation or explicit HTTP errors
-    except Exception as e:
-         print(f"Error setting up compare run for thread {request.thread_id}: {e}")
-         traceback.print_exc()
-         raise HTTPException(status_code=500, detail="Failed to initiate comparison stream.")
+# --- Include API Routers ---
+# Include the routers after the FastAPI app is defined
+app.include_router(runs_router.router)
+app.include_router(threads_router.router)
+app.include_router(constitutions_router.router)
+print("Included API routers.")
 
 
 # --- Main Execution ---

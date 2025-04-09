@@ -252,7 +252,7 @@ export const activeSessionId: Writable<string | null> = writable(null);
 *   **Stores (`src/lib/stores.ts`):**
     *   Implement `uiSessions`, `activeSessionId`, `knownThreadIds` using `svelte-persisted-store`.
     *   Remove old stores related to `conversationStates`, `activeConstitutionIds`, `constitutionAdherenceLevels`, etc.
-    *   Consider a non-persisted store to hold the fetched `HistoryEntry[]` for the active session.
+    *   Add a non-persisted, writable store `historyCacheStore: Writable<Record<string, HistoryEntry>>` to `stores.ts`. This acts as an in-memory cache holding the latest known `HistoryEntry` for each `threadId` interacted with.
 *   **State Management Functions (`src/lib/sessionManager.ts` or similar):**
     *   Create functions for managing `uiSessions` (create, rename, delete, update `threadIds`).
     *   Create functions for managing `knownThreadIds`.
@@ -272,5 +272,74 @@ export const activeSessionId: Writable<string | null> = writable(null);
     *   Implement `getLatestHistory(threadId)` function to call `/api/threads/{thread_id}/latest` and return a typed `HistoryEntry`.
     *   Implement `getFullHistory(threadId)` function to call `/api/threads/{thread_id}/history` and return typed `HistoryEntry[]`.
     *   Remove message transformation logic from API fetching functions.
-    *   Update SSE handling logic to route based on `threadId`.
-*   **Testing:** Focus on core workflows: creating sessions, sending messages (first and subsequent), fetching/displaying latest state via `/latest`, persistence across reloads, switching sessions. Verify compare mode structure using separate `threadId`s.
+    *   **Stream Processing Logic (`src/lib/streamProcessor.ts` - NEW):**
+        *   **Goal:** Provide pure, stateless functions to process intermediate SSE events (`chunk`, `ai_tool_chunk`, `tool_result`) based on the current state of a thread's `HistoryEntry` from the cache, returning a *new, updated* `HistoryEntry` object reflecting the optimistic change.
+        *   **Approach:**
+            *   Create `streamProcessor.ts`.
+            *   Implement pure functions like:
+                *   `handleChunk(currentEntry: HistoryEntry | undefined, chunkData: string, event: SSEEventData): HistoryEntry` - Takes the current entry (or undefined if it's the very first event for a new message), appends the chunk to the content of the last message (creating a new message object if necessary), and returns a *new* `HistoryEntry` object with the updated messages array.
+                *   `handleToolChunk(currentEntry: HistoryEntry, toolChunkData: SSEToolCallChunkData, event: SSEEventData): HistoryEntry` - Takes the current entry, finds the last AI message, updates its `tool_calls` array based on the chunk data (parsing args incrementally if needed), and returns a *new* `HistoryEntry` object.
+                *   `handleToolResult(currentEntry: HistoryEntry, toolResultData: SSEToolResultData, event: SSEEventData): HistoryEntry` - Takes the current entry, creates a new `ToolApiMessage`, adds it to the messages array, and returns a *new* `HistoryEntry` object.
+            *   These functions encapsulate the complex logic of message construction without managing state themselves.
+    *   **API Integration (`api.ts` - `streamRun`):**
+        *   The internal `onmessage` handler within `streamRun` orchestrates optimistic updates:
+            1.  Receives an intermediate SSE event for a specific `threadId`.
+            2.  Gets the current `historyCacheStore` value using `get(historyCacheStore)`.
+            3.  Retrieves the specific `HistoryEntry` for the event's `threadId` from the cache (`currentEntry = cache[threadId]`).
+            4.  Calls the appropriate pure function from `streamProcessor.ts` with `currentEntry` and event data.
+            5.  Receives the `newEntry` (a new `HistoryEntry` object) back.
+            6.  Updates the central cache immutably: `historyCacheStore.update(cache => ({ ...cache, [threadId]: newEntry }));`
+        *   The `onEnd` callback triggers `getLatestHistory(threadId)` to fetch the final state, which overwrites the `historyCacheStore` entry. Log discrepancies between optimistic and final state.
+    *   **Refactoring Order:** Implement changes in the following order:
+        1.  Backend API Verification (Already Done).
+        2.  Define `historyCacheStore` in `stores.ts`.
+        3.  Implement Stream Processing pure functions (`streamProcessor.ts`).
+        4.  Integrate stream processing logic into `api.ts` (`streamRun`'s `onmessage` handler).
+        5.  Refactor UI Components (`ChatInterface.svelte`, `ConstitutionSelector.svelte`).
+    *   **UI Component Logic (`ChatInterface.svelte`, etc.):**
+        *   **Active Threads Determination:** A top-level component (e.g., `App.svelte`) derives the `activeThreadIds: string[]` by subscribing to `activeSessionId` and `uiSessions`.
+        *   **Props:** The `activeThreadIds` array is passed down as props to display components (e.g., `<ChatView threadId={activeThreadIds[0]} />`).
+        *   **Subscription & Data Selection:** Display components receive `threadId`(s) via props, subscribe to `historyCacheStore`, and use reactive declarations (`$:`) to select the relevant `HistoryEntry` from the cache: `$: entry = $historyCacheStore[threadId];`.
+        *   **Rendering:** Components render messages (`entry?.values?.messages`), config (`entry?.runConfig`), etc., based on the selected `entry`.
+        *   **Fetching:** If `entry` is initially undefined for a required `threadId`, the component triggers `getLatestHistory(threadId)` to populate the cache.
+    *   **Testing:** Focus on core workflows: creating sessions, sending messages, fetching initial history, real-time display via cache updates, correct state overwrite on end/error, discrepancy logging, persistence of session info, switching sessions, (Future) multiple components displaying different threads simultaneously.
+
+## 7. Refactor Log
+
+*   **2025-04-09:**
+    *   Updated `superego-frontend/src/global.d.ts`:
+        *   Added new interfaces: `UISessionState`, `ConfiguredConstitutionModule`, `RunConfig`, `CheckpointConfigurable`, `HistoryEntry`.
+        *   Replaced old `MessageType` and related interfaces with backend-aligned `BaseApiMessage`, `HumanApiMessage`, `AiApiMessage`, `SystemApiMessage`, `ToolApiMessage`, and updated `MessageType` union.
+        *   Removed obsolete types: `ThreadItem`, `HistoryResponse`, `StreamRunRequest`, `CompareRunRequest`, `ConversationState`, `BackendConstitutionRefById`, `BackendConstitutionFullText`, `SelectedConstitution`.
+        *   Fixed syntax error related to commented-out `ConversationState`.
+    *   Refactored state management:
+        *   Updated `superego-frontend/src/lib/stores.ts` to export simple `persisted` stores (`uiSessions`, `knownThreadIds`) and a `writable` store (`activeSessionId`).
+        *   Created `superego-frontend/src/lib/sessionManager.ts` containing functions (`createNewSession`, `renameSession`, `deleteSession`, `addThreadToSession`, etc.) to manage the state in the stores.
+        *   Removed old `conversationManager.ts`.
+    *   Improved logging utilities in `superego-frontend/src/lib/utils.ts`:
+        *   Added `logOperationStatus` helper for synchronous operations returning a boolean status.
+        *   Standardized logging prefixes (`[OK]`, `[FAIL]`) in both `logOperationStatus` and the existing async `logExecution` helper.
+        *   Updated `sessionManager.ts` to use the shared `logOperationStatus` helper.
+    *   Updated `superego-frontend/src/lib/components/Sidebar.svelte`:
+        *   Refactored to import and use the simple stores from `stores.ts` and management functions from `sessionManager.ts`.
+        *   Updated logic for displaying sessions, creating, renaming, deleting, and selecting sessions.
+        *   Removed call to non-existent `deleteThread` API function.
+    *   Updated `superego-frontend/src/lib/api.ts`:
+        *   Removed old API functions (`fetchHistory`, `fetchConstitutions`, `submitConstitution`, `fetchConstitutionContent`, `deleteThread`, old `streamRun`).
+        *   Implemented `getLatestHistory` and `getFullHistory` functions.
+        *   Implemented new `streamRun` function accepting `userInput`, `runConfig`, and `callbacks`, sending the `CheckpointConfigurable` payload, and handling SSE routing via `thread_id`.
+        *   Corrected store imports and removed unnecessary type imports.
+    *   Updated `superego-frontend/src/global.d.ts`:
+        *   Added `SSEThreadInfoData` type.
+        *   Refined `SSEEventData` to include `thread_info` type and top-level `thread_id`.
+        *   Removed obsolete `SSEThreadCreatedData`.
+    *   Restored `superego-frontend/src/lib/stores.ts` to include refactored stores (`uiSessions`, `knownThreadIds`, `activeSessionId`) and `globalError`.
+*   **2025-04-09 (Plan Adjustment):** Paused refactoring of UI components (`ChatInterface`, `ConstitutionSelector`). Prioritizing verification of backend API alignment with `refactor_plan.md` requirements before proceeding with component implementation.
+*   **2025-04-09 (API Verification):** Verified backend API endpoints (`api_routers/runs.py`, `api_routers/threads.py`) against Section 4 requirements. Confirmed alignment for `/api/runs/stream` (accepts `configurable`, returns `thread_id` & `checkpoint_id` in SSE, derives constitution), `/api/threads/{thread_id}/latest`, and `/api/threads/{thread_id}/history` (return correct `HistoryEntry` structure with adapted messages and `runConfig`). Backend API is ready for frontend component refactoring.
+*   **2025-04-09 (State Plan Refinement):** Discussed and refined the frontend state management and stream processing strategy. Iterated through several approaches (separate streaming store, active entry store) before settling on the final plan documented in Section 6:
+    *   Use a central `historyCacheStore` (Record<string, HistoryEntry>).
+    *   Implement pure functions in `streamProcessor.ts` to calculate optimistic updates.
+    *   Update the cache directly from `api.ts` during streaming.
+    *   Overwrite cache with final state fetched via `getLatestHistory` on stream end.
+    *   UI components subscribe to the cache and select data based on `threadId` props.
+    *   Confirmed refactoring order: Cache -> Processor -> API Integration -> UI Components.

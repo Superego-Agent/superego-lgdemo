@@ -1,39 +1,38 @@
 <script lang="ts">
     import { tick } from 'svelte';
-    import { get } from 'svelte/store';
-    import { slide } from 'svelte/transition';
-    import { activeConversationId, conversationStates, updateConversationMetadataState } from '../stores';
-    import { managedConversations, deleteConversation } from '../conversationManager';
-    import type { ConversationMetadata } from '../conversationManager';
-    import { deleteThread } from '../api';
+    import { uiSessions, activeSessionId } from '../stores';
+    import { createNewSession, renameSession, deleteSession } from '../sessionManager';
 
     import IconEdit from '~icons/fluent/edit-24-regular';
     import IconDelete from '~icons/fluent/delete-24-regular';
     import IconAdd from '~icons/fluent/add-24-regular';
 
-    let editingConversationId: string | null = null;
+    let editingSessionId: string | null = null;
     let editingName: string = '';
     let originalEditingName: string = '';
     let renameInput: HTMLInputElement | null = null;
 
-    $: isActiveConversationProcessing = $activeConversationId ? ($conversationStates[$activeConversationId]?.status === 'loading_history' || $conversationStates[$activeConversationId]?.status === 'streaming') : false;
+    // Reactive statement uses the uiSessions store directly
+    $: sortedSessions = Object.values($uiSessions).sort((a: UISessionState, b: UISessionState) =>
+        new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
+    );
 
     function handleNewChat() {
-        if (isActiveConversationProcessing && $activeConversationId === null) return;
-        activeConversationId.set(null);
+        createNewSession(); // Call imported function
     }
 
-    function selectConversation(conversationId: string) {
-        if (conversationId === $activeConversationId) return;
-        editingConversationId = null;
-        activeConversationId.set(conversationId);
+    function selectConversation(sessionId: string) {
+        // Use $activeSessionId store directly
+        if (sessionId === $activeSessionId) return;
+        editingSessionId = null;
+        activeSessionId.set(sessionId); // Set store value
     }
 
-    function startRename(event: MouseEvent, conversation: ConversationMetadata) {
+    function startRename(event: MouseEvent, session: UISessionState) {
         event.stopPropagation();
-        editingConversationId = conversation.id;
-        editingName = conversation.name;
-        originalEditingName = conversation.name;
+        editingSessionId = session.sessionId;
+        editingName = session.name;
+        originalEditingName = session.name;
         tick().then(() => {
             renameInput?.focus();
             renameInput?.select();
@@ -41,29 +40,20 @@
     }
 
     function handleRename() {
-        if (editingConversationId === null) return;
+        if (editingSessionId === null) return;
 
-        const conversationIdToRename = editingConversationId;
+        const sessionIdToRename = editingSessionId;
         const newName = editingName.trim();
         const originalName = originalEditingName;
 
-        editingConversationId = null;
+        editingSessionId = null;
 
         if (!newName || newName === originalName) {
             return;
         }
 
-        try {
-            managedConversations.update(list =>
-                list.map(conv =>
-                    conv.id === conversationIdToRename ? { ...conv, name: newName, last_updated_at: new Date().toISOString() } : conv
-                ).sort((a, b) => new Date(b.last_updated_at).getTime() - new Date(a.last_updated_at).getTime())
-            );
-            updateConversationMetadataState(conversationIdToRename, { name: newName });
-        } catch (error) {
-            console.error(`Failed to rename conversation ${conversationIdToRename}:`, error);
-            // TODO: Add user feedback for rename failure (e.g., globalError store)
-        }
+        // Call imported function
+        renameSession(sessionIdToRename, newName);
     }
 
     function handleRenameKeyDown(event: KeyboardEvent) {
@@ -71,80 +61,63 @@
             event.preventDefault();
             handleRename();
         } else if (event.key === 'Escape') {
-            editingConversationId = null;
+            editingSessionId = null;
         }
     }
 
-    async function handleDelete(event: MouseEvent, conversationId: string) {
+    async function handleDelete(event: MouseEvent, sessionId: string) {
         event.stopPropagation();
 
-        const conversationToDelete = get(managedConversations).find(c => c.id === conversationId);
-        if (!conversationToDelete) return;
+        // Use $uiSessions store directly
+        const sessionToDelete = $uiSessions[sessionId];
+        if (!sessionToDelete) return;
 
-        if (!confirm(`Are you sure you want to delete conversation "${conversationToDelete.name}"?`)) {
+        if (!confirm(`Are you sure you want to delete session "${sessionToDelete.name}"?`)) {
             return;
         }
 
-        const wasActive = ($activeConversationId === conversationId);
+        // Call imported function to delete frontend session state
+        // Deleting backend threads is currently out of scope for this refactor
+        // and the corresponding API function was removed.
+        deleteSession(sessionId); // Manager function handles updating activeSessionId if needed
 
-        try {
-            if (conversationToDelete.thread_id) {
-                await deleteThread(conversationToDelete.thread_id);
-            }
-
-            deleteConversation(conversationId);
-
-            conversationStates.update(s => {
-                delete s[conversationId];
-                return s;
-            });
-
-            if (wasActive) {
-                activeConversationId.set(null);
-            }
-        } catch (error: unknown) {
-            console.error(`Failed to delete conversation ${conversationId}:`, error);
-            // TODO: Add user feedback for delete failure (e.g., globalError store)
-        }
+        // Removed the try/catch block that attempted to call deleteThread
     }
 </script>
 
 <div class="sidebar">
-    <button class="new-chat-button" on:click={handleNewChat} disabled={isActiveConversationProcessing && $activeConversationId === null} title="New Thread">
-        {#if isActiveConversationProcessing && $activeConversationId === null}
-            <div class="button-spinner"></div>
-            <span>Creating...</span>
-        {:else}
-            <IconAdd class="btn-icon" />
-            <span>New Thread</span>
-        {/if}
+    <button class="new-chat-button" on:click={handleNewChat} title="New Session">
+        <IconAdd class="btn-icon" />
+        <span>New Session</span>
     </button>
 
     <div class="sidebar-section threads-section">
         <ul class="thread-list">
-            {#each $managedConversations as conversation (conversation.id)} 
-                <li class:active={conversation.id === $activeConversationId} class:editing={editingConversationId === conversation.id}> 
-                    {#if editingConversationId === conversation.id} 
+            <!-- Iterate over sortedSessions derived from $uiSessions -->
+            {#each sortedSessions as session: UISessionState (session.sessionId)}
+                 <!-- Use $activeSessionId store directly -->
+                <li class:active={session.sessionId === $activeSessionId} class:editing={editingSessionId === session.sessionId}>
+                    {#if editingSessionId === session.sessionId}
                         <form class="rename-form" on:submit|preventDefault={handleRename}>
                             <input
                                 type="text"
-                                 bind:this={renameInput}
-                                 bind:value={editingName}
-                                 on:blur={handleRename}
-                                 on:keydown={handleRenameKeyDown}
-                                 disabled={false}
+                                bind:this={renameInput}
+                                bind:value={editingName}
+                                on:blur={handleRename}
+                                on:keydown={handleRenameKeyDown}
+                                disabled={false}
                                 class="rename-input"
                             />
                         </form>
                     {:else}
-                        <div class="thread-item-container" on:click={() => selectConversation(conversation.id)} role="button" tabindex="0"
-                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectConversation(conversation.id); }}>
-                            <span class="thread-name">{conversation.name}</span>
+                        <div class="thread-item-container" on:click={() => selectConversation(session.sessionId)} role="button" tabindex="0"
+                             on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectConversation(session.sessionId); }}>
+                            <span class="thread-name">{session.name}</span>
                             <div class="thread-actions">
-                                <button class="icon-button" title="Rename Conversation" on:click={(e) => startRename(e, conversation)} disabled={false}>
+                                <button class="icon-button" title="Rename Session" on:click={(e) => startRename(e, session)} disabled={false}>
                                     <IconEdit />
                                 </button>
-                                <button class="icon-button delete-button" title="Delete Conversation" on:click={(e) => handleDelete(e, conversation.id)} disabled={false}>
+                                <button class="icon-button delete-button" title="Delete Session" on:click={(e) => handleDelete(e, session.sessionId)} disabled={false}>
                                     <IconDelete />
                                 </button>
                             </div>
