@@ -1,5 +1,4 @@
 import { writable } from 'svelte/store';
-import type { UserInfo } from '../../global.d'; // Corrected path
 
 interface AuthState {
     isAuthenticated: boolean;
