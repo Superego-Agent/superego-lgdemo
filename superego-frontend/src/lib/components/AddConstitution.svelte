@@ -2,6 +2,7 @@
     import { submitConstitution, fetchConstitutionContent } from '../api';
     import { addLocalConstitution, localConstitutionsStore } from '../localConstitutions';
     import { availableConstitutions } from '../stores';
+    import authStore from '../stores/authStore';
     import { createEventDispatcher } from 'svelte';
     import { tick } from 'svelte';
 
@@ -187,6 +188,13 @@
             </p>
         {/if}
 
+        <!-- Message shown when trying to submit for review while logged out -->
+        {#if submitForReview && !$authStore.isAuthenticated}
+            <p class="status-message error">
+                You must be logged in to submit a constitution for global review.
+            </p>
+        {/if}
+
         {#if submitStatus}
             <p class="status-message {submitStatus.success ? 'success' : 'error'}">
                 {submitStatus.message}
@@ -196,7 +204,13 @@
         <button
             class="submit-button"
             on:click={handleSubmit}
-            disabled={!constitutionTitle.trim() || !constitutionText.trim() || isSubmitting || templateLoading}
+            disabled={
+                !constitutionTitle.trim() ||
+                !constitutionText.trim() ||
+                isSubmitting ||
+                templateLoading ||
+                submitForReview && !$authStore.isAuthenticated // Removed extra parentheses
+            }
         >
             {#if isSubmitting}
                 Saving...

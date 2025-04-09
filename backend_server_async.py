@@ -535,10 +535,9 @@ async def submit_constitution_for_review(
     # logging.debug(f"  Text: {submission.text[:200]}...") # Log snippet
 
     # --- Send Email Notification via Mailgun ---
-    # TODO: Consider loading these from config/env vars at startup for better practice
     mailgun_api_key = os.getenv("MAILGUN_API_KEY")
-    mailgun_domain = "sandbox37f12266854847919ca7f2ca63fb867c.mailgun.org" # Your sending domain
-    recipient_email = "echarris@smcm.edu"
+    mailgun_domain = os.getenv("MAILGUN_DOMAIN")
+    recipient_email = os.getenv("MAILGUN_RECIPIENT_EMAIL")
 
     email_sent_successfully = False
     email_error_message = ""
@@ -579,9 +578,13 @@ async def submit_constitution_for_review(
             traceback.print_exc()
             email_error_message = f"Unexpected error sending email: {e}"
             email_sent_successfully = False
-    else:
-        logging.warning("Mailgun API Key or Domain not configured. Skipping email notification.")
-        email_error_message = "Email notification not configured."
+    elif not mailgun_api_key:
+        logging.warning("MAILGUN_API_KEY not configured. Skipping email notification.")
+        email_error_message = "Mailgun API Key not configured."
+    else: # Implies domain or recipient might be missing if API key is present
+         logging.warning("Mailgun Domain or Recipient Email not configured correctly. Skipping email notification.")
+         email_error_message = "Mailgun Domain/Recipient not configured."
+
 
     # You could add logic here to:
     # 1. Validate the constitution format/content further.
