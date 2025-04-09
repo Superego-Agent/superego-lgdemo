@@ -1,3 +1,7 @@
+# --- Load Environment Variables FIRST ---
+# Ensure .env is loaded before any other imports that might need the variables
+from dotenv import load_dotenv
+
 import os
 import signal
 import sys
@@ -16,6 +20,8 @@ import aiosqlite  # Use aiosqlite instead of sqlite3
 from config import CONFIG
 from utils import shout_if_fails
 from inner_agent_definitions import default_inner_agent_node
+
+load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
