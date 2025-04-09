@@ -7,6 +7,7 @@ import json
 import asyncio
 import traceback
 import logging # Import logging module
+import requests # Added for Mailgun API call
 from contextlib import asynccontextmanager
 from typing import List, Dict, Optional, Any, Literal, Union, AsyncGenerator, Tuple
 from datetime import datetime # Added for timestamp handling in models
@@ -458,13 +459,72 @@ async def submit_constitution_for_review(
     # Optionally log the text itself, be mindful of log size/sensitivity
     # logging.debug(f"  Text: {submission.text[:200]}...") # Log snippet
 
+    # --- Send Email Notification via Mailgun ---
+    # TODO: Consider loading these from config/env vars at startup for better practice
+    mailgun_api_key = os.getenv("MAILGUN_API_KEY")
+    mailgun_domain = "sandbox37f12266854847919ca7f2ca63fb867c.mailgun.org" # Your sending domain
+    recipient_email = "echarris@smcm.edu"
+
+    email_sent_successfully = False
+    email_error_message = ""
+    
+    logging.info(f"Mailgun API Key: {mailgun_api_key}")
+    logging.info(f"Mailgun Domain: {mailgun_domain}")
+    if mailgun_api_key and mailgun_domain:
+        subject = f"New Constitution Submitted: {submission.title}"
+        body = (
+            f"A new constitution has been submitted for review:\n\n"
+            f"Title: {submission.title}\n"
+            f"Private Submission: {'Yes' if submission.isPrivate else 'No'}\n\n"
+            f"Text:\n---\n{submission.text}\n---"
+        )
+        sender_email = f"noreply@{mailgun_domain}" # Standard practice for sender
+
+        try:
+            response = requests.post(
+                f"https://api.mailgun.net/v3/{mailgun_domain}/messages",
+                auth=("api", mailgun_api_key),
+                data={"from": f"Superego Submission <{sender_email}>",
+                      "to": [recipient_email],
+                      "subject": subject,
+                      "text": body})
+            logging.info(f"Mailgun API Response: {response.status_code} - {response.text}")
+            if response.status_code == 200:
+                logging.info(f"Successfully sent submission email to {recipient_email}")
+                email_sent_successfully = True
+            else:
+                logging.error(f"Mailgun API Error ({response.status_code}): {response.text}")
+                email_error_message = f"Mailgun API Error ({response.status_code}). Check backend logs."
+                email_sent_successfully = False
+
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error sending email via Mailgun: {e}")
+            email_error_message = f"Network error sending email: {e}"
+            email_sent_successfully = False
+        except Exception as e:
+            logging.error(f"Unexpected error during email sending: {e}")
+            traceback.print_exc()
+            email_error_message = f"Unexpected error sending email: {e}"
+            email_sent_successfully = False
+    else:
+        logging.warning("Mailgun API Key or Domain not configured. Skipping email notification.")
+        email_error_message = "Email notification not configured."
+
     # You could add logic here to:
     # 1. Validate the constitution format/content further.
     # 2. Save the submission to a database table (e.g., 'submitted_constitutions').
     # 3. Send a notification (email, Slack, etc.) to reviewers.
     # 4. Return a unique ID for the submission if needed.
 
-    return {"message": "Constitution submitted for review."}
+    final_message = "Constitution submitted for review."
+    if email_sent_successfully:
+        final_message += " Notification email sent."
+    elif email_error_message:
+         final_message += f" Failed to send notification email: {email_error_message}"
+
+    # Return 202 Accepted regardless of email success, as the submission itself was received.
+    # The client doesn't necessarily need to know about backend notification failures immediately.
+    return {"message": final_message}
 
 
 # Removed /api/threads and /api/threads/{thread_id}/rename endpoints
