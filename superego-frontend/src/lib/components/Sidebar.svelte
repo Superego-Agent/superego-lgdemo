@@ -86,14 +86,18 @@
 </script>
 
 <div class="sidebar">
-    <button class="new-chat-button" on:click={handleNewChat} title="New Session">
-        <IconAdd class="btn-icon" />
-        <span>New Session</span>
-    </button>
+    <!-- Button moved inside the list below -->
 
     <div class="sidebar-section threads-section">
         <ul class="thread-list">
             <!-- Iterate over sortedSessions derived from $uiSessions -->
+            <!-- New Session Button as first list item -->
+            <li class="new-session-list-item">
+                 <button class="new-session-button session-item-base" on:click={handleNewChat} title="New Session">
+                     <IconAdd />
+                     <span>Add</span>
+                 </button>
+            </li>
             {#each sortedSessions as session: UISessionState (session.sessionId)}
                  <!-- Use $activeSessionId store directly -->
                 <li class:active={session.sessionId === $activeSessionId} class:editing={editingSessionId === session.sessionId}>
@@ -110,7 +114,7 @@
                             />
                         </form>
                     {:else}
-                        <div class="thread-item-container" on:click={() => selectConversation(session.sessionId)} role="button" tabindex="0"
+                        <div class="thread-item-container session-item-base" on:click={() => selectConversation(session.sessionId)} role="button" tabindex="0"
                              on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') selectConversation(session.sessionId); }}>
                             <span class="thread-name">{session.name}</span>
                             <div class="thread-actions">
@@ -148,39 +152,8 @@
         box-shadow: var(--shadow-lg);
         color: var(--text-primary);
         gap: var(--space-lg);
+        font-size: 14pt;
         @include custom-scrollbar($track-bg: var(--bg-sidebar), $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
-    }
-
-    .new-chat-button {
-        width: 100%;
-        height: 40px;
-        padding: 0 var(--space-md);
-        margin-bottom: var(--space-sm);
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        font-size: 0.9em;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: var(--space-xs);
-        box-shadow: var(--shadow-sm);
-        flex-shrink: 0;
-
-        &:hover:not(:disabled) {
-            background-color: var(--primary-light);
-            box-shadow: var(--shadow-md);
-        }
-        &:disabled {
-            background-color: var(--primary-dark);
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
     }
 
     .threads-section {
@@ -201,7 +174,7 @@
         @include custom-scrollbar($track-bg: transparent, $thumb-bg: var(--primary-light), $width: 4px); // Use mixin
         display: block;
 
-        li {
+        li { /* Base styles for all list items */
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -231,21 +204,52 @@
                         opacity: 1;
                     }
                 }
+            
+                /* Styles moved outside the .active block */
+            
+                /* Styles moved outside the .active block */
             }
+
         }
     }
 
-    .thread-item-container {
-        flex-grow: 1;
+    /* Base styles for all session items (existing and new button) */
+    .session-item-base {
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        width: 100%;
         padding: 12px 16px;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
         border-radius: var(--radius-md);
-        margin: 2px 0;
-        overflow: hidden; // Add this to clip overflowing content (like pushed buttons)
+        margin: 2px 0; /* Matches original .thread-item-container margin */
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; /* Added color/border */
+        cursor: pointer;
+        /* Font size removed, will inherit default like .thread-name */
+        overflow: hidden; /* Added from .thread-item-container */
+        min-height: 48px; /* Ensure consistent minimum height */
+    }
+
+    /* Specific styles for the new session button */
+    .new-session-button {
+        justify-content: flex-start; /* Align icon and text to start */
+        gap: var(--space-sm); /* Add gap between icon and text */
+        border: 1px dashed var(--input-border);
+        background-color: var(--bg-surface); /* Use surface for better initial contrast */
+        color: var(--primary);
+        font-size: 1.2em;
+        /* margin: 0; */ /* Inherits margin from .session-item-base */
+
+        &:hover {
+            background-color: var(--bg-elevated); /* Use elevated for hover */
+            border-color: var(--primary-light);
+            color: var(--primary); /* Keep icon color change on hover */
+        }
+    }
+
+    /* Specific styles for existing session items */
+    .thread-item-container {
+        flex-grow: 1; /* Keep specific flex grow */
+        justify-content: space-between; /* Keep specific justification */
+        /* Common styles moved to .session-item-base */
 
         &:hover {
             background-color: var(--bg-elevated);
@@ -266,6 +270,12 @@
             gap: 4px;
             flex-shrink: 0;
             margin-left: 8px;
+        }
+    
+        /* Ensure text size matches session names */
+        .new-session-button span {
+            font-size: 0.9em; /* Explicitly set font size for text */
+            line-height: normal; /* Reset line-height if needed */
         }
     }
 

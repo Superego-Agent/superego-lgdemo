@@ -239,7 +239,7 @@ $: {
         transition: background-color 0.15s ease; /* Smooth hover transition */
     }
     .option-item:hover {
-         background-color: var(--primary-lightest); /* Hover background color */
+         background-color: rgba(128, 128, 128, 0.1); /* Subtle hover background */
     }
 
     .option-label {

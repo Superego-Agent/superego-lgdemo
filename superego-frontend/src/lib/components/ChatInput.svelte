@@ -61,7 +61,7 @@
     <textarea
       bind:this={inputElement}
       bind:value={userInput}
-      placeholder="Send a message..."
+      placeholder="Type your message here..."
       rows={isExpanded ? 3 : 1}
       disabled={disabled}
       on:focus={handleFocus}
@@ -95,14 +95,19 @@
   @use '../styles/mixins' as *;
 
   .chat-input-form {
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
     display: flex;
-    padding: var(--space-md);
     gap: var(--space-md);
-    transition: padding 0.2s ease;
-    align-items: flex-end;
+    transition: all 0.2s ease;
+    align-items: space-between;
+    justify-content: center;
   }
   .chat-input-form.expanded {
-    padding: var(--space-lg) var(--space-md);
+  //padding: var(--space-lg) 0px 0px 0px;
+
+    padding: 0px;
   }
   .textarea-container {
     flex-grow: 1;
@@ -111,7 +116,7 @@
     border-radius: var(--radius-lg);
     transition: all 0.3s ease;
     border: 1px solid var(--input-border);
-    background-color: white;
+    background-color: var(--input-bg);
   }
   .expanded .textarea-container {
     box-shadow: var(--shadow-md);
@@ -165,13 +170,18 @@
       align-items: center;
       justify-content: center;
       line-height: 1;
-      transition: background-color 0.2s ease, opacity 0.2s ease; 
+      transition: background-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
   }
    button:disabled {
        cursor: not-allowed;
        opacity: var(--button-disabled-opacity, 0.6); 
        background-color: var(--button-disabled-bg, #f5f5f5); 
-       color: var(--button-disabled-text, #999); 
+       color: var(--button-disabled-text, #999);
+  }
+  button:not(:disabled) {
+      background-color: var(--success);
+      color: #ffffff; /* White text for contrast on green */
+      border-color: transparent; /* Remove border when active */
    }
 
   //  .loading-icon-animate {

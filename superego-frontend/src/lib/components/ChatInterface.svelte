@@ -6,6 +6,7 @@
     import ConstitutionSelector from './ConstitutionSelector.svelte';
     import ChatView from './ChatView.svelte'; // Import the new view component
     // Types from global.d.ts are globally available
+    import IconChat from '~icons/fluent/chat-24-regular';
 
     import ChevronLeftIcon from '~icons/fluent/chevron-left-24-regular';
     import ChevronRightIcon from '~icons/fluent/chevron-right-24-regular';
@@ -128,11 +129,9 @@
                 </div>
             {/if}
         {:else if currentSessionId}
-             <div class="empty-chat">
-                 <p>Send a message to start the first run in this session.</p>
-                 {#if currentSessionState?.name}
-                     <p><small>Session: {currentSessionState.name}</small></p>
-                 {/if}
+            <div class="empty-chat">
+                <IconChat />
+                <p>Configure your superego's available constitution module(s), then enter a message to begin.</p>
              </div>
         {:else}
              <div class="empty-chat">
@@ -142,7 +141,7 @@
     </div>
 
     <div class="input-area">
-         <ConstitutionSelector on:configChange={handleConfigChange} />
+        <ConstitutionSelector on:configChange={handleConfigChange} />
         <ChatInput on:send={handleSend} disabled={!currentSessionId} />
     </div>
 </div>
@@ -279,12 +278,11 @@
 
 
     .input-area {
-        padding: var(--space-sm) var(--space-lg) var(--space-md);
-        border-top: 1px solid var(--input-border);
+        padding: var(--space-md);
         background-color: var(--bg-primary);
         flex-shrink: 0;
-         display: flex;
-         flex-direction: column;
-          gap: var(--space-sm);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
      }
  </style>

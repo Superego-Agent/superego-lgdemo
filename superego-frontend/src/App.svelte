@@ -9,6 +9,9 @@ import { loadLocalConstitutions } from './lib/localConstitutions';
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
+import { get } from 'svelte/store';
+import { uiSessions, activeSessionId } from './lib/stores';
+import { createNewSession } from './lib/sessionManager';
 onMount( async () => {
     try {
         await Promise.all([
@@ -19,6 +22,24 @@ onMount( async () => {
     } catch (error) {
         console.error("App onMount Error: Failed to initialize constitutions:", error);
     }
+
+        // --- START: Add Session Initialization Logic ---
+        const currentActiveId = get(activeSessionId);
+        if (currentActiveId === null) {
+            const currentSessions = get(uiSessions);
+            const sessionIds = Object.keys(currentSessions);
+            if (sessionIds.length > 0) {
+                // Activate the first existing session found
+                activeSessionId.set(sessionIds[0]);
+                console.log(`[App.svelte] Activated existing session: ${sessionIds[0]}`);
+            } else {
+                // No sessions exist, create a new one
+                console.log('[App.svelte] No existing sessions found, creating a new one.');
+                createNewSession(); // This function already sets it as active
+            }
+        }
+        // --- END: Add Session Initialization Logic ---
+
 });
 
 </script>

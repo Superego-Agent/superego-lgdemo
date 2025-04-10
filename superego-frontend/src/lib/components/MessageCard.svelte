@@ -37,7 +37,7 @@
 		'action': 'var(--node-tools)', // Example node ID for tool execution node
 
 		// Message Types (Fallbacks)
-		human: 'var(--human-border)',
+		human: 'var(--text-primary)', // Use primary text color for 'You' title contrast
 		system: 'var(--system-border)',
 		ai: 'var(--node-inner-agent)', // Default AI color if no specific node
 		tool: 'var(--node-tools)', // Default tool color if no specific node
@@ -78,40 +78,13 @@
 
 	$: renderedContent = (() => {
 		const rawText = getRawContentText(message.content);
-		if (message.type === 'tool') {
-			let displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
-			// Refined Regex: Non-greedily capture content between content=' and the next '
-			// Ensures it stops before other attributes like name=...
-			const contentMatch = rawText.match(/^content='(.*?)'(?:\s|$)/); // Capture group 1 is the content
-
-			if (contentMatch && contentMatch[1]) {
-				displayContent = contentMatch[1]; // Use the captured content
-				// No need to manually replace \n with <br>, marked({ breaks: true }) handles it.
-			} else if (rawText && !isError) {
-				// Only warn if there was actual text that didn't match the pattern and wasn't an error
-				console.warn("Tool result content did not match expected pattern `content='...'`. Displaying raw:", rawText);
-				// Keep rawText as displayContent for the fallback
-			}
-			// Process the extracted/fallback content through Markdown parser
-			try {
-				const html = marked.parse(displayContent, { gfm: true, breaks: true });
-				return DOMPurify.sanitize(String(html));
-			} catch (e) {
-				console.error("Markdown parsing error for tool result:", e);
-				// Fallback to plain text rendering in a pre tag if markdown fails, preserving whitespace/newlines
-				// Escape HTML characters to prevent XSS in the fallback.
-				return `<pre class="error-content">${displayContent.replace(/</g, '<').replace(/>/g, '>')}</pre>`;
-			}
-		} else {
-			// Keep Markdown processing for other message types
-			try {
-				const html = marked.parse(rawText, { gfm: true, breaks: true });
-				return DOMPurify.sanitize(String(html));
-			} catch (e) {
-				console.error("Markdown parsing error:", e);
-				return `<pre class="error-content">${rawText}</pre>`;
-			}
-		}
+		// For tool messages OR other types, directly use rawText for Markdown parsing.
+		// Removed the specific regex parsing for tool results as it caused warnings and wasn't matching the actual format.
+		const displayContent = rawText || (message.type === 'tool' && isError ? 'Error occurred' : '(No result)');
+		// The console warning is removed as we no longer attempt the specific pattern match.
+		// Directly process the displayContent using Markdown and sanitize, without try/catch fallback
+		const html = marked.parse(displayContent, { gfm: true, breaks: true });
+		return DOMPurify.sanitize(String(html));
 	})();
 
 
@@ -172,6 +145,8 @@
 
 <style lang="scss">
 	@use '../styles/mixins' as *;
+
+	   /* Removed redundant CSS rule for human title color */
 
 	.message-card-wrapper {
 		width: 100%;
