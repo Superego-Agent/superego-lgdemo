@@ -74,8 +74,12 @@ async def lifespan(app: FastAPI):
         if checkpointer:
             runs_router.router.checkpointer_instance = checkpointer
             threads_router.router.checkpointer_instance = checkpointer
-            # Assuming constitutions_router doesn't need checkpointer based on its likely function
             print("Passed checkpointer instance to runs_router and threads_router.")
+        # Pass graph_app instance to threads_router as well
+        if graph_app:
+             threads_router.router.graph_app_instance = graph_app
+             print("Passed graph_app instance to threads_router.")
+
 
     except Exception as e:
         print(f"FATAL: Error during startup: {e}")

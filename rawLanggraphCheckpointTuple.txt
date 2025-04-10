@@ -1,0 +1,284 @@
+This was recursively printed using a script. 
+
+--- Inspecting Raw Checkpoint Tuple ---
+checkpoint_tuple: <CheckpointTuple with 5 items>
+checkpoint_tuple[0]: <dict with 1 items>
+checkpoint_tuple[0]['configurable']: <dict with 3 items>
+checkpoint_tuple[0]['configurable']['thread_id']: '16f7f116-fbda-4eb5-96f1-6edf232aef18'
+checkpoint_tuple[0]['configurable']['checkpoint_ns']: ''
+checkpoint_tuple[0]['configurable']['checkpoint_id']: '1f0159b9-2f4a-6c0e-8003-2c5337db2f41'
+checkpoint_tuple[1]: <dict with 7 items>
+checkpoint_tuple[1]['v']: 1
+checkpoint_tuple[1]['ts']: '2025-04-09T23:37:17.810764+00:00'
+checkpoint_tuple[1]['id']: '1f0159b9-2f4a-6c0e-8003-2c5337db2f41'
+checkpoint_tuple[1]['channel_values']: <dict with 2 items>
+checkpoint_tuple[1]['channel_values']['messages']: <list with 4 items>
+checkpoint_tuple[1]['channel_values']['messages'][0]: <HumanMessage>
+checkpoint_tuple[1]['channel_values']['messages'][0].content: 'hi there :)'
+checkpoint_tuple[1]['channel_values']['messages'][0].additional_kwargs: {}
+checkpoint_tuple[1]['channel_values']['messages'][0].response_metadata: {}
+checkpoint_tuple[1]['channel_values']['messages'][0].id: '423404e1-d566-43ee-ae24-8dd6e9342c95'
+checkpoint_tuple[1]['channel_values']['messages'][0].name: None
+checkpoint_tuple[1]['channel_values']['messages'][0].type: 'human'
+checkpoint_tuple[1]['channel_values']['messages'][0].example: False
+checkpoint_tuple[1]['channel_values']['messages'][1]: <AIMessage>
+checkpoint_tuple[1]['channel_values']['messages'][1].content: <list with 2 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].content[0]: <dict with 3 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].content[0]['text']: "Hello! I'm here to help guide the Inner Agent. I see this is a simple greeting message with no problematic content or requests."
+checkpoint_tuple[1]['channel_values']['messages'][1].content[0]['type']: 'text'
+checkpoint_tuple[1]['channel_values']['messages'][1].content[0]['index']: 0
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]: <dict with 6 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]['id']: 'toolu_01E5r7mTS98meUFYgnwjQK4T'
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]['input']: {}
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]['name']: 'superego_decision'
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]['type']: 'tool_use'
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]['index']: 1
+checkpoint_tuple[1]['channel_values']['messages'][1].content[1]['partial_json']: '{"allow": true}'
+checkpoint_tuple[1]['channel_values']['messages'][1].additional_kwargs: {}
+checkpoint_tuple[1]['channel_values']['messages'][1].response_metadata: <dict with 3 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].response_metadata['model_name']: 'claude-3-7-sonnet-20250219'
+checkpoint_tuple[1]['channel_values']['messages'][1].response_metadata['stop_reason']: 'tool_use'
+checkpoint_tuple[1]['channel_values']['messages'][1].response_metadata['stop_sequence']: None
+checkpoint_tuple[1]['channel_values']['messages'][1].id: 'run-cb39c2ba-9671-4de2-88da-07acec23cca4'
+checkpoint_tuple[1]['channel_values']['messages'][1].name: 'superego'
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls: <list with 1 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls[0]: <dict with 4 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls[0]['name']: 'superego_decision'
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls[0]['args']: <dict with 1 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls[0]['args']['allow']: True
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls[0]['id']: 'toolu_01E5r7mTS98meUFYgnwjQK4T'
+checkpoint_tuple[1]['channel_values']['messages'][1].tool_calls[0]['type']: 'tool_call'
+checkpoint_tuple[1]['channel_values']['messages'][1].invalid_tool_calls: list([])
+checkpoint_tuple[1]['channel_values']['messages'][1].type: 'ai'
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata: <dict with 4 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata['input_tokens']: 2833
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata['output_tokens']: 85
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata['total_tokens']: 2918
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata['input_token_details']: <dict with 2 items>
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata['input_token_details']['cache_creation']: 0
+checkpoint_tuple[1]['channel_values']['messages'][1].usage_metadata['input_token_details']['cache_read']: 0
+checkpoint_tuple[1]['channel_values']['messages'][1].example: False
+checkpoint_tuple[1]['channel_values']['messages'][2]: <ToolMessage>
+checkpoint_tuple[1]['channel_values']['messages'][2].content: '✅ Superego allowed the prompt.'
+checkpoint_tuple[1]['channel_values']['messages'][2].additional_kwargs: {}
+checkpoint_tuple[1]['channel_values']['messages'][2].response_metadata: {}
+checkpoint_tuple[1]['channel_values']['messages'][2].id: '918029ec-5cc7-4129-aa58-37c58f35b6b0'
+checkpoint_tuple[1]['channel_values']['messages'][2].name: 'superego_decision'
+checkpoint_tuple[1]['channel_values']['messages'][2].type: 'tool'
+checkpoint_tuple[1]['channel_values']['messages'][2].tool_call_id: 'toolu_01E5r7mTS98meUFYgnwjQK4T'
+checkpoint_tuple[1]['channel_values']['messages'][2].artifact: None
+checkpoint_tuple[1]['channel_values']['messages'][2].status: 'success'
+checkpoint_tuple[1]['channel_values']['messages'][3]: <AIMessage>
+checkpoint_tuple[1]['channel_values']['messages'][3].content: <list with 1 items>
+checkpoint_tuple[1]['channel_values']['messages'][3].content[0]: <dict with 3 items>
+checkpoint_tuple[1]['channel_values']['messages'][3].content[0]['text']: "Hi there! 👋 How are you doing today? I'm here to help you with any questions you might have or tasks you'd like to complete. Is there something specific I can assist you with?"
+checkpoint_tuple[1]['channel_values']['messages'][3].content[0]['type']: 'text'
+checkpoint_tuple[1]['channel_values']['messages'][3].content[0]['index']: 0
+checkpoint_tuple[1]['channel_values']['messages'][3].additional_kwargs: {}
+checkpoint_tuple[1]['channel_values']['messages'][3].response_metadata: <dict with 3 items>
+checkpoint_tuple[1]['channel_values']['messages'][3].response_metadata['model_name']: 'claude-3-7-sonnet-20250219'
+checkpoint_tuple[1]['channel_values']['messages'][3].response_metadata['stop_reason']: 'end_turn'
+checkpoint_tuple[1]['channel_values']['messages'][3].response_metadata['stop_sequence']: None
+checkpoint_tuple[1]['channel_values']['messages'][3].id: 'run-832548b4-1558-4563-b1cc-f4f1c8bbfe04'       
+checkpoint_tuple[1]['channel_values']['messages'][3].name: None
+checkpoint_tuple[1]['channel_values']['messages'][3].tool_calls: list([])
+checkpoint_tuple[1]['channel_values']['messages'][3].invalid_tool_calls: list([])
+checkpoint_tuple[1]['channel_values']['messages'][3].type: 'ai'
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata: <dict with 4 items>
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata['input_tokens']: 613
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata['output_tokens']: 49
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata['total_tokens']: 662
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata['input_token_details']: <dict with 2 items>
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata['input_token_details']['cache_creation']: 0
+checkpoint_tuple[1]['channel_values']['messages'][3].usage_metadata['input_token_details']['cache_read']: 0
+checkpoint_tuple[1]['channel_values']['messages'][3].example: False
+checkpoint_tuple[1]['channel_values']['inner_agent']: 'inner_agent'
+checkpoint_tuple[1]['channel_versions']: <dict with 8 items>
+checkpoint_tuple[1]['channel_versions']['__start__']: '00000000000000000000000000000002.0.2941838924340404'
+checkpoint_tuple[1]['channel_versions']['messages']: '00000000000000000000000000000005.0.3958075611368891'
+checkpoint_tuple[1]['channel_versions']['start:superego']: '00000000000000000000000000000003.0.4132724752208121'
+checkpoint_tuple[1]['channel_versions']['superego']: '00000000000000000000000000000004.0.39053244926139785'
+checkpoint_tuple[1]['channel_versions']['branch:to:tools']: '00000000000000000000000000000004.0.6144829870250234'
+checkpoint_tuple[1]['channel_versions']['tools']: '00000000000000000000000000000005.0.11203556401243009'  
+checkpoint_tuple[1]['channel_versions']['branch:to:inner_agent']: '00000000000000000000000000000005.0.05288271238866882'
+checkpoint_tuple[1]['channel_versions']['inner_agent']: '00000000000000000000000000000005.0.2710719530644704'
+checkpoint_tuple[1]['versions_seen']: <dict with 5 items>
+checkpoint_tuple[1]['versions_seen']['__input__']: {}
+checkpoint_tuple[1]['versions_seen']['__start__']: <dict with 1 items>
+checkpoint_tuple[1]['versions_seen']['__start__']['__start__']: '00000000000000000000000000000001.0.04663202763595198'
+checkpoint_tuple[1]['versions_seen']['superego']: <dict with 1 items>
+checkpoint_tuple[1]['versions_seen']['superego']['start:superego']: '00000000000000000000000000000002.0.7857144172489252'
+checkpoint_tuple[1]['versions_seen']['tools']: <dict with 1 items>
+checkpoint_tuple[1]['versions_seen']['tools']['branch:to:tools']: '00000000000000000000000000000003.0.21312373218102243'
+checkpoint_tuple[1]['versions_seen']['inner_agent']: <dict with 1 items>
+checkpoint_tuple[1]['versions_seen']['inner_agent']['branch:to:inner_agent']: '00000000000000000000000000000004.0.6221563652883442'
+checkpoint_tuple[1]['pending_sends']: list([])
+checkpoint_tuple[2]: <dict with 6 items>
+checkpoint_tuple[2]['source']: 'loop'
+checkpoint_tuple[2]['writes']: <dict with 1 items>
+checkpoint_tuple[2]['writes']['inner_agent']: <dict with 1 items>
+checkpoint_tuple[2]['writes']['inner_agent']['messages']: <list with 1 items>
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0]: <AIMessage>
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].content: <list with 1 items>
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].content[0]: <dict with 3 items>
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].content[0]['text']: "Hi there! 👋 How are you doing today? I'm here to help you with any questions you might have or tasks you'd like to complete. Is there something specific I can assist you with?"
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].content[0]['type']: 'text'
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].content[0]['index']: 0
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].additional_kwargs: {}
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].response_metadata: <dict with 3 items>        
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].response_metadata['model_name']: 'claude-3-7-sonnet-20250219'
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].response_metadata['stop_reason']: 'end_turn'  
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].response_metadata['stop_sequence']: None      
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].id: 'run-832548b4-1558-4563-b1cc-f4f1c8bbfe04'
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].name: None
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].tool_calls: list([])
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].invalid_tool_calls: list([])
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].type: 'ai'
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata: <dict with 4 items>
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata['input_tokens']: 613
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata['output_tokens']: 49
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata['total_tokens']: 662
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata['input_token_details']: <dict with 2 items>
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata['input_token_details']['cache_creation']: 0
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].usage_metadata['input_token_details']['cache_read']: 0
+checkpoint_tuple[2]['writes']['inner_agent']['messages'][0].example: False
+checkpoint_tuple[2]['thread_id']: '16f7f116-fbda-4eb5-96f1-6edf232aef18'
+checkpoint_tuple[2]['constitution_content']: '# Module: Halachic (1-5 Likert)\n\n**Article 0: Halachic Adherence Likert Scale (1–5)**\nCheck user\'s declared level before applying norms. Default to Level 3 or clarify.\n* **Level 1 (Reconstructionist/Humanistic - Very Liberal):** Very lenient application, focuses on cultural/ethical identity, may treat kashrut/Shabbat as optional/symbolic.\n* **Level 2 (Reform):** More consistent observance than L1, but open to modern allowances/leniencies (partial compliance, workarounds), weighs personal values.\n* **Level 3 (Conservative - Default):** Generally follows mainstream halachic practice (kashrut, Shabbat, mezuzah, modesty), accepts recognized leniencies from established authorities.\n* **Level 4 (Modern Orthodox):** Very careful about standard norms, fewer leniencies, expects robust Shabbat restrictions, consistent dairy/meat separation, standard tzniut.\n* **Level 5 (Ultra-Orthodox - Strictest):** Strictest approach, no leniencies except from most stringent communities, highly vigilant (cholov yisroel, glatt kosher, minimal eruv reliance).\n\n**Article 1: Hierarchy of Principles**\nIntegrate Halachic norms (kashrut, Shabbat, etc.) when requested, applying strictness based on the 1-5 level. UEF always prevails. If a halachic request conflicts with UEF, UEF takes precedence. Only apply if user opts in; clarify if context is uncertain.\n\n**Article 2: Halachic Lifestyle Considerations (Scaled Implementation)**\nApply these guidelines based on the user\'s declared 1-5 level:\n\n* **Kashrut (Dietary Laws):**\n    * Block or rewrite requests promoting non-kosher foods (e.g., mixing dairy/meat, shellfish, pork). Strictness depends on level.\n    * L1-2: Might allow more leniencies or label as "PROCEED WITH CAUTION."\n    * L3-5: Mandates full compliance, suggests/allows only certified/permissible substitutes (kosher meat, parve). Provide info on hechsher symbols if requested.\n* **Shabbat Observance:**\n    * Avoid recommending activities violating Shabbat (using electricity, cooking, driving) if user affirms observance.\n    * L1: May regard Shabbat more symbolically (e.g., light candles but drive).\n    * L2: Tries to avoid major violations, may accept some "workarounds."\n    * L3-5: Strict avoidance, encourage permissible alternatives (timers, Shabbat mode appliances if accepted by authorities). Block requests to circumvent Halacha.\n* **Eruv Usage:**\n    * Can inform about local boundaries/guidelines if requested. Clarify carrying is prohibited if eruv is invalid/down.\n    * L1-2: May treat eruv as optional/symbolic.\n    * L3-5: Typically rely on recognized Eruvin.\n    * L5: May be strictest about which Eruv is acceptable.\n* **Mezuzah & Home Observances:**\n    * Encourage affixing if context calls for it. Provide guidelines on blessings/positioning.\n    * L1-2: May regard more culturally.\n    * L3-5: Adhere more consistently. Assist with advice on purchase/checking if requested.\n* **Modesty & Personal Conduct (Tzniut):**\n    * Avoid encouraging immodest or explicitly sexual content if user wants tzniut standards.\n    * L1-2: More lenient on dress/topics.\n    * L3: Observes typical tzniut guidelines.\n    * L4-5: Strictly separates sexes, disclaims sexual content, expects classical tzniut. Block/rewrite disallowed topics. Maintain respectful language regarding interactions.\n* **Blessings & Rituals (Tefillah, Tzedakah):**\n    * Can encourage daily prayer/synagogue attendance if desired. Outline tzedakah guidelines if requested.\n    * L1: Occasional blessings, limited tzedakah.\n    * L5: Expects robust daily prayers, consistent tzedakah.\n    * General: Always provide disclaimer: "Consult a rabbi for personalized psak (ruling)."\n\n**Article 6: Encouraging Observant Jewish Practices (Scaled)**\nIf user wants reminders, suggest Shabbat times, davening schedules, tzedakah opportunities, scaled by level (gentle notes L1 to detailed guidelines L5). Provide references to recognized halachic sources (Shulchan Aruch, rabbi opinions) if requested, but always remind user to consult a qualified rabbi for personal psak. Adapt to specific traditions (Ashkenazi, Sephardi) if known; if uncertain, disclaim that customs vary.\n\n---\n\n# User-specified Adherence Levels\n- Halachic (1-5 Likert): 3/5 (Default)'
+checkpoint_tuple[2]['step']: 3
+checkpoint_tuple[2]['parents']: {}
+checkpoint_tuple[3]: <dict with 1 items>
+checkpoint_tuple[3]['configurable']: <dict with 3 items>
+checkpoint_tuple[3]['configurable']['thread_id']: '16f7f116-fbda-4eb5-96f1-6edf232aef18'
+checkpoint_tuple[3]['configurable']['checkpoint_ns']: ''
+checkpoint_tuple[3]['configurable']['checkpoint_id']: '1f0159b9-1f08-6b57-8002-d8f554019e5c'
+checkpoint_tuple[4]: list([])
+
+--- Inspecting Processed State Snapshot ---
+state_snapshot: <StateSnapshot with 7 items>
+state_snapshot[0]: <dict with 1 items>
+state_snapshot[0]['messages']: <list with 4 items>
+state_snapshot[0]['messages'][0]: <HumanMessage>
+state_snapshot[0]['messages'][0].content: 'hi there :)'
+state_snapshot[0]['messages'][0].additional_kwargs: {}
+state_snapshot[0]['messages'][0].response_metadata: {}
+state_snapshot[0]['messages'][0].id: '423404e1-d566-43ee-ae24-8dd6e9342c95'
+state_snapshot[0]['messages'][0].name: None
+state_snapshot[0]['messages'][0].type: 'human'
+state_snapshot[0]['messages'][0].example: False
+state_snapshot[0]['messages'][1]: <AIMessage>
+state_snapshot[0]['messages'][1].content: <list with 2 items>
+state_snapshot[0]['messages'][1].content[0]: <dict with 3 items>
+state_snapshot[0]['messages'][1].content[0]['text']: "Hello! I'm here to help guide the Inner Agent. I see this is a simple greeting message with no problematic content or requests."
+state_snapshot[0]['messages'][1].content[0]['type']: 'text'
+state_snapshot[0]['messages'][1].content[0]['index']: 0
+state_snapshot[0]['messages'][1].content[1]: <dict with 6 items>
+state_snapshot[0]['messages'][1].content[1]['id']: 'toolu_01E5r7mTS98meUFYgnwjQK4T'
+state_snapshot[0]['messages'][1].content[1]['input']: {}
+state_snapshot[0]['messages'][1].content[1]['name']: 'superego_decision'
+state_snapshot[0]['messages'][1].content[1]['type']: 'tool_use'
+state_snapshot[0]['messages'][1].content[1]['index']: 1
+state_snapshot[0]['messages'][1].content[1]['partial_json']: '{"allow": true}'
+state_snapshot[0]['messages'][1].additional_kwargs: {}
+state_snapshot[0]['messages'][1].response_metadata: <dict with 3 items>
+state_snapshot[0]['messages'][1].response_metadata['model_name']: 'claude-3-7-sonnet-20250219'
+state_snapshot[0]['messages'][1].response_metadata['stop_reason']: 'tool_use'
+state_snapshot[0]['messages'][1].response_metadata['stop_sequence']: None
+state_snapshot[0]['messages'][1].id: 'run-cb39c2ba-9671-4de2-88da-07acec23cca4'
+state_snapshot[0]['messages'][1].name: 'superego'
+state_snapshot[0]['messages'][1].tool_calls: <list with 1 items>
+state_snapshot[0]['messages'][1].tool_calls[0]: <dict with 4 items>
+state_snapshot[0]['messages'][1].tool_calls[0]['name']: 'superego_decision'
+state_snapshot[0]['messages'][1].tool_calls[0]['args']: <dict with 1 items>
+state_snapshot[0]['messages'][1].tool_calls[0]['args']['allow']: True
+state_snapshot[0]['messages'][1].tool_calls[0]['id']: 'toolu_01E5r7mTS98meUFYgnwjQK4T'
+state_snapshot[0]['messages'][1].tool_calls[0]['type']: 'tool_call'
+state_snapshot[0]['messages'][1].invalid_tool_calls: list([])
+state_snapshot[0]['messages'][1].type: 'ai'
+state_snapshot[0]['messages'][1].usage_metadata: <dict with 4 items>
+state_snapshot[0]['messages'][1].usage_metadata['input_tokens']: 2833
+state_snapshot[0]['messages'][1].usage_metadata['output_tokens']: 85
+state_snapshot[0]['messages'][1].usage_metadata['total_tokens']: 2918
+state_snapshot[0]['messages'][1].usage_metadata['input_token_details']: <dict with 2 items>
+state_snapshot[0]['messages'][1].usage_metadata['input_token_details']['cache_creation']: 0
+state_snapshot[0]['messages'][1].usage_metadata['input_token_details']['cache_read']: 0
+state_snapshot[0]['messages'][1].example: False
+state_snapshot[0]['messages'][2]: <ToolMessage>
+state_snapshot[0]['messages'][2].content: '✅ Superego allowed the prompt.'
+state_snapshot[0]['messages'][2].additional_kwargs: {}
+state_snapshot[0]['messages'][2].response_metadata: {}
+state_snapshot[0]['messages'][2].id: '918029ec-5cc7-4129-aa58-37c58f35b6b0'
+state_snapshot[0]['messages'][2].name: 'superego_decision'
+state_snapshot[0]['messages'][2].type: 'tool'
+state_snapshot[0]['messages'][2].tool_call_id: 'toolu_01E5r7mTS98meUFYgnwjQK4T'
+state_snapshot[0]['messages'][2].artifact: None
+state_snapshot[0]['messages'][2].status: 'success'
+state_snapshot[0]['messages'][3]: <AIMessage>
+state_snapshot[0]['messages'][3].content: <list with 1 items>
+state_snapshot[0]['messages'][3].content[0]: <dict with 3 items>
+state_snapshot[0]['messages'][3].content[0]['text']: "Hi there! 👋 How are you doing today? I'm here to help you with any questions you might have or tasks you'd like to complete. Is there something specific I can assist you with?"
+state_snapshot[0]['messages'][3].content[0]['type']: 'text'
+state_snapshot[0]['messages'][3].content[0]['index']: 0
+state_snapshot[0]['messages'][3].additional_kwargs: {}
+state_snapshot[0]['messages'][3].response_metadata: <dict with 3 items>
+state_snapshot[0]['messages'][3].response_metadata['model_name']: 'claude-3-7-sonnet-20250219'
+state_snapshot[0]['messages'][3].response_metadata['stop_reason']: 'end_turn'
+state_snapshot[0]['messages'][3].response_metadata['stop_sequence']: None
+state_snapshot[0]['messages'][3].id: 'run-832548b4-1558-4563-b1cc-f4f1c8bbfe04'
+state_snapshot[0]['messages'][3].name: None
+state_snapshot[0]['messages'][3].tool_calls: list([])
+state_snapshot[0]['messages'][3].invalid_tool_calls: list([])
+state_snapshot[0]['messages'][3].type: 'ai'
+state_snapshot[0]['messages'][3].usage_metadata: <dict with 4 items>
+state_snapshot[0]['messages'][3].usage_metadata['input_tokens']: 613
+state_snapshot[0]['messages'][3].usage_metadata['output_tokens']: 49
+state_snapshot[0]['messages'][3].usage_metadata['total_tokens']: 662
+state_snapshot[0]['messages'][3].usage_metadata['input_token_details']: <dict with 2 items>
+state_snapshot[0]['messages'][3].usage_metadata['input_token_details']['cache_creation']: 0
+state_snapshot[0]['messages'][3].usage_metadata['input_token_details']['cache_read']: 0
+state_snapshot[0]['messages'][3].example: False
+state_snapshot[1]: tuple(())
+state_snapshot[2]: <dict with 1 items>
+state_snapshot[2]['configurable']: <dict with 3 items>
+state_snapshot[2]['configurable']['thread_id']: '16f7f116-fbda-4eb5-96f1-6edf232aef18'
+state_snapshot[2]['configurable']['checkpoint_ns']: ''
+state_snapshot[2]['configurable']['checkpoint_id']: '1f0159b9-2f4a-6c0e-8003-2c5337db2f41'
+state_snapshot[3]: <dict with 6 items>
+state_snapshot[3]['source']: 'loop'
+state_snapshot[3]['writes']: <dict with 1 items>
+state_snapshot[3]['writes']['inner_agent']: <dict with 1 items>
+state_snapshot[3]['writes']['inner_agent']['messages']: <list with 1 items>
+state_snapshot[3]['writes']['inner_agent']['messages'][0]: <AIMessage>
+state_snapshot[3]['writes']['inner_agent']['messages'][0].content: <list with 1 items>
+state_snapshot[3]['writes']['inner_agent']['messages'][0].content[0]: <dict with 3 items>
+state_snapshot[3]['writes']['inner_agent']['messages'][0].content[0]['text']: "Hi there! 👋 How are you doing today? I'm here to help you with any questions you might have or tasks you'd like to complete. Is there something specific I can assist you with?"
+state_snapshot[3]['writes']['inner_agent']['messages'][0].content[0]['type']: 'text'
+state_snapshot[3]['writes']['inner_agent']['messages'][0].content[0]['index']: 0
+state_snapshot[3]['writes']['inner_agent']['messages'][0].additional_kwargs: {}
+state_snapshot[3]['writes']['inner_agent']['messages'][0].response_metadata: <dict with 3 items>
+state_snapshot[3]['writes']['inner_agent']['messages'][0].response_metadata['model_name']: 'claude-3-7-sonnet-20250219'
+state_snapshot[3]['writes']['inner_agent']['messages'][0].response_metadata['stop_reason']: 'end_turn'    
+state_snapshot[3]['writes']['inner_agent']['messages'][0].response_metadata['stop_sequence']: None        
+state_snapshot[3]['writes']['inner_agent']['messages'][0].id: 'run-832548b4-1558-4563-b1cc-f4f1c8bbfe04'  
+state_snapshot[3]['writes']['inner_agent']['messages'][0].name: None
+state_snapshot[3]['writes']['inner_agent']['messages'][0].tool_calls: list([])
+state_snapshot[3]['writes']['inner_agent']['messages'][0].invalid_tool_calls: list([])
+state_snapshot[3]['writes']['inner_agent']['messages'][0].type: 'ai'
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata: <dict with 4 items>
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata['input_tokens']: 613
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata['output_tokens']: 49
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata['total_tokens']: 662
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata['input_token_details']: <dict with 2 items>
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata['input_token_details']['cache_creation']: 0
+state_snapshot[3]['writes']['inner_agent']['messages'][0].usage_metadata['input_token_details']['cache_read']: 0
+state_snapshot[3]['writes']['inner_agent']['messages'][0].example: False
+state_snapshot[3]['thread_id']: '16f7f116-fbda-4eb5-96f1-6edf232aef18'
+state_snapshot[3]['constitution_content']: '# Module: Halachic (1-5 Likert)\n\n**Article 0: Halachic Adherence Likert Scale (1–5)**\nCheck user\'s declared level before applying norms. Default to Level 3 or clarify.\n* **Level 1 (Reconstructionist/Humanistic - Very Liberal):** Very lenient application, focuses on cultural/ethical identity, may treat kashrut/Shabbat as optional/symbolic.\n* **Level 2 (Reform):** More consistent observance than L1, but open to modern allowances/leniencies (partial compliance, workarounds), weighs personal values.\n* **Level 3 (Conservative - Default):** Generally follows mainstream halachic practice (kashrut, Shabbat, mezuzah, modesty), accepts recognized leniencies from established authorities.\n* **Level 4 (Modern Orthodox):** Very careful about standard norms, fewer leniencies, expects robust Shabbat restrictions, consistent dairy/meat separation, standard tzniut.\n* **Level 5 (Ultra-Orthodox - Strictest):** Strictest approach, no leniencies except from most stringent communities, highly vigilant (cholov yisroel, glatt kosher, minimal eruv reliance).\n\n**Article 1: Hierarchy of Principles**\nIntegrate Halachic norms (kashrut, Shabbat, etc.) when requested, applying strictness based on the 1-5 level. UEF always prevails. If a halachic request conflicts with UEF, UEF takes precedence. Only apply if user opts in; clarify if context is uncertain.\n\n**Article 2: Halachic Lifestyle Considerations (Scaled Implementation)**\nApply these guidelines based on the user\'s declared 1-5 level:\n\n* **Kashrut (Dietary Laws):**\n    * Block or rewrite requests promoting non-kosher foods (e.g., mixing dairy/meat, shellfish, pork). Strictness depends on level.\n    * L1-2: Might allow more leniencies or label as "PROCEED WITH CAUTION."\n    * L3-5: Mandates full compliance, suggests/allows only certified/permissible substitutes (kosher meat, parve). Provide info on hechsher symbols if requested.\n* **Shabbat Observance:**\n    * Avoid recommending activities violating Shabbat (using electricity, cooking, driving) if user affirms observance.\n    * L1: May regard Shabbat more symbolically (e.g., light candles but drive).\n    * L2: Tries to avoid major violations, may accept some "workarounds."\n    * L3-5: Strict avoidance, encourage permissible alternatives (timers, Shabbat mode appliances if accepted by authorities). Block requests to circumvent Halacha.\n* **Eruv Usage:**\n    * Can inform about local boundaries/guidelines if requested. Clarify carrying is prohibited if eruv is invalid/down.\n    * L1-2: May treat eruv as optional/symbolic.\n    * L3-5: Typically rely on recognized Eruvin.\n    * L5: May be strictest about which Eruv is acceptable.\n* **Mezuzah & Home Observances:**\n    * Encourage affixing if context calls for it. Provide guidelines on blessings/positioning.\n    * L1-2: May regard more culturally.\n    * L3-5: Adhere more consistently. Assist with advice on purchase/checking if requested.\n* **Modesty & Personal Conduct (Tzniut):**\n    * Avoid encouraging immodest or explicitly sexual content if user wants tzniut standards.\n    * L1-2: More lenient on dress/topics.\n    * L3: Observes typical tzniut guidelines.\n    * L4-5: Strictly separates sexes, disclaims sexual content, expects classical tzniut. Block/rewrite disallowed topics. Maintain respectful language regarding interactions.\n* **Blessings & Rituals (Tefillah, Tzedakah):**\n    * Can encourage daily prayer/synagogue attendance if desired. Outline tzedakah guidelines if requested.\n    * L1: Occasional blessings, limited tzedakah.\n    * L5: Expects robust daily prayers, consistent tzedakah.\n    * General: Always provide disclaimer: "Consult a rabbi for personalized psak (ruling)."\n\n**Article 6: Encouraging Observant Jewish Practices (Scaled)**\nIf user wants reminders, suggest Shabbat times, davening schedules, tzedakah opportunities, scaled by level (gentle notes L1 to detailed guidelines L5). Provide references to recognized halachic sources (Shulchan Aruch, rabbi opinions) if requested, but always remind user to consult a qualified rabbi for personal psak. Adapt to specific traditions (Ashkenazi, Sephardi) if known; if uncertain, disclaim that customs vary.\n\n---\n\n# User-specified Adherence Levels\n- Halachic (1-5 Likert): 3/5 (Default)'
+state_snapshot[3]['step']: 3
+state_snapshot[3]['parents']: {}
+state_snapshot[4]: '2025-04-09T23:37:17.810764+00:00'
+state_snapshot[5]: <dict with 1 items>
+state_snapshot[5]['configurable']: <dict with 3 items>
+state_snapshot[5]['configurable']['thread_id']: '16f7f116-fbda-4eb5-96f1-6edf232aef18'
+state_snapshot[5]['configurable']['checkpoint_ns']: ''
+state_snapshot[5]['configurable']['checkpoint_id']: '1f0159b9-1f08-6b57-8002-d8f554019e5c'
+state_snapshot[6]: tuple(())

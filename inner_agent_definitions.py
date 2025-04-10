@@ -30,8 +30,8 @@ def default_inner_agent_node(state: MessagesState, inner_model: Any) -> Dict[str
     # Create the runnable each time or pass it if it's stable
     chain = create_default_inner_agent_runnable(inner_model)
     response = chain.invoke({"messages": messages})
-    # Ensure the response has a name if needed downstream, though not strictly required by MessagesState
-    # response.name = "inner_agent" # Optional: Add if other parts rely on this name
+    # Ensure the response has a name for downstream processing (like history adaptation)
+    response.name = "inner_agent" # Set the name attribute
     return {"messages": [response]}
 
 # Potential future structure for pluggability:

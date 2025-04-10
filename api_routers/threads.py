@@ -14,7 +14,10 @@ from backend_models import (
     HumanApiMessageModel, AiApiMessageModel, ToolApiMessageModel, SystemApiMessageModel
 )
 # Import Langchain message types for adaptation logic
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage
+# Import StateSnapshot and Any for type hinting
+from langgraph.pregel import StateSnapshot # Try importing from pregel
+from typing import List, Optional, Any
 
 # Dependency function to get the checkpointer (will be passed during router inclusion)
 # This is a placeholder; the actual checkpointer comes from the main app instance.
@@ -31,144 +34,132 @@ router = APIRouter(
     prefix="/api/threads",
     tags=["threads"]
 )
-# Add an attribute to hold the checkpointer instance passed from the main app
-router.checkpointer_instance: Optional[BaseCheckpointSaver] = None
+# Add attributes to hold instances passed from the main app
+router.checkpointer_instances = None
+router.graph_app_instance = None # Add attribute for graph instance
 
-# --- Helper Function to Adapt Checkpoint to HistoryEntry ---
-# Moved from backend_server_async.py
-def _adapt_checkpoint_to_history_entry(
-    checkpoint_tuple: CheckpointTuple, default_thread_id: str
+# --- Helper Function to Adapt StateSnapshot to HistoryEntry ---
+def _adapt_snapshot_to_history_entry(
+    state_snapshot: StateSnapshot, default_thread_id: str
 ) -> Optional[HistoryEntry]:
-    """Converts a CheckpointTuple to the HistoryEntry structure."""
-    if not checkpoint_tuple or not checkpoint_tuple.checkpoint:
+    """Converts a StateSnapshot to the HistoryEntry structure."""
+    if not state_snapshot or not state_snapshot.values or not state_snapshot.config:
+        print("Warning: Invalid StateSnapshot received.")
         return None
 
-    checkpoint = checkpoint_tuple.checkpoint
-    config = checkpoint_tuple.config
+    config = state_snapshot.config
+    values = state_snapshot.values
+    metadata = state_snapshot.metadata # Get metadata
 
-    # Extract required fields
-    checkpoint_id = config.get("configurable", {}).get("checkpoint_id") or checkpoint.get("id") # Prefer ID from config if available, fallback to checkpoint's own ID
+    # Extract required fields from config
+    checkpoint_id = config.get("configurable", {}).get("checkpoint_id")
+    if not checkpoint_id:
+         # Attempt to get from snapshot metadata if available (structure might vary)
+         # For now, raise error if not in config as expected by frontend
+         raise ValueError("checkpoint_id missing in state_snapshot.config['configurable']")
+
     thread_id = config.get("configurable", {}).get("thread_id", default_thread_id)
 
-    # Extract RunConfig from the configurable field stored in the checkpoint
+    # Extract RunConfig from the configurable field stored in the snapshot's config
     run_config_dict = config.get("configurable", {}).get("runConfig")
-    run_config_obj = None
-    if run_config_dict:
-        try:
-            run_config_obj = RunConfig.model_validate(run_config_dict)
-        except Exception as e:
-            print(f"Warning: Could not parse runConfig from checkpoint {checkpoint_id} for thread {thread_id}: {e}")
-            run_config_obj = RunConfig(configuredModules=[])
-    else:
-        print(f"Warning: runConfig not found in checkpoint {checkpoint_id} for thread {thread_id}. Using empty default.")
-        run_config_obj = RunConfig(configuredModules=[])
+    try:
+        run_config_obj = RunConfig.model_validate(run_config_dict) if run_config_dict else RunConfig(configuredModules=[])
+    except Exception as e:
+        print(f"Warning: Could not parse runConfig from snapshot config {checkpoint_id} for thread {thread_id}: {e}")
+        run_config_obj = RunConfig(configuredModules=[]) # Default to empty on parse error
 
-    # Extract messages (raw format)
-    raw_messages = checkpoint.get("channel_values", {}).get("messages", [])
+    # Extract messages directly from state snapshot values
+    raw_messages = values.get("messages", [])
+    if not isinstance(raw_messages, list):
+         print(f"Warning: 'messages' in snapshot values is not a list for thread {thread_id}. Found: {type(raw_messages)}")
+         raw_messages = []
 
-    # Adapt messages
     adapted_messages: List[MessageTypeModel] = []
     for i, msg in enumerate(raw_messages):
         msg_data = {}
         adapted_msg = None
-        try:
-            if isinstance(msg, HumanMessage):
-                # Extract nodeId - Raise error if missing
-                node_id = None
-                if isinstance(msg.additional_kwargs, dict):
-                    node_id = msg.additional_kwargs.get('metadata', {}).get('node_id')
-                    if not node_id:
-                         node_id = msg.additional_kwargs.get('node_id') # Check directly under additional_kwargs
+        msg_name = getattr(msg, 'name', None)
+        msg_type = getattr(msg, 'type', None)
+        node_id = msg_name # Use msg.name directly as the source
 
-                if not node_id:
-                    # If still not found, raise an error as it's required
-                    raise ValueError(f"Could not determine required nodeId for message {i} (type: HumanMessage)")
+        # Explicitly set nodeId for HumanMessages
+        if msg_type == 'human':
+            node_id = 'user'
 
-                msg_data = {
-                    "type": "human",
-                    "content": str(msg.content),
-                    "name": getattr(msg, 'name', None),
-                    "tool_call_id": None, # Human messages don't have tool_call_id
-                    "additional_kwargs": getattr(msg, 'additional_kwargs', None),
-                    "nodeId": node_id
-                }
-                adapted_msg = HumanApiMessageModel.model_validate(msg_data)
-            elif isinstance(msg, AIMessage):
-                # Handle content potentially being a list (e.g., tool calls)
-                content_str = str(msg.content) if not isinstance(msg.content, list) else json.dumps(msg.content)
-                # Extract tool calls safely
-                # Properly extract text content and tool calls
-                extracted_content: Optional[str] = None
-                raw_content = msg.content
+        # --- Adapt based on type ---
+        # Let Pydantic validation handle missing nodeId loudly if required by the specific model
+        if msg_type == 'human':
+            msg_data = {
+                "type": "human",
+                "content": str(msg.content),
+                "name": msg_name,
+                "tool_call_id": None,
+                "additional_kwargs": getattr(msg, 'additional_kwargs', None),
+                "nodeId": node_id
+            }
+            adapted_msg = HumanApiMessageModel.model_validate(msg_data)
+        elif msg_type == 'ai':
+            extracted_content: Optional[str] = None
+            raw_content = msg.content
+            if isinstance(raw_content, list):
+                for part in raw_content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        extracted_content = part.get("text")
+                        break
+            elif isinstance(raw_content, str):
+                extracted_content = raw_content
+            else:
+                extracted_content = str(raw_content)
 
-                if isinstance(raw_content, list):
-                    # Find the first text part for content
-                    for part in raw_content:
-                        if isinstance(part, dict) and part.get("type") == "text":
-                            extracted_content = part.get("text")
-                            break
-                    # If no text part found, content remains None (as AiApiMessageModel.content is Optional)
-                elif isinstance(raw_content, str):
-                    extracted_content = raw_content
-                else:
-                    # Fallback for unexpected content types
-                    extracted_content = str(raw_content)
+            tool_calls = getattr(msg, 'tool_calls', [])
+            if not isinstance(tool_calls, list): tool_calls = []
 
-                # Extract tool calls safely, ensuring it's a list
-                tool_calls = getattr(msg, 'tool_calls', [])
-                if not isinstance(tool_calls, list): tool_calls = [] # Ensure list type
+            invalid_tool_calls = getattr(msg, 'invalid_tool_calls', [])
+            if not isinstance(invalid_tool_calls, list): invalid_tool_calls = []
 
-                invalid_tool_calls = getattr(msg, 'invalid_tool_calls', [])
-                if not isinstance(invalid_tool_calls, list): invalid_tool_calls = [] # Ensure list type
+            msg_data = {
+                "type": "ai",
+                "content": extracted_content,
+                "name": msg_name,
+                "tool_call_id": None,
+                "additional_kwargs": getattr(msg, 'additional_kwargs', None),
+                "tool_calls": tool_calls,
+                "invalid_tool_calls": invalid_tool_calls,
+                "nodeId": node_id
+            }
+            adapted_msg = AiApiMessageModel.model_validate(msg_data)
+        elif msg_type == 'tool':
+             msg_data = {
+                "type": "tool",
+                "content": str(msg.content),
+                "name": msg_name,
+                "tool_call_id": str(getattr(msg, 'tool_call_id', f'missing_id_{i}')),
+                "additional_kwargs": getattr(msg, 'additional_kwargs', None),
+                "is_error": isinstance(msg.content, Exception),
+                "nodeId": node_id
+            }
+             adapted_msg = ToolApiMessageModel.model_validate(msg_data)
+        elif msg_type == 'system':
+             msg_data = {
+                "type": "system",
+                "content": str(msg.content),
+                "name": msg_name,
+                "tool_call_id": None,
+                "additional_kwargs": getattr(msg, 'additional_kwargs', None),
+                "nodeId": node_id
+            }
+             adapted_msg = SystemApiMessageModel.model_validate(msg_data)
+        else:
+             # Handle potential other message types if necessary, or raise error
+             print(f"Warning: Unhandled message type '{msg_type}' at index {i} for thread {thread_id}")
+             continue # Skip unhandled types for now
 
-                # Attempt to extract nodeId from metadata if available
-                node_id = msg.additional_kwargs.get('metadata', {}).get('node_id') if isinstance(msg.additional_kwargs, dict) else None
-                msg_data = {
-                    "type": "ai",
-                    "content": extracted_content, # Use the extracted text content (can be None)
-                    "name": getattr(msg, 'name', None),
-                    "tool_call_id": None, # AI messages don't have a single tool_call_id
-                    "additional_kwargs": getattr(msg, 'additional_kwargs', None),
-                    "tool_calls": tool_calls, # Assign the extracted tool calls list
-                    "invalid_tool_calls": invalid_tool_calls, # Assign the extracted invalid tool calls list
-                    "nodeId": node_id # Add nodeId
-                }
-                adapted_msg = AiApiMessageModel.model_validate(msg_data)
-            elif isinstance(msg, ToolMessage):
-                # Attempt to extract nodeId from metadata if available
-                node_id = msg.additional_kwargs.get('metadata', {}).get('node_id') if isinstance(msg.additional_kwargs, dict) else None
-                msg_data = {
-                    "type": "tool",
-                    "content": str(msg.content),
-                    "name": getattr(msg, 'name', None),
-                    "tool_call_id": str(getattr(msg, 'tool_call_id', f'missing_id_{i}')),
-                    "additional_kwargs": getattr(msg, 'additional_kwargs', None),
-                    "is_error": isinstance(msg.content, Exception), # Check if content is an Exception
-                    "nodeId": node_id # Add nodeId
-                }
-                adapted_msg = ToolApiMessageModel.model_validate(msg_data)
-            else: # Treat as SystemMessage or fallback
-                # Attempt to extract nodeId from metadata if available
-                node_id = msg.additional_kwargs.get('metadata', {}).get('node_id') if isinstance(msg.additional_kwargs, dict) else None
-                msg_data = {
-                    "type": "system",
-                    "content": str(msg.content),
-                    "name": getattr(msg, 'name', None),
-                    "tool_call_id": None,
-                    "additional_kwargs": getattr(msg, 'additional_kwargs', None),
-                    "nodeId": node_id # Add nodeId
-                }
-                adapted_msg = SystemApiMessageModel.model_validate(msg_data)
-
-            if adapted_msg:
-                adapted_messages.append(adapted_msg)
-
-        except Exception as e:
-            # Log the specific data that failed validation for this type
-            print(f"Warning: Failed to adapt message {i} (type: {type(msg).__name__}) for thread {thread_id}: {e}. Data attempted: {msg_data}")
+        if adapted_msg:
+            adapted_messages.append(adapted_msg)
+        # Pydantic validation errors will propagate
 
     return HistoryEntry(
-        checkpoint_id=str(checkpoint_id) if checkpoint_id else "unknown",
+        checkpoint_id=str(checkpoint_id),
         thread_id=str(thread_id),
         values={"messages": adapted_messages},
         runConfig=run_config_obj
@@ -178,88 +169,105 @@ def _adapt_checkpoint_to_history_entry(
 @router.get("/{thread_id}/latest", response_model=HistoryEntry)
 async def get_thread_latest_endpoint(
     thread_id: str = FastApiPath(..., title="The checkpoint thread ID (UUID string)")
-    # checkpointer: BaseCheckpointSaver = Depends(get_checkpointer) # Use dependency injection later if needed
 ):
-    """Retrieves the latest history entry (checkpoint state) for a specific thread ID."""
-    checkpointer = router.checkpointer_instance # Access passed checkpointer
-    if not checkpointer:
-        print("Error: Checkpointer not available for getting latest state.")
-        raise HTTPException(status_code=500, detail="Checkpointer service unavailable.")
+    """Retrieves the latest history entry (snapshot state) for a specific thread ID."""
+    graph_app = router.graph_app_instance # Access passed graph instance
+    if not graph_app:
+        print("Error: Graph app not available for getting latest state.")
+        raise HTTPException(status_code=500, detail="Graph application service unavailable.")
 
     try:
-        print(f"Fetching latest checkpoint for Thread ID: {thread_id}")
+        print(f"Fetching latest state snapshot for Thread ID: {thread_id}")
         config = {"configurable": {"thread_id": thread_id}}
-        checkpoint_tuple: Optional[CheckpointTuple] = await checkpointer.aget_tuple(config)
+        # Use graph.aget_state to get the StateSnapshot
+        state_snapshot: Optional[StateSnapshot] = await graph_app.aget_state(config)
 
-        if not checkpoint_tuple:
-            raise HTTPException(status_code=404, detail=f"No history found for thread ID: {thread_id}")
+        if not state_snapshot:
+            # Check if the thread exists at all using the checkpointer
+            checkpointer = router.checkpointer_instance
+            if checkpointer:
+                 cp_tuple = await checkpointer.aget_tuple(config)
+                 if not cp_tuple:
+                      raise HTTPException(status_code=404, detail=f"No history found for thread ID: {thread_id}")
+            # If thread exists but state is None, it's an unexpected issue
+            print(f"Warning: Thread {thread_id} exists but aget_state returned None.")
+            raise HTTPException(status_code=404, detail=f"Could not retrieve latest state for thread ID: {thread_id}")
 
-        history_entry = _adapt_checkpoint_to_history_entry(checkpoint_tuple, thread_id)
+
+        # Adapt the StateSnapshot using the new helper function
+        history_entry = _adapt_snapshot_to_history_entry(state_snapshot, thread_id)
 
         if not history_entry:
-             print(f"Error: Failed to adapt checkpoint to HistoryEntry for thread {thread_id}")
+             # This indicates an issue within the adaptation function itself
+             print(f"Error: Failed to adapt state snapshot to HistoryEntry for thread {thread_id}")
              raise HTTPException(status_code=500, detail="Failed to process history data.")
 
         return history_entry
 
     except HTTPException:
-        raise
+        raise # Re-raise specific HTTP errors (like 404)
     except Exception as e:
         print(f"Error getting latest history for thread {thread_id}: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Failed to load latest history.")
+        # Catch potential ValidationErrors from adaptation and return 500
+        raise HTTPException(status_code=500, detail=f"Failed to load latest history: {e}")
 
 
-# TODO: Fix this endpoint logic after file splitting is complete
-@router.get("/{thread_id}/history", response_model=List[HistoryEntry]) # Changed response model
+@router.get("/{thread_id}/history", response_model=List[HistoryEntry])
 async def get_thread_history_endpoint(
     thread_id: str = FastApiPath(..., title="The checkpoint thread ID (UUID string)")
-    # checkpointer: BaseCheckpointSaver = Depends(get_checkpointer)
 ):
-    """Retrieves all history entries (checkpoint states) for a specific thread ID."""
-    checkpointer = router.checkpointer_instance # Access passed checkpointer
-    if not checkpointer:
-        print("Error: Checkpointer not available for getting history.")
-        raise HTTPException(status_code=500, detail="Checkpointer service unavailable.")
+    """Retrieves all history entries (snapshot states) for a specific thread ID."""
+    graph_app = router.graph_app_instance # Access passed graph instance
+    if not graph_app:
+        print("Error: Graph app not available for getting history.")
+        raise HTTPException(status_code=500, detail="Graph application service unavailable.")
 
+    history_entries: List[HistoryEntry] = []
     try:
-        # Directly use the provided string thread_id with the checkpointer
-        print(f"Fetching all checkpoints for Thread ID: {thread_id}")
+        print(f"Fetching state history for Thread ID: {thread_id}")
         config = {"configurable": {"thread_id": thread_id}}
-        # Fetch all checkpoint tuples for the thread using alist
-        checkpoint_tuples: List[CheckpointTuple] = await checkpointer.alist(config)
-
-        if not checkpoint_tuples:
-             print(f"No checkpoints found for thread_id: {thread_id}")
-             # Return an empty list if no history exists
-             return []
-
-        # Adapt each checkpoint tuple to the HistoryEntry structure
-        history_entries: List[HistoryEntry] = []
-        for cp_tuple in checkpoint_tuples:
-            entry = _adapt_checkpoint_to_history_entry(cp_tuple, thread_id)
+        snapshot_count = 0
+        # Use graph.aget_state_history to iterate through snapshots
+        async for state_snapshot in graph_app.aget_state_history(config):
+            snapshot_count += 1
+            entry = _adapt_snapshot_to_history_entry(state_snapshot, thread_id)
             if entry:
                 history_entries.append(entry)
             else:
-                # Log if a specific checkpoint failed adaptation
-                cp_id = cp_tuple.config.get("configurable", {}).get("checkpoint_id") or cp_tuple.checkpoint.get("id")
-                print(f"Warning: Failed to adapt checkpoint {cp_id} for thread {thread_id}")
+                cp_id = state_snapshot.config.get("configurable", {}).get("checkpoint_id", "unknown")
+                print(f"Warning: Failed to adapt state snapshot {cp_id} for thread {thread_id}")
 
-        # Return the list of HistoryEntry objects, implicitly sorted by the checkpointer
+        if snapshot_count == 0:
+             # Check if the thread exists at all using the checkpointer
+             checkpointer = router.checkpointer_instance
+             if checkpointer:
+                  cp_tuple = await checkpointer.aget_tuple(config)
+                  if not cp_tuple:
+                       print(f"No history found for thread_id: {thread_id}")
+                       # Return empty list, not 404, as per original logic
+                       return []
+             # If thread exists but no snapshots, return empty list
+             print(f"Thread {thread_id} exists but aget_state_history yielded no snapshots.")
+             return []
+
+
+        # Return the list of HistoryEntry objects
+        # Note: aget_state_history iterates oldest to newest, which matches frontend expectation
         return history_entries
 
     except HTTPException:
-        raise # Re-raise validation or explicit HTTP errors
+        raise # Re-raise specific HTTP errors
     except Exception as e:
         print(f"Error getting history for thread {thread_id}: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Failed to load history.")
+        # Catch potential ValidationErrors from adaptation and return 500
+        raise HTTPException(status_code=500, detail=f"Failed to load history: {e}")
 
 
 @router.delete("/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_thread_endpoint(
     thread_id: str = FastApiPath(..., title="The LangGraph thread ID (UUID string) to delete")
-    # checkpointer: BaseCheckpointSaver = Depends(get_checkpointer)
 ):
     """Deletes all checkpoint data associated with a specific thread ID."""
     checkpointer = router.checkpointer_instance # Access passed checkpointer
@@ -275,11 +283,12 @@ async def delete_thread_endpoint(
 
     print(f"Attempting to delete thread ID: {thread_id}")
     try:
+        # Use the checkpointer's connection for deletion
         async with checkpointer.conn.cursor() as cursor:
             await cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
             deleted_count = cursor.rowcount
             print(f"Deleted {deleted_count} rows from checkpoints table for thread {thread_id}")
-            # Add deletion for 'writes' table if necessary
+            # Consider deleting from 'writes' table if it exists and is relevant
             # await cursor.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
 
         await checkpointer.conn.commit()
@@ -288,12 +297,13 @@ async def delete_thread_endpoint(
         if deleted_count == 0:
             print(f"Warning: No checkpoint data found for thread ID '{thread_id}' during deletion.")
 
+        # Return 204 No Content on success
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    except aiosqlite.Error as e:
-        print(f"Database error deleting thread {thread_id}: {e}")
+    except aiosqlite.Error as db_err:
+        print(f"Database error deleting thread {thread_id}: {db_err}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Database error deleting thread: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error deleting thread: {db_err}")
     except Exception as e:
         print(f"Unexpected error deleting thread {thread_id}: {e}")
         traceback.print_exc()

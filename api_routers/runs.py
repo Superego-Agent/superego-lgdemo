@@ -88,13 +88,22 @@ async def stream_events(
 
         # --- Yield run_start event ---
         # Prepare data for the run_start event
+        # Explicitly add nodeId='user' when creating HumanApiMessageModel
+        initial_messages_adapted = []
+        for msg in input_messages:
+             if isinstance(msg, HumanMessage):
+                 msg_dict = msg.dict()
+                 msg_dict['nodeId'] = 'user' # Add the required nodeId
+                 initial_messages_adapted.append(HumanApiMessageModel(**msg_dict))
+             # Add handling for other potential initial message types if necessary
+
         run_start_data = SSERunStartData(
             thread_id=thread_id,
             runConfig=run_config,
-            initialMessages=[HumanApiMessageModel(**msg.dict()) for msg in input_messages if isinstance(msg, HumanMessage)], # Convert HumanMessage to Pydantic model
-            node="setup" # Add node field
+            initialMessages=initial_messages_adapted,
+            node="setup"
         )
-        # Use the helper to create and yield the event (removed node, set_id args)
+        # Use the helper to create and yield the event
         start_event = await prepare_sse_event("run_start", data_payload=run_start_data, thread_id=thread_id)
         yield start_event
         # --- End run_start event ---
