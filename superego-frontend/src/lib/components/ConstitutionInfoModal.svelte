@@ -25,7 +25,7 @@
 
     <svelte:window on:keydown={handleKeydown}/>
 
-    <div class="modal-overlay" on:click={closeModal} transition:fade={{ duration: 150 }}>
+    <div class="modal-overlay" on:click={closeModal} transition:fade={{ duration: 150 }} role="dialog" aria-modal="true">
         <div class="modal-content" on:click|stopPropagation transition:fade={{ duration: 150, delay: 50 }}>
             <button class="close-button" on:click={closeModal} aria-label="Close modal">
                 <IconClose />
@@ -49,7 +49,9 @@
         </div>
     </div>
 
-    <style>
+    <style lang="scss">
+        @use '../styles/mixins' as *;
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -64,37 +66,27 @@
         }
 
         .modal-content {
-            background-color: var(--bg-surface);
-            padding: var(--space-lg);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
+            @include base-card($shadow: var(--shadow-xl)); // Use mixin, override shadow
+            padding: var(--space-lg); // Keep specific padding
             width: 90%;
-            max-width: 700px; /* Limit max width */
-            max-height: 80vh; /* Limit max height */
-            overflow-y: auto; /* Allow scrolling for content */
-            position: relative; /* For close button positioning */
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary-light) var(--bg-surface);
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            @include custom-scrollbar($track-bg: var(--bg-surface), $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
         }
-         .modal-content::-webkit-scrollbar { width: 6px; }
-         .modal-content::-webkit-scrollbar-track { background: var(--bg-surface); }
-         .modal-content::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
-
 
         .close-button {
+            @include icon-button($padding: var(--space-xs)); // Use mixin
             position: absolute;
             top: var(--space-sm);
             right: var(--space-sm);
-            background: none;
-            border: none;
-            font-size: 1.5em; /* Make icon larger */
-            cursor: pointer;
-            color: var(--text-secondary);
-            padding: var(--space-xs);
-             line-height: 1;
-        }
-        .close-button:hover {
-            color: var(--text-primary);
+            font-size: 1.5em; // Keep specific size
+
+            &:hover { // Override mixin hover
+                color: var(--text-primary);
+                background-color: transparent; // Ensure no background on hover
+            }
         }
 
         h2 {
@@ -125,14 +117,9 @@
             border-radius: var(--radius-md);
             border: 1px solid var(--input-border);
             max-height: 50vh; /* Limit height within modal */
-            overflow-y: auto; /* Scroll specifically for content */
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary-light) var(--bg-primary);
+            overflow-y: auto;
+            @include custom-scrollbar($track-bg: var(--bg-primary), $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
         }
-         .content-area::-webkit-scrollbar { width: 6px; }
-         .content-area::-webkit-scrollbar-track { background: var(--bg-primary); }
-         .content-area::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: var(--radius-pill); }
-
 
         .loading-indicator, .error-message {
             padding: var(--space-lg);

@@ -41,9 +41,7 @@ h1 {
   line-height: 1.1;
 }
 
-.card {
-  padding: 2em;
-}
+/* Removed unused .card class */
 
 #app {
   width: 100%;
@@ -72,15 +70,4 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* Removed prefers-color-scheme media query as theme is handled by data-theme attribute */

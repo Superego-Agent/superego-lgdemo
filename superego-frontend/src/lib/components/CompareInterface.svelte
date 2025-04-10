@@ -1,123 +1,20 @@
 <script lang="ts">
-    import { availableConstitutions, compareSets } from '../stores';
+    import { globalConstitutions } from '../stores/globalConstitutionsStore'; // Corrected import
+    // import { compareSets } from '../stores'; // Removed - Store does not exist after refactor
     import { v4 as uuidv4 } from 'uuid'; // Need to install uuid: npm install uuid @types/uuid
     import { slide, fade, fly } from 'svelte/transition';
 
-    function addCompareSet() {
-        const newSet: CompareSet = {
-            id: `set-${uuidv4().substring(0, 4)}`, // Short unique ID
-            constitution_ids: [],
-            name: `Set ${$compareSets.length + 1}` // Default name
-        };
-        compareSets.update(sets => [...sets, newSet]);
-    }
-
-    function removeCompareSet(setId: string) {
-        compareSets.update(sets => sets.filter(s => s.id !== setId));
-    }
-
-    function addConstitutionToSet(setId: string, constitutionId: string) {
-        if (!constitutionId) return; // Ignore empty selections
-        compareSets.update(sets => {
-            const setIndex = sets.findIndex(s => s.id === setId);
-            if (setIndex > -1 && !sets[setIndex].constitution_ids.includes(constitutionId)) {
-                sets[setIndex].constitution_ids = [...sets[setIndex].constitution_ids, constitutionId];
-            }
-            return sets;
-        });
-    }
-
-    function removeConstitutionFromSet(setId: string, constitutionId: string) {
-         compareSets.update(sets => {
-            const setIndex = sets.findIndex(s => s.id === setId);
-            if (setIndex > -1) {
-                sets[setIndex].constitution_ids = sets[setIndex].constitution_ids.filter(id => id !== constitutionId);
-            }
-            return sets;
-        });
-    }
+    // --- Functions related to compareSets removed as the store/feature is not implemented ---
+    // function addCompareSet() { ... }
+    // function removeCompareSet(setId: string) { ... }
+    // function addConstitutionToSet(setId: string, constitutionId: string) { ... }
+    // function removeConstitutionFromSet(setId: string, constitutionId: string) { ... }
 </script>
 
 <div class="compare-interface">
-    <button 
-        on:click={addCompareSet} 
-        class="add-set-button"
-        in:fade={{duration: 200}}
-    >
-        <span class="button-icon">+</span> Add Comparison Set
-    </button>
-
-    {#if $compareSets.length === 0}
-        <div class="no-sets-info" in:fade={{duration: 300}}>
-            <p>Add sets to compare different constitution combinations.</p>
-        </div>
-    {/if}
-
-    <div class="sets-container">
-        {#each $compareSets as set, i (set.id)}
-            <div 
-                class="compare-set-card" 
-                in:fly={{y: 20, delay: i * 100, duration: 300}}
-                out:fade={{duration: 200}}
-            >
-                <div class="card-header">
-                    <input 
-                        type="text" 
-                        bind:value={set.name} 
-                        placeholder="Set Name" 
-                        class="set-name-input"
-                    />
-                    <button 
-                        class="remove-set-button" 
-                        title="Remove Set" 
-                        on:click={() => removeCompareSet(set.id)}
-                    >
-                        ×
-                    </button>
-                </div>
-
-                <div class="constitution-adder">
-                    <select 
-                        on:change={(e) => addConstitutionToSet(set.id, (e.target as HTMLSelectElement).value)} 
-                        title="Add a constitution to this set"
-                        class="constitution-select"
-                    >
-                        <option value="">Add Constitution...</option>
-                        {#each $availableConstitutions as constitution (constitution.id)}
-                            {#if !set.constitution_ids.includes(constitution.id)}
-                                <option value={constitution.id} title={constitution.description}>
-                                    {constitution.name} ({constitution.id})
-                                </option>
-                            {/if}
-                        {/each}
-                    </select>
-                </div>
-
-                <div class="selected-chips">
-                    {#if set.constitution_ids.length > 0}
-                        {#each set.constitution_ids as id, i}
-                            {@const constitution = $availableConstitutions.find(c => c.id === id)}
-                            <span 
-                                class="chip"
-                                in:slide|local={{delay: i * 50, duration: 200}}
-                                out:fade|local={{duration: 150}}
-                            >
-                                <span class="chip-name">{constitution?.name ?? id}</span>
-                                <button 
-                                    class="remove-btn"
-                                    title="Remove" 
-                                    on:click={() => removeConstitutionFromSet(set.id, id)}
-                                >
-                                    ×
-                                </button>
-                            </span>
-                        {/each}
-                    {:else}
-                        <span class="empty-state">No constitutions added</span>
-                    {/if}
-                </div>
-            </div>
-        {/each}
+    <!-- Button and list removed as compareSets store/feature is not implemented -->
+    <div class="no-sets-info" in:fade={{duration: 300}}>
+        <p>Compare Mode UI - Functionality pending implementation.</p>
     </div>
     
     <div class="info-note">
@@ -196,14 +93,6 @@
         box-shadow: var(--shadow-md);
     }
     
-    .catyld-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--space-md);
-        border-bottom: 1px solid var(--input-border);
-        padding-bottom: var(--space-sm);
-    }
     
     .set-name-input {
         border: none;

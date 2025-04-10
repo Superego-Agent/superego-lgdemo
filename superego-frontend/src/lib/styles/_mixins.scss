@@ -1,0 +1,101 @@
+@use 'sass:color';
+
+// Mixin for common scrollbar styling
+@mixin custom-scrollbar($track-bg: var(--bg-surface), $thumb-bg: var(--primary-light), $thumb-radius: var(--radius-pill), $width: 8px) {
+  scrollbar-width: thin;
+  scrollbar-color: $thumb-bg $track-bg; // Standard property
+
+  &::-webkit-scrollbar {
+    width: $width;
+  }
+  &::-webkit-scrollbar-track {
+    background: $track-bg;
+    border-radius: $thumb-radius; // Match thumb radius for consistency
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: $thumb-bg;
+    border-radius: $thumb-radius;
+    // Optional: Add a subtle border for better visibility on similar backgrounds
+    // border: 1px solid #{color.scale($track-bg, $lightness: -10%)};
+  }
+}
+
+// Mixin for the loading spinner animation and base style
+@mixin loading-spinner($size: 20px, $border-width: 3px, $color: var(--secondary), $track-color: rgba(0, 0, 0, 0.1)) {
+  border: $border-width solid $track-color;
+  border-top-color: $color;
+  border-radius: 50%;
+  width: $size;
+  height: $size;
+  animation: spin 1s linear infinite;
+}
+
+// Keyframes should ideally be defined globally once,
+// but placing here for simplicity if only used via the mixin.
+// If used elsewhere, move to a global stylesheet (e.g., app.css or a dedicated _animations.scss).
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Mixin for common button reset/base styles (Example - can be expanded)
+@mixin button-reset {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  appearance: none; // Remove default browser styles
+}
+
+// Mixin for visually hidden elements (Accessibility)
+@mixin visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  white-space: nowrap; // Avoid line breaks
+}
+
+// Mixin for common icon button styles
+@mixin icon-button($padding: var(--space-xs), $hover-bg: var(--primary-lightest), $hover-color: var(--primary)) {
+  @include button-reset; // Apply base reset
+  display: inline-flex; // Use inline-flex for better alignment control
+  align-items: center;
+  justify-content: center;
+  padding: $padding;
+  border-radius: var(--radius-sm); // Default small radius
+  color: var(--text-secondary); // Default subtle color
+  line-height: 1; // Prevent extra space
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: $hover-bg;
+    color: $hover-color;
+    // Optional: slight scale effect on hover
+    // transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Mixin for base card styles
+@mixin base-card($bg: var(--bg-surface), $border: 1px solid var(--input-border), $radius: var(--radius-lg), $shadow: var(--shadow-sm)) {
+  background-color: $bg;
+  border: $border;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  // Optional: Add transition for hover effects if common
+  // transition: box-shadow 0.2s ease;
+  // &:hover { box-shadow: var(--shadow-md); }
+}

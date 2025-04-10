@@ -3,236 +3,218 @@
 	import { elasticOut } from 'svelte/easing';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	// Uses types from global.d.ts
+	import ToolIcon from '~icons/fluent/wrench-24-regular'; // Use Fluent wrench icon
 
 	export let message: MessageType;
 
-   // --- Reactive Computations ---
-	$: sender = message.sender;
-	$: node = message.node;
-	$: isError = (sender === 'system' && (message as SystemMessage).isError) ||
-				(sender === 'tool_result' && (message as ToolResultMessage).is_error);
-	$: toolName = (sender === 'tool_result') ? (message as ToolResultMessage).tool_name : null;
+	// Removed sender variable, use message.type directly
+	// Use message.nodeId directly where needed
 
-	// Use standard AIMessage type, access optional tool_calls
-	$: aiMessage = sender === 'ai' ? (message as AIMessage) : null;
-	$: toolResultMsg = sender === 'tool_result' ? (message as ToolResultMessage) : null;
+	// Correctly determine if the message represents an error
+	$: isError = message.type === 'tool' && message.is_error === true;
+	// Note: SystemApiMessage doesn't have an is_error flag in global.d.ts
 
-	$: cardClasses = `message-card ${sender} ${node ? `node-${node.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
+	// Get tool name safely
+	$: toolName = message.type === 'tool' ? message.name : null;
 
+	// Get AI message safely
+	$: aiMessage = message.type === 'ai' ? message : null;
+
+	// Get Tool message safely (used for tool_call_id if needed, though not currently used)
+	// $: toolApiMsg = message.type === 'tool' ? message : null;
+
+	const titleMap: Record<string, string | undefined> = {
+		human: 'You',
+		system: 'System',
+		// AI and Tool titles are handled dynamically based on nodeId or tool name
+	};
+
+	// Map node IDs and message types to accent colors
+	const accentColorMap: Record<string, string> = {
+		// Node IDs (adjust if backend sends different IDs)
+		'input_moderator': 'var(--node-superego)', // Example node ID for superego
+		'agent': 'var(--node-inner-agent)', // Example node ID for inner agent
+		'action': 'var(--node-tools)', // Example node ID for tool execution node
+
+		// Message Types (Fallbacks)
+		human: 'var(--text-primary)', // Use primary text color for 'You' title contrast
+		system: 'var(--system-border)',
+		ai: 'var(--node-inner-agent)', // Default AI color if no specific node
+		tool: 'var(--node-tools)', // Default tool color if no specific node
+	};
+
+	// Determine accent color based on error status, node ID, or message type
+	$: cardAccentColor = isError
+		? 'var(--error)'
+		: accentColorMap[message.nodeId] ?? accentColorMap[message.type] ?? 'var(--node-default)';
+
+	// Determine the title displayed on the card
 	$: title = (() => {
-	    if (sender === 'ai' || sender === 'tool_result') {
-	        return node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-	    }
-	    if (sender === 'human') {
-	        return 'You';
-	    }
-	    return null;
+		if (message.type === 'ai') {
+			// Use Node ID for AI messages if available, otherwise 'AI'
+			return message.nodeId?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? 'AI';
+		} else if (message.type === 'tool') {
+			// Use tool name for tool messages
+			return `Tool: ${toolName ?? 'Result'}`;
+		} else if (message.type === 'human' || message.type === 'system') {
+			// Use the title map for human/system
+			return titleMap[message.type];
+		}
+		return undefined; // Default case
 	})();
 
-	$: titlePrefix = (() => {
-	    return '';
-	})();
+	// Generate CSS classes based on message type, node ID, and error status
+	$: cardClasses = `message-card ${message.type} ${message.nodeId ? `node-${message.nodeId.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
 
-	// Main content rendering
+
+	function getRawContentText(content: MessageType['content']): string {
+		if (typeof content === 'string') {
+			return content;
+		} else if (Array.isArray(content)) {
+			return content.map(part => (typeof part === 'object' && part?.type === 'text' ? part.text : String(part))).join('');
+		}
+		return String(content ?? '');
+	}
+
+    // Reverted renderedContent logic to original state (pre-Fix #1)
 	$: renderedContent = (() => {
-		let rawContent = '';
-		if (sender === 'tool_result' && toolResultMsg) {
-		   // For tool results, extract just the content part
-		   let content = toolResultMsg.content ?? (isError ? 'Error occurred' : '(No result)');
-
-		   // Format the content string - handle various tool result formats
-		   if (content && typeof content === 'string') {
-		       // Try to extract content from common formats
-
-		       // Format: <<< Tool Result Tools (superego_decision) content='✅ Superego allowed the prompt.' ...
-		       // We want to extract just the value from content='...'
-		       const contentMatch = content.match(/content=['"]([^'"]+)['"]/);
-		       if (contentMatch && contentMatch[1]) {
-		           content = contentMatch[1];
-		       }
-		       // If we didn't find a content= match but it still has the Tool Result prefix
-		       else if (content.includes('Tool Result')) {
-		           // Clean up common prefixes
-		           content = content
-		               .replace(/<<< Tool Result Tools \([^)]+\)\s*/g, '')
-		               .replace(/<<< Tool Result\s*/g, '')
-		               .trim();
-		       }
-		   }
-
-		   return DOMPurify.sanitize(String(content)); // Sanitize the extracted content
-		} else if (typeof message.content === 'string') {
-		   rawContent = message.content; // Main text content for AI/Human/System
-	   } else if (Array.isArray(message.content)) {
-		   rawContent = message.content.map(part => (typeof part === 'object' && part?.type === 'text' ? part.text : String(part))).join('');
-	   } else {
-			rawContent = String(message.content ?? '');
+		const rawText = getRawContentText(message.content);
+		// Simplified logic: directly use rawText for parsing for all types,
+		// as the stream processor now sends the correct raw content.
+		if (message.type === 'tool') {
+			// Use rawText directly. The faulty regex parsing is removed.
+			const displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
+			// Original try/catch for tool content
+			try {
+				const html = marked.parse(displayContent, { gfm: true, breaks: true });
+				return DOMPurify.sanitize(String(html));
+			} catch (e) {
+				console.error("Markdown parsing error for tool result:", e);
+				// Use literal < and > for fallback pre tag
+				return `<pre class="error-content">${displayContent.replace(/</g, '<').replace(/>/g, '>')}</pre>`;
+			}
+		} else {
+			// Original try/catch for other content
+			try {
+				const html = marked.parse(rawText, { gfm: true, breaks: true });
+				return DOMPurify.sanitize(String(html));
+			} catch (e) {
+				console.error("Markdown parsing error:", e);
+				// Use literal < and > for fallback pre tag
+				return `<pre class="error-content">${rawText.replace(/</g, '<').replace(/>/g, '>')}</pre>`;
+			}
 		}
-		// Render Markdown and sanitize for AI/Human/System main content
-		try {
-			// Use escapeHtml from this component scope
-			const html = marked.parse(rawContent, { gfm: true, breaks: true });
-			return DOMPurify.sanitize(String(html));
-		} catch (e) { console.error("Markdown parsing error:", e); return `<pre>${escapeHtml(rawContent)}</pre>`; }
 	})();
 
-	// HTML Escaping helper (needed for fallback)
-	function escapeHtml(unsafe: string): string {
-		if (!unsafe) return '';
-		// Ensure input is a string before calling replace
-		const str = String(unsafe);
-		return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-	}
 
-	// Tool call arguments formatting (handles string JSON or already parsed objects)
 	function formatToolArgs(args: any): string {
-		if (args === null || args === undefined) {
-			return ""; // Handle null/undefined explicitly
+		if (args === null || args === undefined || args === '') {
+			return "";
 		}
 
-		if (typeof args === 'string') {
-			// If it's a string, try to parse it as JSON
-			try {
-				if (args.trim() === "") return ""; // Handle empty string
-				const parsed = JSON.parse(args);
-				// Successfully parsed, now stringify prettily
-				return JSON.stringify(parsed, null, 2);
-			} catch (e) {
-				// Parsing failed, assume it's just a plain string that needs escaping
-				console.warn("Failed to parse tool args string as JSON, escaping instead:", args);
-				return escapeHtml(args); // Use escapeHtml from this component
-			}
-		} else if (typeof args === 'object') {
-			// If it's already an object (or array), stringify it prettily
-			try {
-				return JSON.stringify(args, null, 2);
-			} catch (e) {
-				// Should be rare, but handle potential circular references etc.
-				console.error("Failed to stringify tool args object:", args, e);
-				return escapeHtml(String(args)); // Fallback to string conversion and escaping
-			}
-		} else {
-			// Handle other types (boolean, number) by converting to string and escaping
-			return escapeHtml(String(args)); // Use escapeHtml from this component
+		let formattedArgs = '';
+		try {
+			const valueToFormat = (typeof args === 'string') ? JSON.parse(args) : args;
+			formattedArgs = JSON.stringify(valueToFormat, null, 2);
+		} catch (e) {
+			formattedArgs = String(args);
 		}
+		// Use literal < and > for pre tag
+		return `<pre class="tool-args-content">${formattedArgs}</pre>`;
 	}
 
-	// Card style and accent colors
-	$: cardAccentColor = (() => {
-		if (isError) return 'var(--error)';
-		if (node === 'superego') return 'var(--node-superego)';
-		if (node === 'inner_agent') return 'var(--node-inner-agent)';
-		if (node === 'tools' || sender === 'tool_result') return 'var(--node-tools)';
-		if (sender === 'human') return 'var(--human-border)';
-		if (sender === 'system') return 'var(--system-border)';
-		return 'var(--node-default)';
+	// Animation properties based on message type
+	$: animProps = (() => {
+		const common = { duration: 300, easing: elasticOut };
+		const position = message.type === 'human' ? { y: -20, x: 20 } : { y: 20, x: -20 };
+		return { ...common, ...position };
 	})();
 
-	// Reactive style for title color
-	$: finalTitleColor = cardAccentColor;
-
-	// Entry animation setup
-	function getMessageAnimation(msgSender: string) {
-		if (msgSender === 'human') {
-			return {
-				y: -20,
-				x: 20,
-				duration: 300,
-				easing: elasticOut
-			};
-		} else {
-			return {
-				y: 20,
-				x: -20,
-				duration: 300,
-				easing: elasticOut
-			};
-		}
-	}
-
-	$: animProps = getMessageAnimation(sender);
 </script>
 
 <div class="message-card-wrapper" in:fly|local={animProps}>
 	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
-			<div class="message-title" style:color={finalTitleColor}>
+			<div class="message-title" style:color={cardAccentColor}>
+				{#if message.type === 'tool'}
+					<span class="tool-icon"><ToolIcon /></span>
+				{/if}
 				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
-					{titlePrefix} {title} {#if toolName && sender === 'tool_result'}({toolName}){/if}
+					{title}
 				</span>
 			</div>
 		{/if}
 
-	   <div class="message-content main-content">
+		<div class="message-content main-content">
 			{@html renderedContent}
 		</div>
 
-	   {#if sender === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
-		   <div class="tool-calls-separator"></div>
-		   <div class="tool-calls-section">
-			   {#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
-				   <div class="tool-call-item" in:fade|local={{delay: 100 + i * 50, duration: 200}}>
-					   <span class="tool-call-prefix">↳ Called {toolCall.name || 'Tool'}:</span>
-					   <pre class="tool-call-args">{formatToolArgs(toolCall.args)}</pre>
-				   </div>
-			   {/each}
-		   </div>
-	   {/if}
-
-	   {#if message.set_id}
-			<div class="message-set-id">Set: {message.set_id}</div>
+		{#if message.type === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
+			<div class="tool-calls-separator"></div>
+			<div class="tool-calls-section">
+				{#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
+					<div class="tool-call-item" in:fade|local={{delay: 100 + i * 50, duration: 200}}>
+						<span class="tool-call-prefix">↳ Called {toolCall.name || 'Tool'}:</span>
+						{@html formatToolArgs(toolCall.args)}
+					</div>
+				{/each}
+			</div>
 		{/if}
 	</div>
 </div>
 
-<style>
+<style lang="scss">
+	@use '../styles/mixins' as *;
+
+	/* CSS rule for human title color removed */
+
 	.message-card-wrapper {
-		width: 100%;
+		width: 100%; /* Reverted */
 		margin-bottom: var(--space-md);
 		padding: 0 var(--space-sm);
 	}
 
 	.message-card {
-		border-radius: var(--radius-lg);
+		@include base-card($bg: var(--ai-bg), $radius: var(--radius-lg), $shadow: var(--shadow-md)); /* Reverted shadow */
 		padding: var(--space-md);
-		background-color: var(--ai-bg);
-		border: 1px solid var(--input-border);
-		max-width: min(60ch, 90%); /* Limit width to 60ch or 90%, whichever is smaller */
+		max-width: min(60ch, 90%);
 		position: relative;
 		overflow-wrap: break-word;
 		word-break: break-word;
 		color: var(--text-primary);
-		box-shadow: var(--shadow-md);
 		transition: all 0.2s ease;
-	}
 
-	.message-card:hover {
-		box-shadow: var(--shadow-lg);
-		transform: translateY(-1px);
+		&:hover { /* Literal & */
+			box-shadow: var(--shadow-lg);
+			transform: translateY(-1px);
+		}
 	}
 
 	.message-card.human {
 		background-color: var(--human-bg);
 		margin-left: auto;
 		color: var(--text-primary);
-		/* Width remains flexible but capped at 60ch */
 	}
 
-	.message-card.ai, .message-card.tool_result {
+	.message-card.ai {
 		background-color: var(--ai-bg);
 		margin-right: auto;
-		/* Width remains flexible but capped at 60ch */
+	}
+
+	.message-card.tool {
+		// Slightly different background for tool results
+		background-color: color-mix(in srgb, var(--ai-bg) 90%, var(--bg-primary) 10%);
+		margin-right: auto;
 	}
 
 	.message-card.system {
 		background-color: var(--system-bg);
 		font-style: italic;
 		color: var(--text-primary);
-		max-width: 100%; /* System messages can still be full width */
+		max-width: 100%;
 	}
 
-	.message-card.system.error, .message-card.tool_result.error {
+	.message-card.system.error, .message-card.tool.error {
 		background-color: var(--error-bg);
 		color: var(--text-primary);
 	}
@@ -244,8 +226,16 @@
 		font-size: 0.875rem;
 		display: flex;
 		align-items: center;
+		gap: var(--space-xs); // Add gap for icon
 		border-bottom: 1px solid var(--input-border);
 		width: calc(100% + 2 * var(--space-md));
+	}
+
+	.tool-icon {
+		display: inline-flex;
+		align-items: center;
+		font-size: 1.1em; // Adjust icon size if needed
+		opacity: 0.8;
 	}
 
 	.title-text {
@@ -255,7 +245,7 @@
 	.message-content {
 		font-size: 1rem;
 		line-height: 1.6;
-		white-space: pre-wrap;
+		/* white-space: pre-wrap; */ /* Removed this - might interfere with wrapping of non-pre elements */
 	}
 
 	:global(.message-content p) {
@@ -326,7 +316,6 @@
 		color: var(--secondary);
 	}
 
-   /* Styles for appended tool calls section */
    .tool-calls-separator {
 		border-top: 1px dashed var(--input-border);
 		margin-top: var(--space-md);
@@ -358,8 +347,52 @@
 		font-size: 0.85em;
 		color: var(--text-primary);
 		white-space: pre;
-		margin-top: var(--space-xs);
+		margin: var(--space-xs) 0 0 0;
+		padding: 0;
+		background: none;
 	}
+
+	/* Style for the <pre> tag generated for tool results content - REMOVED as <pre> is no longer used */
+	/*
+	.tool-result-content {
+		white-space: pre-wrap;
+		word-break: break-word;
+		overflow-wrap: break-word;
+		font-family: inherit;
+		font-size: inherit;
+		margin: 0;
+		padding: 0;
+		background: none;
+		color: inherit;
+	}
+	*/
+
+	/* Style for the <pre> tag generated for error content */
+	.error-content {
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-family: inherit;
+		font-size: inherit;
+		margin: 0;
+		padding: 0;
+		background: none;
+		color: var(--error);
+	}
+
+	/* Style for the <pre> tag generated for tool call arguments */
+	:global(.tool-args-content) {
+		display: block; /* Ensure it takes block layout */
+		background-color: var(--bg-elevated);
+		padding: var(--space-sm);
+		border-radius: var(--radius-sm);
+		overflow-x: scroll; /* Always show scrollbar for horizontal overflow */
+		white-space: pre; /* Prevent wrapping */
+		font-family: 'Fira Code', 'Roboto Mono', monospace;
+		font-size: 0.85em;
+		color: var(--text-primary);
+		margin-top: var(--space-xs); /* Add some space above */
+	}
+
 
 	.message-set-id {
 		font-size: 0.75rem;
@@ -367,4 +400,5 @@
 		text-align: right;
 		margin-top: var(--space-sm);
 	}
+
 </style>

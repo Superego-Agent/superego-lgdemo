@@ -1,38 +1,47 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    // Removed get, managedConversations, activeConversationId imports
-    import Sidebar from './lib/components/Sidebar.svelte';
-    import ChatInterface from './lib/components/ChatInterface.svelte';
-    import ThemeToggle from './lib/components/ThemeToggle.svelte';
-    import TabBar from './lib/components/TabBar.svelte';
-    import AddConstitution from './lib/components/AddConstitution.svelte';
-    import { theme } from './lib/stores/theme';
-    import { fetchConstitutions } from './lib/api';
-    import './lib/styles/theme.css';
-    import './lib/styles/dark-theme.css';
+import { onMount } from 'svelte';
+import { loadGlobalConstitutions } from './lib/stores/globalConstitutionsStore';
+import Sidebar from './lib/components/Sidebar.svelte';
+import ChatInterface from './lib/components/ChatInterface.svelte';
+import ThemeToggle from './lib/components/ThemeToggle.svelte';
+import { theme } from './lib/stores/theme';
+import { loadLocalConstitutions } from './lib/localConstitutions'; 
+import './lib/styles/theme.css';
+import './lib/styles/dark-theme.css';
 
-    let activeTab = 'home';
-
-    // Handle theme updates reactively
-    $: if (typeof document !== 'undefined') {
-        document.documentElement.setAttribute('data-theme', $theme);
+import { get } from 'svelte/store';
+import { uiSessions, activeSessionId } from './lib/stores';
+import { createNewSession } from './lib/sessionManager';
+onMount( async () => {
+    try {
+        await Promise.all([
+            loadGlobalConstitutions(), 
+            loadLocalConstitutions() 
+        ]);
+        console.log('Fetched initial global constitutions and loaded local ones.');
+    } catch (error) {
+        console.error("App onMount Error: Failed to initialize constitutions:", error);
     }
 
-    // Apply theme and fetch initial data on mount
-    onMount(async () => {
-        document.documentElement.setAttribute('data-theme', $theme);
-        try {
-            // Fetch essential data
-            await fetchConstitutions();
-            console.log('App mounted: Fetched initial constitutions.');
-
-            // Removed logic to auto-select most recent conversation
-
-        } catch (error) {
-            console.error("App onMount Error: Failed to fetch initial constitutions:", error);
-            // Error display is handled by the globalError store via apiFetch
+        // --- START: Add Session Initialization Logic ---
+        const currentActiveId = get(activeSessionId);
+        if (currentActiveId === null) {
+            const currentSessions = get(uiSessions);
+            const sessionIds = Object.keys(currentSessions);
+            if (sessionIds.length > 0) {
+                // Activate the first existing session found
+                activeSessionId.set(sessionIds[0]);
+                console.log(`[App.svelte] Activated existing session: ${sessionIds[0]}`);
+            } else {
+                // No sessions exist, create a new one
+                console.log('[App.svelte] No existing sessions found, creating a new one.');
+                createNewSession(); // This function already sets it as active
+            }
         }
-    });
+        // --- END: Add Session Initialization Logic ---
+
+});
+
 </script>
 
 <main class="app-layout">
@@ -46,19 +55,13 @@
         </div>
         
     </div>
-    <TabBar bind:activeTab />
     <div class="app-content">
-        {#if activeTab === 'home'}
-            <Sidebar />
-            <ChatInterface />
-        {:else if activeTab === 'add-constitution'}
-            <AddConstitution />
-        {/if}
+        <Sidebar />
+        <ChatInterface />
     </div>
 </main>
 
 <style>
-    /* Styles remain unchanged */
     .app-layout {
         display: flex;
         flex-direction: column;

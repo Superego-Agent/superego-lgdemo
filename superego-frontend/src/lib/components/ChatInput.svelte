@@ -1,29 +1,25 @@
 <script lang="ts">
-  import { isLoading } from "../stores";
   import { scale } from "svelte/transition";
   import { createEventDispatcher } from "svelte";
 
-  // Import icons - Reverting to Send icon
   import IconSend from '~icons/fluent/send-24-regular';
-  // import IconEdit from '~icons/fluent/edit-24-regular'; // Using Edit icon for test
   import IconLoading from '~icons/fluent/arrow-sync-circle-24-regular';
-
 
   let userInput: string = "";
   let inputElement: HTMLTextAreaElement;
   let isExpanded = false;
 
-  // Initialize dispatcher without explicit generic type for testing
+  /** Controls whether the input and button are disabled. Passed from parent. */
+  export let disabled: boolean = false;
+
   const dispatch = createEventDispatcher();
 
   function handleSubmit() {
     const trimmedInput = userInput.trim();
-    if (!trimmedInput || $isLoading) {
-      console.log("Submit prevented: input empty or loading."); // Line 38 area
+    if (!trimmedInput || disabled) {
       return;
     }
 
-    console.log("Dispatching send event with:", trimmedInput);
     dispatch("send", { text: trimmedInput });
 
     userInput = "";
@@ -65,9 +61,9 @@
     <textarea
       bind:this={inputElement}
       bind:value={userInput}
-      placeholder="Send a message..."
+      placeholder="Type your message here..."
       rows={isExpanded ? 3 : 1}
-      disabled={$isLoading}
+      disabled={disabled}
       on:focus={handleFocus}
       on:blur={handleBlur}
       on:input={handleInput}
@@ -80,15 +76,14 @@
     ></textarea>
   </div>
 
-  <!-- Restore conditional logic and loading class -->
   <button
     type="submit"
-    disabled={!userInput.trim() || $isLoading}
-    class:loading={$isLoading}
+    disabled={!userInput.trim() || disabled}
+    class:loading={disabled}
     title="Send Message"
     in:scale|local={{ duration: 150, start: 0.8 }}>
 
-    {#if $isLoading}
+    {#if disabled}
       <IconLoading class="loading-icon-animate" />
     {:else}
       <IconSend />
@@ -96,18 +91,23 @@
   </button>
 </form>
 
-<style>
+<style lang="scss">
+  @use '../styles/mixins' as *;
+
   .chat-input-form {
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
     display: flex;
-    padding: var(
-      --space-md
-    ); /* border-top: 1px solid var(--input-border); */ /* background-color: var(--bg-surface); */
     gap: var(--space-md);
-    transition: padding 0.2s ease;
-    align-items: flex-end;
+    transition: all 0.2s ease;
+    align-items: space-between;
+    justify-content: center;
   }
   .chat-input-form.expanded {
-    padding: var(--space-lg) var(--space-md);
+  //padding: var(--space-lg) 0px 0px 0px;
+
+    padding: 0px;
   }
   .textarea-container {
     flex-grow: 1;
@@ -116,7 +116,7 @@
     border-radius: var(--radius-lg);
     transition: all 0.3s ease;
     border: 1px solid var(--input-border);
-    background-color: white;
+    background-color: var(--input-bg);
   }
   .expanded .textarea-container {
     box-shadow: var(--shadow-md);
@@ -125,8 +125,8 @@
     width: 100%;
     padding: var(--space-md) var(--space-lg);
     padding-right: calc(var(--space-lg) + 10px);
-    border: none; /* REMOVED border */
-    background-color: transparent; /* Make textarea bg transparent */
+    border: none;
+    background-color: transparent;
     color: var(--text-primary);
     border-radius: var(--radius-lg);
     resize: none;
@@ -136,19 +136,9 @@
     max-height: 150px;
     transition: all 0.2s ease;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-light) transparent;
+    @include custom-scrollbar($track-bg: transparent, $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
   }
-  textarea::-webkit-scrollbar {
-    width: 6px;
-  }
-  textarea::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  textarea::-webkit-scrollbar-thumb {
-    background-color: var(--primary-light);
-    border-radius: var(--radius-pill);
-  }
+
   .textarea-container:has(textarea:focus) {
     border-color: var(--input-focus);
     outline: none;
@@ -157,53 +147,44 @@
       0 0 0 2px rgba(157, 70, 255, 0.2);
   }
   textarea:focus {
-    outline: none; /* Remove default textarea focus outline */
+    outline: none;
   }
   textarea:disabled {
     background-color: var(--bg-surface);
     cursor: not-allowed;
     opacity: 0.7;
   }
-  /* Minimal button styling + ONLY CIRCULAR shape */
+
   button {
-      padding: 0; /* Remove padding for fixed size */
-      height: 44px; /* Set fixed height */
-      width: 44px; /* Set fixed width */
+      padding: 0;
+      height: 44px;
+      width: 44px;
       cursor: pointer;
-      align-self: flex-end; /* Keep alignment */
-      margin-bottom: var(--space-sm); /* Adjust margin as needed */
-      /* Basic appearance */
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: var(--radius-pill); /* Make it circular */
-      color: #333; /* Default text/icon color for basic button */
-      /* Ensure icon fits */
+      align-self: flex-end;
+      margin-bottom: var(--space-sm);
+      background-color: var(--button-bg, #eee); 
+      border: 1px solid var(--button-border, #ccc); 
+      border-radius: var(--radius-pill);
+      color: var(--button-text, #333); 
       display: flex;
       align-items: center;
       justify-content: center;
-      line-height: 1; /* Prevent extra space */
+      line-height: 1;
+      transition: background-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
   }
    button:disabled {
        cursor: not-allowed;
-       opacity: 0.6;
-       background-color: #f5f5f5; /* Basic disabled background */
-       color: #999; /* Basic disabled text/icon color */
+       opacity: var(--button-disabled-opacity, 0.6); 
+       background-color: var(--button-disabled-bg, #f5f5f5); 
+       color: var(--button-disabled-text, #999);
+  }
+  button:not(:disabled) {
+      background-color: var(--success);
+      color: #ffffff; /* White text for contrast on green */
+      border-color: transparent; /* Remove border when active */
    }
-   /* Remove hover/loading styles */
 
-  /* Keep loading animation definition */
-   .loading-icon-animate {
-       animation: spin 1s linear infinite;
-   }
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-  @media (max-width: 768px) {
-    /* Existing mobile styles */
-  }
+  //  .loading-icon-animate {
+  //      animation: spin 1s linear infinite;
+  //  }
 </style>

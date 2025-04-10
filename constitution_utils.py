@@ -35,8 +35,10 @@ def get_available_constitutions() -> Dict[str, Dict[str, Any]]:
         if not _is_valid_id_format(constitution_id) or constitution_id == "none":
             continue
 
+        # Removed logging.info(f"Processing constitution file: ...")
         try:
             post = frontmatter.load(constitution_path)
+            # Removed logging.info(f"Successfully loaded: ...")
             title = post.metadata.get('title', constitution_id.replace('_', ' ').title())
             description = post.metadata.get('description', '')
 

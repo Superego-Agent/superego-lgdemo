@@ -14,6 +14,8 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tsconfig/svelte": "^5.0.4",
     "marked": "^15.0.7",
+    "random-word-slugs": "^0.1.7",
+    "sass": "^1.86.3",
     "svelte": "^5.20.2",
     "svelte-check": "^4.1.4",
     "typescript": "~5.7.2",
