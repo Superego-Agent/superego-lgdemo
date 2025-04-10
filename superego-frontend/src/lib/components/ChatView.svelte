@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { threadCacheStore } from '$lib/stores';
+	import { tick } from 'svelte'; // Add tick import
 	import { derived } from 'svelte/store';
 	import MessageCard from './MessageCard.svelte'; // Use existing component
 
@@ -7,6 +8,8 @@
 
 	// Derive the specific cache entry for this threadId
 	const cacheEntry = derived(threadCacheStore, ($cache) => $cache[threadId]);
+
+	let messageListContainer: HTMLDivElement; // Define container variable
 
 	// Derive individual state pieces for easier use in the template
 	let history: HistoryEntry | null = null;
@@ -27,6 +30,26 @@
     let messages: MessageType[] = [];
     $: messages = history?.values?.messages ?? [];
 
+    // Reactive statement for conditional auto-scrolling
+    $: if (messageListContainer && messages) {
+        const scrollToBottomIfNear = async () => {
+            const { scrollHeight, scrollTop, clientHeight } = messageListContainer;
+            // Threshold in pixels - adjust as needed
+            const scrollThreshold = 50;
+            // Check if user is near the bottom *before* the DOM updates
+            const isNearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
+
+            // Wait for DOM update after messages change
+            await tick();
+
+            // Only scroll if the user was already near the bottom
+            if (isNearBottom) {
+                messageListContainer.scrollTop = messageListContainer.scrollHeight;
+            }
+        };
+        scrollToBottomIfNear();
+    }
+
 </script>
 
 <div class="chat-view">
@@ -35,7 +58,7 @@
 	{/if}
 
 	{#if history}
-		<div class="message-list">
+		<div class="message-list" bind:this={messageListContainer}>
 			{#each messages as message, i (message.nodeId + '-' + i)} <!-- Basic key, might need improvement -->
 				<MessageCard {message} />
 			{/each}

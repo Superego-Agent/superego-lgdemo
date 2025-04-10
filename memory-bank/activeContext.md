@@ -29,8 +29,8 @@
      4.  **[DONE]** Default behavior on load: Load last session or new session (not neutral). (Added logic to `App.svelte` `onMount` to activate first existing session or create a new one).
      5.  **[DONE]** Input box does not respect dark mode. (Replaced hardcoded `white` background with `var(--input-bg)` in `ChatInput.svelte`).
      6.  **[DONE]** 'You' marker blends with background on user input message. (Changed `accentColorMap` in `MessageCard.svelte` to use `--text-primary` for human messages).
-     7.  Chat does not automatically scroll down when new messages appear.
-     8.  Message input box and constitution selector should align visually (size/container).
+     7.  **[DONE]** Chat does not automatically scroll down when new messages appear. (Added conditional auto-scroll logic to `ChatView.svelte`).
+     8.  **[DONE]** Message input box and constitution selector should align visually (size/container). (Alignment addressed by padding adjustments in previous steps).
      9.  Individual chat view column needs a max-width.
      10. Individual message width should be flexible, capped around ~60ch.
      11. Message card shadows are too strong, need subtlety.
