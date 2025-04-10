@@ -171,12 +171,18 @@ This section outlines the immediate tasks required to implement the refined stat
             *   Provide `sendUserMessage(userInput)` function that reads stored config, builds `RunConfig`, and calls `api.streamRun`.
         *   Refactored `ChatInterface.svelte` to:
             *   Call `chatService.updateChatConfig` on `configChange` event from `ConstitutionSelector`.
-            *   Call `chatService.sendUserMessage` in its `handleSend` function, removing direct API call and placeholder `RunConfig`.
+    *   Call `chatService.sendUserMessage` in its `handleSend` function, removing direct API call and placeholder `RunConfig`.
 
-8.  **Testing:** Thoroughly test the core workflows after completing the above steps.
+7.  **Testing:** Thoroughly test the core workflows after completing the above steps. (Ongoing)
+
+**Status:** **COMPLETED** (As of 2025-04-10 ~02:58 AM) - All implementation tasks related to this refactor plan are finished. The core chat workflow should now function correctly with the new state management and backend history loading logic.
+
+**Next Steps (Post-Refactor):**
+1.  Small Cleanups (Details TBD)
+2.  Implement Comparison Mode (Details TBD)
 
 **Future Considerations:**
-*   Rename `HistoryEntry` to `CheckpointState` for clarity.
+*   Consider renaming `HistoryEntry` to `CheckpointState` for clarity in future work.
 *   (Addressed by creating `chatService.ts`)
 
 ## 7. Refactor Log (Pruned)
