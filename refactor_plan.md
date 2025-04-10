@@ -165,12 +165,12 @@ This section outlines the immediate tasks required to implement the refined stat
 7.  **Refactor Constitution Handling & Sending Logic (Completed):**
     *   **Goal:** Ensure selected constitutions are correctly used when sending messages, improving separation of concerns.
     *   **Approach:**
-        *   `ConstitutionSelector.svelte` uses global/local stores, manages local selection, derives `configuredModules`, and dispatches `configChange`. (Verified Complete)
+        *   `RunConfigurationPanel.svelte` uses global/local stores, manages local selection, derives `configuredModules`, and dispatches `configChange`. (Verified Complete)
         *   Created `src/lib/services/chatService.ts` to:
             *   Store the latest `configuredModules` received via `updateChatConfig`.
             *   Provide `sendUserMessage(userInput)` function that reads stored config, builds `RunConfig`, and calls `api.streamRun`.
         *   Refactored `ChatInterface.svelte` to:
-            *   Call `chatService.updateChatConfig` on `configChange` event from `ConstitutionSelector`.
+            *   Call `chatService.updateChatConfig` on `configChange` event from `RunConfigurationPanel`.
     *   Call `chatService.sendUserMessage` in its `handleSend` function, removing direct API call and placeholder `RunConfig`.
 
 7.  **Testing:** Thoroughly test the core workflows after completing the above steps. (Ongoing)
@@ -189,4 +189,4 @@ This section outlines the immediate tasks required to implement the refined stat
 
 *   Previous refactoring steps completed up to implementing the initial stream processing logic (`streamProcessor.ts`) and integrating it into `api.ts` using the original `historyCacheStore` and map dispatch approach. Type definitions and backend SSE structure were aligned.
 *   **Next Phase:** Implement the refined caching (`ThreadCacheData`), type-safe dispatch, and UI component refactoring outlined in Section 6. (Completed Steps 1-6)
-*   **Constitution Integration:** Refactored `ConstitutionSelector` to use stores and dispatch config. Created `chatService.ts` to handle config state and API calls. Updated `ChatInterface` to use the service. (Completed Step 7)
+*   **Constitution Integration:** Refactored `RunConfigurationPanel` to use stores and dispatch config. Created `chatService.ts` to handle config state and API calls. Updated `ChatInterface` to use the service. (Completed Step 7)

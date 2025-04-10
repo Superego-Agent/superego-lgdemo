@@ -337,7 +337,8 @@ const eventHandlers: { [key: string]: Function } = {
  */
 export const streamRun = async (
     userInput: string,
-    runConfig: RunConfig
+    runConfig: RunConfig,
+    threadId: string | null
 ): Promise<AbortController> => {
     globalError.set(null);
     const controller = new AbortController();
@@ -360,8 +361,7 @@ export const streamRun = async (
         return controller;
     }
 
-    const threadIdToSend: string | null = sessionState.threadIds.length > 0 ? sessionState.threadIds[0] : null;
-
+    const threadIdToSend: string | null = threadId;
     const checkpointConfigurable: CheckpointConfigurable = {
         thread_id: threadIdToSend,
         runConfig: runConfig,

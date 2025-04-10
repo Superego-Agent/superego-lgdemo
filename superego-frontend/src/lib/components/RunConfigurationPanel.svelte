@@ -5,19 +5,19 @@
     isLoadingGlobalConstitutions,
     globalConstitutionsError,
   } from "../stores/globalConstitutionsStore";
-  import { createEventDispatcher } from "svelte";
+  import { uiSessions, activeSessionId, activeConfigEditorId } from '../stores'; 
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
   import IconAdd from "~icons/fluent/add-24-regular";
   import ConstitutionInfoModal from "./ConstitutionInfoModal.svelte";
   import AddConstitutionModal from "./AddConstitutionModal.svelte";
+  import RunConfigManager from './RunConfigManager.svelte';
   import { fetchConstitutionContent } from "../api";
 
-  const dispatch = createEventDispatcher();
 
   let isExpanded = true; // Start expanded
-  let selectedLevels: Record<string, number> = {};
+  // Removed internal selectedLevels state and sync block
 
   let showModal = false;
   let modalIsLoading = false;
@@ -27,22 +27,11 @@
   let modalContent: string | undefined = undefined;
   let showAddModal = false;
 
-  // Function to handle checkbox changes (uses ID, works for both global and local)
-  function handleCheckChange(id: string, isChecked: boolean) {
-    if (isChecked) {
-      selectedLevels[id] = 3;
-    } else {
-      delete selectedLevels[id];
-    }
-    selectedLevels = { ...selectedLevels }; // Trigger reactivity
-  }
-
-  // Function to show the info modal - accepts the combined type
   async function showInfo(item: ConstitutionItem | LocalConstitution) {
-    // Simplified type
     modalTitle = item.title;
     // Determine if it's global (has description) or local (has text)
     const isGlobal = "description" in item;
+    
     modalDescription = isGlobal
       ? item.description
       : `Local constitution created ${new Date((item as LocalConstitution).createdAt).toLocaleDateString()}`;
@@ -71,27 +60,89 @@
     isExpanded = !isExpanded;
   }
 
-  // --- Derive configuredModules and dispatch changes ---
-  let configuredModules: ConfiguredConstitutionModule[] = [];
-  $: {
-    configuredModules = Object.entries(selectedLevels)
-      .map(([id, level]): ConfiguredConstitutionModule | null => {
-        // Find title from either global or local store
-        const globalItem = $globalConstitutions.find(
-          (c: ConstitutionItem) => c.id === id
-        );
-        const localItem = $localConstitutionsStore.find(
-          (c: LocalConstitution) => c.id === id
-        );
-        const title = globalItem?.title ?? localItem?.title;
-        return title ? { id, title: title, adherence_level: level } : null;
-      })
-      .filter(
-        (module): module is ConfiguredConstitutionModule => module !== null
-      );
-    dispatch("configChange", configuredModules);
+  // --- Helper Functions for Direct Store Interaction ---
+
+  function getActiveConfig(): ThreadConfigState | null {
+      const currentSessionId = $activeSessionId;
+      if (!currentSessionId) return null;
+      const currentSession = $uiSessions[currentSessionId];
+      const activeId = $activeConfigEditorId; 
+      if (!activeId || !currentSession?.threads) return null;
+      return currentSession.threads[activeId] ?? null;
+  }
+
+  function getModule(itemId: string): ConfiguredConstitutionModule | null {
+      const activeConfig = getActiveConfig();
+      return activeConfig?.runConfig?.configuredModules?.find(m => m.id === itemId) ?? null;
+  }
+
+  // Generic helper to update the configuredModules array in the store
+  function updateModules(modulesUpdater: (currentModules: ConfiguredConstitutionModule[]) => ConfiguredConstitutionModule[]) {
+      const currentSessionId = $activeSessionId;
+      if (!currentSessionId) {
+          console.warn("RunConfigurationPanel: No active session ID found, cannot update modules.");
+          return;
+      }
+      const currentSession = $uiSessions[currentSessionId];
+      const activeThreadConfigId = $activeConfigEditorId;
+      if (!activeThreadConfigId) {
+          console.warn("RunConfigurationPanel: No active thread config ID found, cannot update modules.");
+          return;
+      }
+
+      uiSessions.update(sessions => {
+          const session = sessions[currentSessionId];
+          // Ensure the path exists before trying to update
+          if (session?.threads?.[activeThreadConfigId]) {
+              // Ensure runConfig exists
+              if (!session.threads[activeThreadConfigId].runConfig) {
+                  session.threads[activeThreadConfigId].runConfig = { configuredModules: [] };
+              }
+              const currentModules = session.threads[activeThreadConfigId].runConfig.configuredModules ?? [];
+              const newModules = modulesUpdater(currentModules);
+              // Only update if the array content actually changed (simple JSON check)
+              if (JSON.stringify(currentModules) !== JSON.stringify(newModules)) {
+                  session.threads[activeThreadConfigId].runConfig.configuredModules = newModules;
+                  session.lastUpdatedAt = new Date().toISOString();
+                  console.log(`RunConfigurationPanel: Updated modules for session ${currentSessionId}, thread ${activeThreadConfigId}`);
+              }
+          } else {
+               console.warn(`RunConfigurationPanel: Could not find session ${currentSessionId} or thread ${activeThreadConfigId} in store to update modules.`);
+          }
+          return sessions;
+      });
+  }
+
+  // Specific handler for checkbox changes
+  function handleCheckboxChange(itemId: string, isChecked: boolean) {
+      updateModules(currentModules => {
+          if (isChecked) {
+              // Add if not present
+              if (!currentModules.some(m => m.id === itemId)) {
+                   const globalItem = $globalConstitutions.find(c => c.id === itemId);
+                   const localItem = $localConstitutionsStore.find(c => c.id === itemId);
+                   const title = globalItem?.title ?? localItem?.title ?? 'Unknown Constitution'; // Provide a default title
+                   return [...currentModules, { id: itemId, title: title, adherence_level: 3 }]; // Add with default level 3
+              }
+              return currentModules; // Already present, do nothing (level handled by slider)
+          } else {
+              // Remove if present
+              return currentModules.filter(m => m.id !== itemId);
+          }
+      });
+  }
+
+  // Specific handler for slider input changes
+  function handleSliderInput(itemId: string, newLevel: number) {
+       updateModules(currentModules =>
+           currentModules.map(m =>
+               m.id === itemId ? { ...m, adherence_level: newLevel } : m
+           )
+       );
   }
 </script>
+
+  <RunConfigManager />
 
 <div class="selector-card">
   <!-- Header with integrated toggle -->
@@ -137,15 +188,14 @@
           </div>
 
           {#each $localConstitutionsStore as item (item.id)}
-            {@const isSelected = selectedLevels[item.id] !== undefined}
+            <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
                 <input
                   type="checkbox"
-                  checked={isSelected}
-                  on:change={(e) =>
-                    handleCheckChange(item.id, e.currentTarget.checked)}
-                />
+                  checked={!!getModule(item.id)}
+                  on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
+                 />
                 <span class="title-text"
                   ><span class="local-indicator">[Local]</span
                   >{item.title}</span
@@ -157,33 +207,33 @@
                   ><IconInfo /></button
                 >
               </label>
-              {#if isSelected}
+              {#if getModule(item.id)}
                 <div class="slider-container">
                   <input
                     type="range"
                     min="1"
                     max="5"
                     step="1"
-                    bind:value={selectedLevels[item.id]}
+                    value={getModule(item.id)?.adherence_level ?? 0}
+                    on:input={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
                     class="adherence-slider"
                     aria-label="{item.title} Adherence Level"
-                  />
-                  <span class="level-display">{selectedLevels[item.id]}/5</span>
+                   />
+                  <span class="level-display">{getModule(item.id)?.adherence_level ?? '-'}/5</span>
                 </div>
               {/if}
             </div>
           {/each}
 
           {#each $globalConstitutions as item (item.id)}
-            {@const isSelected = selectedLevels[item.id] !== undefined}
+            <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
                 <input
                   type="checkbox"
-                  checked={isSelected}
-                  on:change={(e) =>
-                    handleCheckChange(item.id, e.currentTarget.checked)}
-                />
+                  checked={!!getModule(item.id)}
+                  on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
+                 />
                 <span class="title-text" title={item.description}
                   >{item.title}</span
                 >
@@ -194,18 +244,19 @@
                   ><IconInfo /></button
                 >
               </label>
-              {#if isSelected}
+              {#if getModule(item.id)}
                 <div class="slider-container">
                   <input
                     type="range"
                     min="1"
                     max="5"
                     step="1"
-                    bind:value={selectedLevels[item.id]}
+                    value={getModule(item.id)?.adherence_level ?? 0}
+                    on:input={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
                     class="adherence-slider"
                     aria-label="{item.title} Adherence Level"
-                  />
-                  <span class="level-display">{selectedLevels[item.id]}/5</span>
+                   />
+                  <span class="level-display">{getModule(item.id)?.adherence_level ?? '-'}/5</span>
                 </div>
               {/if}
             </div>
@@ -242,7 +293,7 @@
     @include base-card(); // Use mixin
     overflow: hidden;
     margin-bottom: var(--space-sm);
-    transition: all 0.2s ease; 
+    transition: all 0.2s ease;
   }
 
   .selector-header {

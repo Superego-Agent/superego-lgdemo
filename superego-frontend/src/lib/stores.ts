@@ -19,7 +19,7 @@ export const knownThreadIds = persisted<string[]>('superego_knownThreads', []);
 export const uiSessions = persisted<Record<string, UISessionState>>('superego_uiSessions', {});
 
 /**
- * Tracks the sessionId of the currently viewed session/tab (NOT persisted).
+ * Tracks the sessionId of the currently viewed session/tab
  */
 export const activeSessionId: Writable<string | null> = writable(null);
 
@@ -30,10 +30,11 @@ export const activeSessionId: Writable<string | null> = writable(null);
 export const threadCacheStore: Writable<Record<string, ThreadCacheData>> = writable({});
 
 
+
+/**
+ * Tracks the threadId of the configuration card currently being edited
+ */
+export const activeConfigEditorId: Writable<string | null> = writable(null);
+
 /** Store for displaying global errors */
 export const globalError: Writable<string | null> = writable(null);
-
-// --- Removed Old Stores ---
-// messages, activeConversationId (replaced by activeSessionId), activeThreadId,
-// isLoading, currentMode, availableConstitutions, activeConstitutionIds,
-// constitutionAdherenceLevels, compareSets

@@ -7,7 +7,7 @@
 
  ## 2. Recent Changes (During Current Session)
 
- *   **Frontend State Refactor:** Completed all steps outlined in `refactor_plan.md`, including store updates, API layer changes, stream processing, and UI component refactoring (`ChatView`, `ChatInterface`, `ConstitutionSelector`, `chatService`).
+ *   **Frontend State Refactor:** Completed all steps outlined in `refactor_plan.md`, including store updates, API layer changes, stream processing, and UI component refactoring (`ChatView`, `ChatInterface`, `RunConfigurationPanel`, `chatService`).
  *   **Constitution Handling:** Implemented global store and service layer (`chatService.ts`) for managing constitution selection and API calls.
  *   **Various Frontend Fixes:** Addressed `svelte-check` errors, updated `MessageCard` props, integrated global constitution loading.
  *   **Backend History `nodeId` Fix:**

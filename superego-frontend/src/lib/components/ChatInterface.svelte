@@ -1,11 +1,10 @@
 <script lang="ts">
     // Removed unused imports: get, afterUpdate, tick, slide, fade, MessageCard, ErrorIcon, ChatIcon, InfoIcon, knownThreadIds, addThreadToSession, getLatestHistory
     import { globalError, activeSessionId, uiSessions } from '../stores';
-    import { updateChatConfig, sendUserMessage } from '../services/chatService'; // Use the new service
+    import { sendUserMessage } from '../services/chatService';
     import ChatInput from './ChatInput.svelte';
-    import ConstitutionSelector from './ConstitutionSelector.svelte';
-    import ChatView from './ChatView.svelte'; // Import the new view component
-    // Types from global.d.ts are globally available
+    import RunConfigurationPanel from './RunConfigurationPanel.svelte';
+    import ChatView from './ChatView.svelte'; 
     import IconChat from '~icons/fluent/chat-24-regular';
 
     import ChevronLeftIcon from '~icons/fluent/chevron-left-24-regular';
@@ -23,7 +22,7 @@
     // --- Reactive State Derivations ---
     $: currentSessionId = $activeSessionId;
     $: currentSessionState = currentSessionId ? $uiSessions[currentSessionId] : null;
-    $: activeThreadIds = currentSessionState?.threadIds ?? [];
+    $: activeThreadIds = currentSessionState?.threads ? Object.keys(currentSessionState.threads) : [];
 
     // --- Reactive Pagination Calculations ---
     $: {
@@ -59,10 +58,6 @@
     // the service handles it. We just need to update the service.
 
     // --- Event Handlers ---
-    function handleConfigChange(event: CustomEvent<ConfiguredConstitutionModule[]>) {
-        updateChatConfig(event.detail);
-    }
-
     async function handleSend(event: CustomEvent<{ text: string }>) {
         const userInput = event.detail.text.trim();
         if (!userInput || !currentSessionId) {
@@ -141,7 +136,7 @@
     </div>
 
     <div class="input-area">
-        <ConstitutionSelector on:configChange={handleConfigChange} />
+        <RunConfigurationPanel />
         <ChatInput on:send={handleSend} disabled={!currentSessionId} />
     </div>
 </div>
