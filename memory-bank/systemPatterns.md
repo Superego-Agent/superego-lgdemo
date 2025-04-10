@@ -29,13 +29,12 @@
     *   Relies on backend checkpoints as the source of truth.
     *   Uses `svelte-persisted-store` for minimal local state (`uiSessions`, `knownThreadIds`).
     *   Uses a non-persisted `activeSessionId` store to track the current UI tab.
-    *   Uses a non-persisted `historyCacheStore` (Record<string, HistoryEntry>) as an in-memory cache for fetched/streamed thread states.
-    *   UI components subscribe to `historyCacheStore` and select data based on `threadId` props. Optimistic updates modify the cache directly. Final state fetched on stream end overwrites the cache entry.
+    *   Uses a non-persisted `threadCacheStore` (Record<string, ThreadCacheData>) as an in-memory cache for fetched/streamed thread states and status.
+    *   UI components subscribe to `threadCacheStore` and select data based on `threadId` props.
+    *   **Service Layer:** Dedicated modules (e.g., `src/lib/services/chatService.ts`) encapsulate specific API interaction logic (like sending messages) and manage related state (like the current run configuration), keeping UI components cleaner.
 
 ## 3. Communication & Interaction
-
-*   **CLI:** Direct interaction with the Python LangGraph application (`cli.py`). Output is streamed to the console.
-*   **Web:**
+s*   **Web:**
     *   Svelte frontend communicates with the Python FastAPI backend server.
     *   **API:** RESTful endpoints for initiating runs, fetching history, and managing constitutions (details in `techContext.md`).
     *   **Streaming:** Server-Sent Events (SSE) used on the `/api/runs/stream` endpoint to push agent outputs and intermediate events (like `thread_info`) to the frontend in real-time.
@@ -51,7 +50,7 @@
 
 ## 5. Coding Requirements & Guidelines
 
-*   **CRITICAL: NO GUESSING:** Never make assumptions about APIs (especially LangGraph), configurations, library behavior, or system state. Verify through documentation, code examination, or asking clarifying questions. Incorrect assumptions are a primary source of bugs and complexity in this project. (Mistake Tally: 1)
+*   **CRITICAL: NO GUESSING:** Never make assumptions about APIs (especially LangGraph), configurations, library behavior, or system state. Verify through documentation, code examination, or asking clarifying questions. Incorrect assumptions are a primary source of bugs and complexity in this project. (Mistake Tally: 2 - Incorrect Pydantic Union validation)
 *   **Refactoring Order:** When refactoring across layers (e.g., backend API, frontend API client, frontend UI), prioritize verifying/implementing the lower layers first (Backend -> Frontend API Client -> Frontend UI). Avoid refactoring UI components based on unverified API contracts. (Mistake Tally: 1)
 *   **Simplicity & Focus (Custom Code):** Prioritize direct, functional custom code. Avoid unnecessary complexity, deep nesting, or premature optimization *in the code you write*. Focus on the core research demo functionality.
 *   **Leverage Dependencies:** Use external packages effectively to avoid reinventing the wheel. The goal is minimal *custom* code, not minimal dependencies.
@@ -61,9 +60,9 @@
 *   **Abstractions (Custom Code):** Use elegant abstractions *within custom code* where appropriate to avoid repeating complex patterns or logic. (Per user request).
 *   **Commenting Policy (Strict):**
     *   Comments are **ONLY** for permanent, essential clarification of non-obvious logic that cannot be improved via naming/structure. Aim for self-documenting code first.
-    *   **NO** ephemeral comments (e.g., `// TODO: fix this later`). Do not use placeholders for missing functionality; leave it clearly broken until dependencies are met. (Mistake Tally: 1)
+    *   **NO** ephemeral comments (e.g., `// TODO: fix this later`). Do not use placeholders for missing functionality; leave it clearly broken until dependencies are met. (Mistake Tally: 40)
     *   **NO** comments explaining the obvious or narrating simple code (e.g., "Type X comes from global.d.ts"). (Mistake Tally: 1)
     *   **Svelte Template Comments:** Within the HTML template part of `.svelte` files, use ONLY HTML-style comments (`<!-- comment -->`). Do NOT use JavaScript-style comments inside template expressions (`{/* INCORRECT */}`). Standard JavaScript comments (`//`, `/* */`) are acceptable within `<script>` tags.
     *   Adding comments requires justification.
 *   **Global Types:** Do not add comments stating that types from `global.d.ts` are global; this is assumed project knowledge. Do not explicitly import types from `global.d.ts`. (Mistake Tally: 1)
-*   **Tool Usage:** Use tools correctly, paying attention to syntax, escaping rules (e.g., for `apply_diff`), and avoiding inclusion of tool-specific markers (like `<![CDATA[...]]>`) in file content. (Mistake Tally: 2 - `apply_diff` escaping/parsing; `write_to_file` CDATA inclusion)
+*   **Tool Usage:** Use tools correctly, paying attention to syntax, escaping rules (e.g., for `apply_diff`), and avoiding inclusion of tool-specific markers (like `<![CDATA[...]]>`) in file content. (Mistake Tally: 3 - `apply_diff` escaping/parsing; `write_to_file` CDATA inclusion; `apply_diff` content mismatch)

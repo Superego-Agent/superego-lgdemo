@@ -1,24 +1,22 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { loadGlobalConstitutions } from './lib/stores/globalConstitutionsStore';
 import Sidebar from './lib/components/Sidebar.svelte';
 import ChatInterface from './lib/components/ChatInterface.svelte';
 import ThemeToggle from './lib/components/ThemeToggle.svelte';
 import { theme } from './lib/stores/theme';
-import { fetchConstitutions } from './lib/api';
-import { loadLocalConstitutions } from './lib/localConstitutions'; // Import the new function
+import { loadLocalConstitutions } from './lib/localConstitutions'; 
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
 onMount( async () => {
     try {
-        // Load both global and local constitutions
         await Promise.all([
-            fetchConstitutions(),
-            loadLocalConstitutions() // Call the function here
+            loadGlobalConstitutions(), 
+            loadLocalConstitutions() 
         ]);
         console.log('Fetched initial global constitutions and loaded local ones.');
     } catch (error) {
-        // Handle potential errors from either fetch or load
         console.error("App onMount Error: Failed to initialize constitutions:", error);
     }
 });
@@ -43,7 +41,6 @@ onMount( async () => {
 </main>
 
 <style>
-    /* Styles remain unchanged */
     .app-layout {
         display: flex;
         flex-direction: column;

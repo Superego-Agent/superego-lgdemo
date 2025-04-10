@@ -25,7 +25,7 @@
 
     <svelte:window on:keydown={handleKeydown}/>
 
-    <div class="modal-overlay" on:click={closeModal} transition:fade={{ duration: 150 }}>
+    <div class="modal-overlay" on:click={closeModal} transition:fade={{ duration: 150 }} role="dialog" aria-modal="true">
         <div class="modal-content" on:click|stopPropagation transition:fade={{ duration: 150, delay: 50 }}>
             <button class="close-button" on:click={closeModal} aria-label="Close modal">
                 <IconClose />

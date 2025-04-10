@@ -127,45 +127,60 @@ This section outlines the immediate tasks required to implement the refined stat
     *   `global.d.ts`: Added `ThreadCacheData`, removed `SSEThreadInfoData` and `"thread_info"` type.
     *   `backend_models.py`: Removed `SSEThreadInfoData` model and `"thread_info"` type.
 
-2.  **Update Stores (`src/lib/stores.ts`):**
-    *   Rename `historyCacheStore` to `threadCacheStore`.
-    *   Update its type signature to `Writable<Record<string, ThreadCacheData>>`.
+2.  **Update Stores (`src/lib/stores.ts`) (Completed):**
+    *   Verified `historyCacheStore` was already renamed to `threadCacheStore`.
+    *   Verified type signature is `Writable<Record<string, ThreadCacheData>>`.
 
-3.  **Update API Layer (`src/lib/api.ts`):**
-    *   Update store references to `threadCacheStore`.
-    *   Refactor `getLatestHistory` to update `ThreadCacheData` in the store (managing `history`, `isStreaming`, `error`).
-    *   Refactor SSE event handlers (`handleRunStartEvent`, `handleStreamUpdateEvent`, `handleErrorEvent`, `handleEndEvent`) to work with `ThreadCacheData`.
-    *   Remove `handleThreadInfoEvent`.
-    *   Implement **type-safe event dispatch** using a typed handler map.
-    *   Ensure `isStreaming` and `error` flags are managed robustly for relevant scenarios.
-    *   Remove unnecessary comments.
+3.  **Update API Layer (`src/lib/api.ts`) (Completed):**
+    *   Updated store references to `threadCacheStore`.
+    *   Refactored `getLatestHistory` (implicitly used by `handleEndEvent`).
+    *   Refactored SSE event handlers (`handleRunStartEvent`, `handleStreamUpdateEvent`, `handleErrorEvent`, `handleEndEvent`) to work with `ThreadCacheData`, managing `isStreaming` and `error` flags.
+    *   Removed `handleThreadInfoEvent` and its usage.
+    *   Verified type-safe event dispatch map is used.
+    *   Resolved TS errors using non-null assertion (`!`) where runtime checks guarantee non-null history.
+    *   Removed unnecessary comments.
 
-4.  **Update Stream Processor (`src/lib/streamProcessor.ts`):**
-    *   Ensure mutator functions (`handleChunk`, `handleToolChunk`, `handleToolResult`) correctly accept and modify the `HistoryEntry` object (passed from `api.ts` which extracts it from `ThreadCacheData.history`).
+4.  **Update Stream Processor (`src/lib/streamProcessor.ts`) (Completed):**
+    *   Verified mutator functions (`handleChunk`, `handleToolChunk`, `handleToolResult`) correctly accept `HistoryEntry` and modify its `values.messages` array as expected. No changes were needed.
 
-5.  **Create `ChatView.svelte` Component:**
-    *   Accept `threadId` prop.
-    *   Import `threadCacheStore`.
-    *   Reactively derive `history`, `isStreaming`, `error` from the store for the given `threadId`.
-    *   Render UI based on derived state (messages, initial error, streaming indicator). Implicitly handle initial loading state.
+5.  **Create `ChatView.svelte` Component (Completed):**
+    *   Created `superego-frontend/src/lib/components/ChatView.svelte`.
+    *   Accepts `threadId` prop.
+    *   Imports `threadCacheStore`.
+    *   Reactively derives `history`, `isStreaming`, `error` from the store entry.
+    *   Renders messages using `MessageCard.svelte`.
+    *   Displays error messages.
+    *   Shows a spinner during initial load and active streaming.
 
-6.  **Refactor `ChatInterface.svelte` Component:**
-    *   Remove local history state management.
-    *   Remove direct message rendering.
-    *   Import and instantiate `<ChatView {threadId} />`.
-    *   Update `handleSend`: Keep `api.streamRun` call (for now), remove callbacks.
-    *   Clean up unused code.
+6.  **Refactor `ChatInterface.svelte` Component (Completed):**
+    *   Removed local history/message state management and rendering logic.
+    *   Implemented responsive, paginated carousel:
+        *   Uses `bind:clientWidth` to detect container width.
+        *   Calculates `itemsPerPage` based on `MIN_CHAT_VIEW_WIDTH`.
+        *   Renders the appropriate slice of `activeThreadIds` using `<ChatView>` components side-by-side within `.page-content`.
+        *   Added pagination controls (buttons, dots) when `totalPages > 1`.
+    *   Simplified `handleSend` to only call `api.streamRun`.
+    *   Cleaned up unused code and styles.
 
-7.  **Refactor `ConstitutionSelector.svelte`:** (Lower priority, can be deferred)
-    *   Update component to manage its state and provide the selected `configuredModules` array needed to construct the `RunConfig` in `ChatInterface.svelte`. Remove the placeholder in `ChatInterface.handleSend`.
+7.  **Refactor Constitution Handling & Sending Logic (Completed):**
+    *   **Goal:** Ensure selected constitutions are correctly used when sending messages, improving separation of concerns.
+    *   **Approach:**
+        *   `ConstitutionSelector.svelte` uses global/local stores, manages local selection, derives `configuredModules`, and dispatches `configChange`. (Verified Complete)
+        *   Created `src/lib/services/chatService.ts` to:
+            *   Store the latest `configuredModules` received via `updateChatConfig`.
+            *   Provide `sendUserMessage(userInput)` function that reads stored config, builds `RunConfig`, and calls `api.streamRun`.
+        *   Refactored `ChatInterface.svelte` to:
+            *   Call `chatService.updateChatConfig` on `configChange` event from `ConstitutionSelector`.
+            *   Call `chatService.sendUserMessage` in its `handleSend` function, removing direct API call and placeholder `RunConfig`.
 
 8.  **Testing:** Thoroughly test the core workflows after completing the above steps.
 
 **Future Considerations:**
 *   Rename `HistoryEntry` to `CheckpointState` for clarity.
-*   Refactor `handleSend` logic out of `ChatInterface.svelte` (e.g., using event dispatch or a dedicated service).
+*   (Addressed by creating `chatService.ts`)
 
 ## 7. Refactor Log (Pruned)
 
 *   Previous refactoring steps completed up to implementing the initial stream processing logic (`streamProcessor.ts`) and integrating it into `api.ts` using the original `historyCacheStore` and map dispatch approach. Type definitions and backend SSE structure were aligned.
-*   **Next Phase:** Implement the refined caching (`ThreadCacheData`), type-safe dispatch, and UI component refactoring outlined in Section 6.
+*   **Next Phase:** Implement the refined caching (`ThreadCacheData`), type-safe dispatch, and UI component refactoring outlined in Section 6. (Completed Steps 1-6)
+*   **Constitution Integration:** Refactored `ConstitutionSelector` to use stores and dispatch config. Created `chatService.ts` to handle config state and API calls. Updated `ChatInterface` to use the service. (Completed Step 7)

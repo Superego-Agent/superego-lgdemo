@@ -1,0 +1,1 @@
+{"source": "input", "writes": {"__start__": {"messages": [{"lc": 1, "type": "constructor", "id": ["langchain", "schema", "messages", "HumanMessage"], "kwargs": {"content": "hi there", "type": "human"}}]}}, "thread_id": "thread_5_run_2028478d-294d-4923-9297-bbcb3656305d", "constitution_content": "", "step": -1, "parents": {}}

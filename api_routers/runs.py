@@ -15,9 +15,9 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 
 # Project-specific imports (adjust paths as needed)
 from backend_models import (
-    RunConfig, CheckpointConfigurable, StreamRunRequest,
-    SSEThreadInfoData, SSEToolCallChunkData, SSEToolResultData,
-    SSEEndData, SSEEventData
+    RunConfig, CheckpointConfigurable, StreamRunRequest, MessageTypeModel, HumanApiMessageModel, # Added HumanApiMessageModel
+    SSERunStartData, SSEChunkData, SSEToolCallChunkData, SSEToolResultData, # Added missing SSE types
+    SSEErrorData, SSEEndData
 )
 from constitution_utils import get_constitution_content # Assuming this is accessible
 
@@ -91,7 +91,7 @@ async def stream_events(
         run_start_data = SSERunStartData(
             thread_id=thread_id,
             runConfig=run_config,
-            initialMessages=input_messages, # Pass the input messages directly
+            initialMessages=[HumanApiMessageModel(**msg.dict()) for msg in input_messages if isinstance(msg, HumanMessage)], # Convert HumanMessage to Pydantic model
             node="setup" # Add node field
         )
         # Use the helper to create and yield the event (removed node, set_id args)

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { submitConstitution, fetchConstitutionContent } from '../api';
     import { addLocalConstitution, localConstitutionsStore } from '../localConstitutions';
-    import { availableConstitutions } from '../stores';
+    import { globalConstitutions } from '../stores/globalConstitutionsStore';
     import { createEventDispatcher } from 'svelte';
     import { tick } from 'svelte';
 
@@ -25,10 +25,10 @@
 
     // Correct reactive declaration syntax
     $: allConstitutionsForTemplate = [
-        ...$availableConstitutions
-            .filter(c => c.id !== 'none')
-            .map((c): TemplateOption => ({ type: 'global', id: c.id, title: c.title })), // Add type assertion in map
-        ...$localConstitutionsStore.map((c): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text }))
+        ...$globalConstitutions
+            .filter((c: ConstitutionItem) => c.id !== 'none') // Add type ConstitutionItem
+            .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })), // Add type ConstitutionItem
+        ...$localConstitutionsStore.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text })) // Add type LocalConstitution
     ].sort((a, b) => a.title.localeCompare(b.title));
 
     // Reactive statement to load template when selectedTemplateId changes

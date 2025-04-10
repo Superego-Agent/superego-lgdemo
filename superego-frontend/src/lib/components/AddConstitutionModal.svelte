@@ -18,7 +18,7 @@
 
 <svelte:window on:keydown={handleKeydown}/>
 
-<div class="modal-overlay" on:click={closeModal}>
+<div class="modal-overlay" on:click={closeModal} role="dialog" aria-modal="true">
     <div class="modal-content" on:click|stopPropagation>
         <button class="close-button" on:click={closeModal}>&times;</button>
         <AddConstitution on:constitutionAdded={closeModal} />

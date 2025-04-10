@@ -35,6 +35,7 @@ class BaseApiMessageModel(BaseModel):
     name: Optional[str] = None
     tool_call_id: Optional[str] = None
     additional_kwargs: Optional[Dict[str, Any]] = None
+    nodeId: str # Node ID is required
 
 class HumanApiMessageModel(BaseApiMessageModel):
     type: Literal['human']
@@ -42,7 +43,7 @@ class HumanApiMessageModel(BaseApiMessageModel):
 
 class AiApiMessageModel(BaseApiMessageModel):
     type: Literal['ai']
-    content: str # AI text response
+    content: Optional[str] # AI text response (optional if only tool calls)
     tool_calls: Optional[List[Dict[str, Any]]] = None # Matches Langchain structure
     invalid_tool_calls: Optional[List[Any]] = None
 

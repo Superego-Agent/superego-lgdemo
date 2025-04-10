@@ -181,12 +181,6 @@
             opacity: 0.7;
         }
 
-        .btn-icon {
-            font-size: 1.3em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
     }
 
     .threads-section {
@@ -338,9 +332,6 @@
         border-bottom: none;
     }
 
-    .button-spinner {
-        @include loading-spinner($size: 18px, $color: #fff, $track-color: rgba(255, 255, 255, 0.2));
-    }
 
     @media (max-width: 768px) {
         /* Mobile styles can be added here if needed */

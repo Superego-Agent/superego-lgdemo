@@ -165,6 +165,8 @@ declare global {
         email_sent: boolean;
     }
 
+
+
 }
 
 // Ensures this file is treated as a module. Required for declare global.

@@ -2,7 +2,7 @@
 import { get } from 'svelte/store';
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { logExecution, deepClone } from './utils';
-import { globalError, historyCacheStore } from './stores';
+import { globalError, threadCacheStore } from './stores'; 
 import { uiSessions, knownThreadIds, activeSessionId } from './stores';
 import { addThreadToSession, addKnownThreadId } from './sessionManager';
 import { handleChunk, handleToolChunk, handleToolResult } from './streamProcessor';
@@ -79,6 +79,67 @@ export const getFullHistory = (threadId: string, signal?: AbortSignal): Promise<
     );
 };
 
+/**
+ * Fetches the list of available global constitutions.
+ * Assumes the backend provides an endpoint like /api/constitutions.
+ */
+export const fetchAvailableConstitutions = (signal?: AbortSignal): Promise<ConstitutionItem[]> => {
+    return logExecution('Fetch available constitutions', () =>
+        apiFetch<ConstitutionItem[]>(`${BASE_URL}/constitutions`, {}, signal)
+    );
+};
+
+/**
+ * Fetches the full text content of a specific global constitution.
+ * Assumes the backend provides an endpoint like /api/constitutions/{constitution_id}/content.
+ */
+export const fetchConstitutionContent = (constitutionId: string, signal?: AbortSignal): Promise<string> => {
+    return logExecution(`Fetch content for constitution ${constitutionId}`, async () => {
+        // Assuming the endpoint returns plain text
+        globalError.set(null);
+        try {
+            // Note: apiFetch assumes JSON response, so use raw fetch here for text/plain
+            const response = await fetch(`${BASE_URL}/constitutions/${constitutionId}/content`, {
+                signal,
+                headers: { 'Accept': 'text/plain' }, // Request plain text
+            });
+            if (!response.ok) {
+                let errorMsg = `HTTP error! Status: ${response.status}`;
+                try { const errorText = await response.text(); errorMsg += ` - ${errorText}`; } catch (e) { /* Ignore */ }
+                throw new Error(errorMsg);
+            }
+            return await response.text();
+        } catch (error: unknown) {
+            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                console.error(`API Fetch Error (Text): ${BASE_URL}/constitutions/${constitutionId}/content`, error);
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                globalError.set(errorMsg || 'An unknown API error occurred fetching constitution content.');
+                throw error;
+            } else {
+                console.log(`API Fetch aborted: ${BASE_URL}/constitutions/${constitutionId}/content`);
+                throw error;
+            }
+        }
+    });
+};
+
+
+/**
+ * Submits a new constitution for review.
+ * Assumes the backend provides a POST endpoint like /api/constitutions.
+ */
+export const submitConstitution = (
+    payload: ConstitutionSubmission,
+    signal?: AbortSignal
+): Promise<SubmissionResponse> => {
+    return logExecution('Submit constitution for review', () =>
+        apiFetch<SubmissionResponse>(`${BASE_URL}/constitutions`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        }, signal)
+    );
+};
+
 
 // --- Stream Run Function ---
 
@@ -87,66 +148,104 @@ export const getFullHistory = (threadId: string, signal?: AbortSignal): Promise<
 function handleRunStartEvent(
     startData: SSERunStartData,
     currentActiveSessionId: string,
-    threadIdToSend: string | null
+    threadIdToSend: string | null // This is the ID we *sent* the request with (null if new)
 ) {
-    const initialEntry: HistoryEntry = {
-        checkpoint_id: '',
-        thread_id: startData.thread_id,
-        values: { messages: startData.initialMessages },
-        runConfig: startData.runConfig
-    };
-    historyCacheStore.update(cache => ({
-        ...cache,
-        [startData.thread_id]: initialEntry
-    }));
+    const targetThreadId = startData.thread_id; // This is the ID the backend *confirmed* or created
+
+    threadCacheStore.update(cache => {
+        const existingEntry = cache[targetThreadId];
+        let updatedMessages: MessageType[];
+
+        if (existingEntry?.history?.values?.messages) {
+            // Preserve existing messages and append initial messages from run_start
+            // Ensure no duplicates if initialMessages contains the user input already present
+            const existingMessages = existingEntry.history.values.messages;
+            const newMessages = startData.initialMessages.filter(
+                newMsg => !existingMessages.some(existingMsg =>
+                    // Basic duplicate check (might need refinement based on message IDs if available)
+                    existingMsg.type === newMsg.type && existingMsg.content === newMsg.content
+                )
+            );
+            updatedMessages = [...existingMessages, ...newMessages];
+        } else {
+            // No existing entry or messages, use initial messages directly
+            updatedMessages = startData.initialMessages;
+        }
+
+        const updatedCacheData: ThreadCacheData = {
+            // Use existing history structure if available, otherwise create new
+            history: {
+                checkpoint_id: existingEntry?.history?.checkpoint_id || '', // Preserve old checkpoint ID until 'end'
+                thread_id: targetThreadId,
+                values: { messages: updatedMessages },
+                runConfig: startData.runConfig // Update runConfig from the start event
+            },
+            isStreaming: true,
+            error: null // Clear any previous error
+        };
+
+        return {
+            ...cache,
+            [targetThreadId]: updatedCacheData
+        };
+    });
+
+    // If this run started a *new* thread (threadIdToSend was null), update session/known IDs
     if (threadIdToSend === null) {
-        console.log(`Received run_start for new thread ID: ${startData.thread_id} for session ${currentActiveSessionId}`);
-        addKnownThreadId(startData.thread_id);
-        addThreadToSession(currentActiveSessionId, startData.thread_id);
+        console.log(`Received run_start for new thread ID: ${targetThreadId} for session ${currentActiveSessionId}`);
+        addKnownThreadId(targetThreadId);
+        addThreadToSession(currentActiveSessionId, targetThreadId);
+    } else if (threadIdToSend !== targetThreadId) {
+        // This case shouldn't happen with current backend logic but good to log
+        console.warn(`run_start thread ID ${targetThreadId} differs from requested thread ID ${threadIdToSend}`);
+        // Potentially update session mapping if needed, though backend should handle thread continuity
     }
 }
 
-function handleThreadInfoEvent(
-    threadInfo: SSEThreadInfoData,
-    currentActiveSessionId: string,
-    threadIdToSend: string | null
-) {
-    if (threadIdToSend === null && threadInfo.thread_id) {
-         console.log(`Received thread_info confirmation for new thread ID: ${threadInfo.thread_id} for session ${currentActiveSessionId}`);
-         addKnownThreadId(threadInfo.thread_id);
-         addThreadToSession(currentActiveSessionId, threadInfo.thread_id);
-    }
-}
-
+// Removed handleThreadInfoEvent as 'run_start' now contains all necessary initial info
+// and the logic to add known thread/session was already present in handleRunStartEvent below.
 // Combined handler for events that update the message stream
 function handleStreamUpdateEvent(
     eventType: 'chunk' | 'ai_tool_chunk' | 'tool_result',
     eventData: SSEChunkData | SSEToolCallChunkData | SSEToolResultData,
     targetThreadId: string
 ) {
-    const currentCache = get(historyCacheStore);
-    const currentEntry = currentCache[targetThreadId];
+    const currentCache = get(threadCacheStore);
+    const currentCacheEntry = currentCache[targetThreadId];
 
-    if (!currentEntry) {
+    if (!currentCacheEntry) {
         console.error(`Received '${eventType}' for thread ${targetThreadId}, but no cache entry found. Was 'run_start' missed?`);
-        globalError.set(`System Error: State mismatch for thread ${targetThreadId}.`);
+        // Don't set globalError here, let the stream continue if possible, maybe run_start is delayed
+        // globalError.set(`System Error: State mismatch for thread ${targetThreadId}.`);
+        return; // Cannot process without a cache entry
+    }
+
+    // Ensure we don't process updates if there was a prior error or stream ended prematurely
+    if (!currentCacheEntry.isStreaming || currentCacheEntry.error) {
+        console.warn(`Ignoring '${eventType}' for thread ${targetThreadId} because stream is not active or has an error.`);
         return;
     }
 
-    const entryToMutate = deepClone(currentEntry);
-
+    // Clone the history part for mutation, keep other flags
+    // We've already checked that currentCacheEntry exists, isStreaming is true, and error is null.
+    // This implies currentCacheEntry.history cannot be null here. Use type assertion (!) to inform TS.
+    const historyToMutate = deepClone(currentCacheEntry.history!);
     try {
         if (eventType === 'chunk') {
-            handleChunk(entryToMutate, eventData as SSEChunkData);
+            handleChunk(historyToMutate, eventData as SSEChunkData);
         } else if (eventType === 'ai_tool_chunk') {
-            handleToolChunk(entryToMutate, eventData as SSEToolCallChunkData);
-        } else {
-            handleToolResult(entryToMutate, eventData as SSEToolResultData);
+            handleToolChunk(historyToMutate, eventData as SSEToolCallChunkData);
+        } else { // tool_result
+            handleToolResult(historyToMutate, eventData as SSEToolResultData);
         }
 
-        historyCacheStore.update(cache => ({
+        // Update the cache entry with mutated history, keeping streaming true
+        threadCacheStore.update(cache => ({
             ...cache,
-            [targetThreadId]: entryToMutate
+            [targetThreadId]: {
+                ...currentCacheEntry, // Keep existing flags like isStreaming, error
+                history: historyToMutate
+            }
         }));
     } catch (processingError: unknown) {
          console.error(`Error processing '${eventType}' in streamProcessor:`, processingError);
@@ -158,8 +257,35 @@ function handleErrorEvent(
     errorData: SSEErrorData,
     targetThreadId: string | null
 ) {
-    console.error(`SSE Error Event Received (Node: ${errorData.node}, Thread: ${targetThreadId ?? 'N/A'}):`, errorData.error);
-    globalError.set(`Backend Error (${errorData.node}): ${errorData.error}`);
+    const errorMessage = `Backend Error (${errorData.node}): ${errorData.error}`;
+    console.error(`SSE Error Event Received (Thread: ${targetThreadId ?? 'N/A'}):`, errorMessage);
+    globalError.set(errorMessage);
+
+    // Update cache entry if threadId exists
+    if (targetThreadId) {
+        threadCacheStore.update(cache => {
+            const entry = cache[targetThreadId];
+            if (entry) {
+                return {
+                    ...cache,
+                    [targetThreadId]: {
+                        ...entry,
+                        isStreaming: false,
+                        error: errorMessage
+                    }
+                };
+            }
+            // If no entry exists yet, create one to store the error
+            return {
+                ...cache,
+                [targetThreadId]: {
+                    history: null, // No history available
+                    isStreaming: false,
+                    error: errorMessage
+                }
+            };
+        });
+    }
 }
 
 // Async handler for the 'end' event
@@ -170,11 +296,23 @@ async function handleEndEvent(
 ) {
     console.log(`SSE stream ended for thread ${targetThreadId}. Final Checkpoint: ${endData.checkpoint_id}`);
     try {
-        const finalEntry = await getLatestHistory(targetThreadId, controller.signal);
-        historyCacheStore.update(cache => ({
-            ...cache,
-            [targetThreadId]: finalEntry
-        }));
+        // Fetch the definitive final state
+        const finalHistoryEntry = await getLatestHistory(targetThreadId, controller.signal);
+
+        // Update the cache entry with final state, mark streaming as false, clear error
+        threadCacheStore.update(cache => {
+             const currentEntry = cache[targetThreadId];
+             return {
+                ...cache,
+                [targetThreadId]: {
+                    // Preserve existing data if fetch somehow failed, but mark as not streaming
+                    ...(currentEntry ?? {}),
+                    history: finalHistoryEntry, // Overwrite with definitive final state
+                    isStreaming: false,
+                    error: null // Clear any previous transient errors
+                }
+             };
+        });
         console.log(`Cache updated with final state for thread ${targetThreadId}`);
     } catch (fetchError: unknown) {
          if (!(fetchError instanceof DOMException && fetchError.name === 'AbortError')) {
@@ -187,7 +325,7 @@ async function handleEndEvent(
 // --- Event Handler Map ---
 const eventHandlers: { [key: string]: Function } = {
     'run_start': handleRunStartEvent,
-    'thread_info': handleThreadInfoEvent,
+    // 'thread_info': handleThreadInfoEvent, // Removed
     'chunk': handleStreamUpdateEvent,
     'ai_tool_chunk': handleStreamUpdateEvent,
     'tool_result': handleStreamUpdateEvent,
@@ -279,8 +417,8 @@ export const streamRun = async (
                             // Call the appropriate handler, passing necessary context
                             if (eventType === 'run_start') {
                                 handler(eventData as SSERunStartData, currentActiveSessionId, threadIdToSend);
-                            } else if (eventType === 'thread_info') {
-                                handler(eventData as SSEThreadInfoData, currentActiveSessionId, threadIdToSend);
+                            // } else if (eventType === 'thread_info') { // Removed
+                            //     handler(eventData as SSEThreadInfoData, currentActiveSessionId, threadIdToSend);
                             } else if (eventType === 'chunk' || eventType === 'ai_tool_chunk' || eventType === 'tool_result') {
                                 if (targetThreadId) {
                                     handler(eventType, eventData as any, targetThreadId); // Pass eventType to combined handler

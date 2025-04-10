@@ -32,18 +32,6 @@ except ImportError as e:
     import sys
     sys.exit(1)
 
-# Import models from the new file (Remove obsolete ones)
-# Keep models needed by routers if they aren't imported within the routers themselves.
-# Assuming routers handle their own model imports. Let's remove models not directly used here.
-# Re-checking... models are likely needed for type hints passed around. Keep them for now.
-from backend_models import (
-    ConfiguredConstitutionModule, RunConfig, CheckpointConfigurable, StreamRunInput,
-    StreamRunRequest, BaseApiMessageModel, HumanApiMessageModel, AiApiMessageModel,
-    SystemApiMessageModel, ToolApiMessageModel, MessageTypeModel, HistoryEntry,
-    ConstitutionItem, SSEThreadInfoData, SSEToolCallChunkData, SSEToolResultData,
-    SSEEndData, SSEEventData # Removed HistoryMessage, HistoryResponse
-)
-
 # Import Routers
 from api_routers import runs as runs_router
 from api_routers import threads as threads_router

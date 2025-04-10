@@ -7,38 +7,64 @@
 
 	export let message: MessageType;
 
-	$: sender = message.sender;
-	$: node = message.node;
-	$: isError = (sender === 'system' && (message as SystemMessage).isError) ||
-				(sender === 'tool_result' && (message as ToolResultMessage).is_error);
-	$: toolName = (sender === 'tool_result') ? (message as ToolResultMessage).tool_name : null;
-	$: aiMessage = sender === 'ai' ? (message as AIMessage) : null;
-	$: toolResultMsg = sender === 'tool_result' ? (message as ToolResultMessage) : null;
+	// Removed sender variable, use message.type directly
+	// Use message.nodeId directly where needed
+
+	// Correctly determine if the message represents an error
+	$: isError = message.type === 'tool' && message.is_error === true;
+	// Note: SystemApiMessage doesn't have an is_error flag in global.d.ts
+
+	// Get tool name safely
+	$: toolName = message.type === 'tool' ? message.name : null;
+
+	// Get AI message safely
+	$: aiMessage = message.type === 'ai' ? message : null;
+
+	// Get Tool message safely (used for tool_call_id if needed, though not currently used)
+	// $: toolApiMsg = message.type === 'tool' ? message : null;
 
 	const titleMap: Record<string, string | undefined> = {
 		human: 'You',
-		system: 'System'
+		system: 'System',
+		// AI and Tool titles are handled dynamically based on nodeId or tool name
 	};
 
+	// Map node IDs and message types to accent colors
 	const accentColorMap: Record<string, string> = {
-		superego: 'var(--node-superego)',
-		inner_agent: 'var(--node-inner-agent)',
-		tools: 'var(--node-tools)',
+		// Node IDs (adjust if backend sends different IDs)
+		'input_moderator': 'var(--node-superego)', // Example node ID for superego
+		'agent': 'var(--node-inner-agent)', // Example node ID for inner agent
+		'action': 'var(--node-tools)', // Example node ID for tool execution node
+
+		// Message Types (Fallbacks)
 		human: 'var(--human-border)',
-		system: 'var(--system-border)'
+		system: 'var(--system-border)',
+		ai: 'var(--node-inner-agent)', // Default AI color if no specific node
+		tool: 'var(--node-tools)', // Default tool color if no specific node
 	};
 
+	// Determine accent color based on error status, node ID, or message type
 	$: cardAccentColor = isError
 		? 'var(--error)'
-		: accentColorMap[node ?? ''] ?? accentColorMap[sender] ?? 'var(--node-default)';
+		: accentColorMap[message.nodeId] ?? accentColorMap[message.type] ?? 'var(--node-default)';
 
-	$: title = sender === 'ai'
-		? node?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? 'AI'
-		: sender === 'tool_result'
-		? `Tool: ${toolName ?? 'Result'}`
-		: titleMap[sender];
+	// Determine the title displayed on the card
+	$: title = (() => {
+		if (message.type === 'ai') {
+			// Use Node ID for AI messages if available, otherwise 'AI'
+			return message.nodeId?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) ?? 'AI';
+		} else if (message.type === 'tool') {
+			// Use tool name for tool messages
+			return `Tool: ${toolName ?? 'Result'}`;
+		} else if (message.type === 'human' || message.type === 'system') {
+			// Use the title map for human/system
+			return titleMap[message.type];
+		}
+		return undefined; // Default case
+	})();
 
-	$: cardClasses = `message-card ${sender} ${node ? `node-${node.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
+	// Generate CSS classes based on message type, node ID, and error status
+	$: cardClasses = `message-card ${message.type} ${message.nodeId ? `node-${message.nodeId.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : ''} ${isError ? 'error' : ''}`;
 
 
 	function getRawContentText(content: MessageType['content']): string {
@@ -47,12 +73,12 @@
 		} else if (Array.isArray(content)) {
 			return content.map(part => (typeof part === 'object' && part?.type === 'text' ? part.text : String(part))).join('');
 		}
-		return String(content ?? ''); 
+		return String(content ?? '');
 	}
 
 	$: renderedContent = (() => {
 		const rawText = getRawContentText(message.content);
-		if (sender === 'tool_result') {
+		if (message.type === 'tool') {
 			let displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
 			// Refined Regex: Non-greedily capture content between content=' and the next '
 			// Ensures it stops before other attributes like name=...
@@ -104,13 +130,12 @@
 		return `<pre class="tool-args-content">${formattedArgs}</pre>`;
 	}
 
-	function getMessageAnimation(msgSender: string) {
+	// Animation properties based on message type
+	$: animProps = (() => {
 		const common = { duration: 300, easing: elasticOut };
-		const position = msgSender === 'human' ? { y: -20, x: 20 } : { y: 20, x: -20 };
+		const position = message.type === 'human' ? { y: -20, x: 20 } : { y: 20, x: -20 };
 		return { ...common, ...position };
-	}
-
-	$: animProps = getMessageAnimation(sender);
+	})();
 
 </script>
 
@@ -118,7 +143,7 @@
 	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
 			<div class="message-title" style:color={cardAccentColor}>
-				{#if sender === 'tool_result'}
+				{#if message.type === 'tool'}
 					<span class="tool-icon"><ToolIcon /></span>
 				{/if}
 				<span class="title-text" in:scale|local={{duration: 200, delay: 100, start: 0.8}}>
@@ -131,7 +156,7 @@
 			{@html renderedContent}
 		</div>
 
-		{#if sender === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
+		{#if message.type === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
 			<div class="tool-calls-separator"></div>
 			<div class="tool-calls-section">
 				{#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
@@ -181,7 +206,7 @@
 		margin-right: auto;
 	}
 
-	.message-card.tool_result {
+	.message-card.tool {
 		// Slightly different background for tool results
 		background-color: color-mix(in srgb, var(--ai-bg) 90%, var(--bg-primary) 10%);
 		margin-right: auto;
@@ -194,7 +219,7 @@
 		max-width: 100%;
 	}
 
-	.message-card.system.error, .message-card.tool_result.error {
+	.message-card.system.error, .message-card.tool.error {
 		background-color: var(--error-bg);
 		color: var(--text-primary);
 	}

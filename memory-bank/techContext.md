@@ -13,7 +13,7 @@
 
 *   **Framework:** Svelte / SvelteKit (inferred from `svelte.config.js`, `vite.config.ts`)
 *   **Language:** TypeScript (indicated by `tsconfig.json`, `.ts` files), JavaScript
-*   **State Management:** `svelte/store` (for `writable`), `svelte-persisted-store` (for `uiSessions`, `knownThreadIds`). A non-persisted `historyCacheStore` (writable store holding `Record<string, HistoryEntry>`) is used for caching thread states.
+*   **State Management:** `svelte/store` (for `writable`), `svelte-persisted-store` (for `uiSessions`, `knownThreadIds`). A non-persisted `threadCacheStore` (writable store holding `Record<string, ThreadCacheData>`) is used for caching thread states and status. Service modules (e.g., `chatService.ts`) may also manage related state.
 *   **Styling:** Likely CSS or a preprocessor (TailwindCSS is common with SvelteKit, but not explicitly confirmed).
 *   **Build Tool:** Vite (indicated by `vite.config.ts`)
 *   **Package Management:** npm (indicated by `package.json`, `package-lock.json`)

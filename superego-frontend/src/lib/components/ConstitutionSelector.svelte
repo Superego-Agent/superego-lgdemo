@@ -1,111 +1,85 @@
 <script lang="ts">
-    import { availableConstitutions, constitutionAdherenceLevels } from '../stores';
-    import { localConstitutionsStore } from '../localConstitutions'; // Import local store
-    import { tick } from 'svelte';
-    import IconInfo from '~icons/fluent/info-24-regular';
-    import IconChevronDown from '~icons/fluent/chevron-down-24-regular'; // Icon for toggle
-    import IconChevronUp from '~icons/fluent/chevron-up-24-regular'; // Icon for toggle
-    import IconAdd from '~icons/fluent/add-24-regular'; // Icon for add button
-    import { activeConversationId, conversationStates } from '../stores'; // Import conversation state stores
-    import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
-    import AddConstitutionModal from './AddConstitutionModal.svelte';
-    import { fetchConstitutionContent } from '../api';
+import { localConstitutionsStore } from '../localConstitutions';
+import { globalConstitutions, isLoadingGlobalConstitutions, globalConstitutionsError } from '../stores/globalConstitutionsStore'; 
+import { createEventDispatcher } from 'svelte';
+import IconInfo from '~icons/fluent/info-24-regular';
+import IconChevronDown from '~icons/fluent/chevron-down-24-regular';
+import IconChevronUp from '~icons/fluent/chevron-up-24-regular';
+import IconAdd from '~icons/fluent/add-24-regular';
+import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
+import AddConstitutionModal from './AddConstitutionModal.svelte';
+import { fetchConstitutionContent } from '../api'; 
 
-    // Component State
-    let isExpanded = true; // Start expanded
-    let previousStatus: string | undefined = undefined; // Track previous status for collapse logic
+const dispatch = createEventDispatcher();
 
-    // Info Modal State
-    let showModal = false;
-    let modalIsLoading = false;
-    let modalError: string | null = null;
-    let modalTitle: string = '';
-    let modalDescription: string | undefined = undefined;
-    let modalContent: string | undefined = undefined;
+let isExpanded = true; // Start expanded
+let selectedLevels: Record<string, number> = {}; 
 
-    // Add Constitution Modal State
-    let showAddModal = false;
+let showModal = false;
+let modalIsLoading = false;
+let modalError: string | null = null;
+let modalTitle: string = '';
+let modalDescription: string | undefined = undefined;
+let modalContent: string | undefined = undefined;
+let showAddModal = false;
 
-    // Combine global and local constitutions for display
-    // Define a type for the combined list items
-    type DisplayConstitution =
-        | { type: 'global'; id: string; title: string; description?: string }
-        | { type: 'local'; id: string; title: string; text: string; createdAt: string };
-
-    // Correct reactive declaration syntax (no type annotation here)s
-    $: allDisplayConstitutions = [
-        ...$availableConstitutions
-            .filter(c => c.id !== 'none') // Filter out 'none' globally
-            .map((c): DisplayConstitution => ({ type: 'global', id: c.id, title: c.title, description: c.description })), // Add type assertion in map if needed
-        ...$localConstitutionsStore.map((c): DisplayConstitution => ({ type: 'local', id: c.id, title: c.title, text: c.text, createdAt: c.createdAt }))
-    ].sort((a, b) => a.title.localeCompare(b.title)); // Sort alphabetically
-
-    // Function to handle checkbox changes (uses ID, works for both global and local)
-    function handleCheckChange(id: string, isChecked: boolean) {
-        if (isChecked) {
-            // Add constitution with default level 3 if checked
-            $constitutionAdherenceLevels[id] = 3;
-            // Trigger store update
-            constitutionAdherenceLevels.set($constitutionAdherenceLevels);
-        } else {
-            delete $constitutionAdherenceLevels[id];
-            // Trigger store update
-            constitutionAdherenceLevels.update(currentLevels => {
-                delete currentLevels[id];
-                return currentLevels; // Return the modified object
-            });
-        }
-        // console.log('Adherence Levels:', $constitutionAdherenceLevels); // For debugging
+// Function to handle checkbox changes (uses ID, works for both global and local)
+function handleCheckChange(id: string, isChecked: boolean) {
+    if (isChecked) {
+        selectedLevels[id] = 3;
+    } else {
+        delete selectedLevels[id];
     }
+    selectedLevels = { ...selectedLevels }; // Trigger reactivity
+}
 
-    // Function to show the info modal - accepts the combined type
-    async function showInfo(item: DisplayConstitution) {
-        modalTitle = item.title;
-        modalDescription = item.type === 'global' ? item.description : `Local constitution created ${new Date(item.createdAt).toLocaleDateString()}`; // Use description or creation date
-        modalContent = undefined;
-        modalError = null;
-        modalIsLoading = true; // Set loading true initially
-        showModal = true;
+// Function to show the info modal - accepts the combined type
+async function showInfo(item: ConstitutionItem | LocalConstitution) { // Simplified type
+    modalTitle = item.title;
+    // Determine if it's global (has description) or local (has text)
+    const isGlobal = 'description' in item;
+    modalDescription = isGlobal ? item.description : `Local constitution created ${new Date((item as LocalConstitution).createdAt).toLocaleDateString()}`;
+    modalContent = undefined;
+    modalError = null;
+    modalIsLoading = true;
+    showModal = true;
 
-        if (item.type === 'local') {
-            // For local, use text directly
-            modalContent = item.text;
-            modalIsLoading = false; // No fetching needed
-        } else {
-            // For global, fetch content
-            try {
-                modalContent = await fetchConstitutionContent(item.id);
-            } catch (err: any) {
-                console.error("Failed to fetch constitution content:", err);
-                modalError = err.message || "Unknown error fetching content.";
-            } finally {
-                modalIsLoading = false;
-            }
+    if (!isGlobal) {
+        modalContent = (item as LocalConstitution).text;
+        modalIsLoading = false;
+    } else {
+        // For global, fetch content
+        try {
+            modalContent = await fetchConstitutionContent(item.id);
+        } catch (err: any) {
+            console.error("Failed to fetch constitution content:", err);
+            modalError = err.message || "Unknown error fetching content.";
+        } finally {
+            modalIsLoading = false;
         }
     }
+}
 
-    function toggleExpand() {
-        isExpanded = !isExpanded;
-    }
+function toggleExpand() {
+    isExpanded = !isExpanded;
+}
 
-    // Reactive block to collapse the selector when a message starts streaming
-    $: {
-        const currentConversationId = $activeConversationId;
-        if (currentConversationId) {
-            const currentState = $conversationStates[currentConversationId];
-            const currentStatus = currentState?.status;
 
-            // Collapse if the status *just* changed to 'streaming'
-            // This indicates a message was sent and the response is starting
-            if (currentStatus === 'streaming' && previousStatus !== 'streaming') {
-                isExpanded = false;
-            }
-            previousStatus = currentStatus; // Update previous status for the next check
-        } else {
-            // Reset previous status if no conversation is active
-            previousStatus = undefined;
-        }
-    }
+// --- Derive configuredModules and dispatch changes ---
+let configuredModules: ConfiguredConstitutionModule[] = [];
+$: {
+    configuredModules = Object.entries(selectedLevels)
+        .map(([id, level]): ConfiguredConstitutionModule | null => {
+            // Find title from either global or local store
+            const globalItem = $globalConstitutions.find((c: ConstitutionItem) => c.id === id);
+            const localItem = $localConstitutionsStore.find((c: LocalConstitution) => c.id === id);
+            const title = globalItem?.title ?? localItem?.title;
+            return title ? { id, title: title, adherence_level: level } : null;
+        })
+        .filter((module): module is ConfiguredConstitutionModule => module !== null);
+    dispatch('configChange', configuredModules);
+}
+
 </script>
 
 <div class="selector-card">
@@ -122,64 +96,63 @@
     <!-- Collapsible content area -->
     {#if isExpanded}
         <div class="options-container">
-            {#if allDisplayConstitutions.length > 0}
-                <div class="options-wrapper">
-                    <!-- Add Button First -->
-                    <div class="option-item add-item" on:click={() => showAddModal = true} role="button" tabindex="0">
-                        <div class="option-label add-label">
-                            <IconAdd class="add-icon"/>
-                            <span class="title-text">Add Local Constitution</span>
-                        </div>
-                    </div>
-                    <!-- List Combined Constitutions -->
-                    {#each allDisplayConstitutions as item (item.id)}
-                        <div class="option-item">
-                            <label class="option-label">
-                                <input
-                                    type="checkbox"
-                                    checked={$constitutionAdherenceLevels[item.id] !== undefined}
-                                    on:change={(e) => handleCheckChange(item.id, e.currentTarget.checked)}
-                                />
-                                <span class="title-text" title={item.type === 'global' ? item.description : item.title}>
-                                    {#if item.type === 'local'}
-                                        <span class="local-indicator">[Local]</span>
-                                    {/if}
-                                    {item.title}
-                                </span>
-                                <button class="info-button" title="Show constitution info" on:click|stopPropagation={() => showInfo(item)}>
-                                    <IconInfo />
-                                </button>
-                            </label>
-                            {#if $constitutionAdherenceLevels[item.id] !== undefined}
-                                <div class="slider-container">
-                                    <input
-                                        type="range"
-                                    min="1"
-                                    max="5"
-                                    step="1"
-                                    bind:value={$constitutionAdherenceLevels[item.id]}
-                                    class="adherence-slider"
-                                    aria-label="{item.title} Adherence Level"
-                                />
-                                <span class="level-display">
-                                    {$constitutionAdherenceLevels[item.id]}/5
-                                </span>
-                                </div>
-                            {/if}
-                        </div>
-                    {/each}
-                </div>
+            {#if $isLoadingGlobalConstitutions}
+                <p class="loading-text">Loading global constitutions...</p>
+            {:else if $globalConstitutionsError}
+                <p class="loading-text error-text">Error loading: {$globalConstitutionsError}</p>
             {:else}
-                 <!-- Show Add button even if lists are empty -->
-                 <div class="options-wrapper">
-                    <div class="option-item add-item" on:click={() => showAddModal = true} role="button" tabindex="0">
-                        <div class="option-label add-label">
+                <div class="options-wrapper">
+                     <div class="option-item add-item" on:click={() => showAddModal = true} role="button" tabindex="0" on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') showAddModal = true; }}>
+                         <div class="option-label add-label">
                              <IconAdd class="add-icon"/>
-                            <span class="title-text">Add Local Constitution</span>
-                        </div>
-                    </div>
-                    <p class="loading-text">No constitutions loaded.</p>
-                </div> <!-- Missing closing div -->
+                             <span class="title-text">Add Local Constitution</span>
+                         </div>
+                     </div>
+
+                     {#if $globalConstitutions.length > 0}
+                         <h4 class="list-heading">Global</h4>
+                         {#each $globalConstitutions as item (item.id)}
+                             {@const isSelected = selectedLevels[item.id] !== undefined}
+                             <div class="option-item">
+                                 <label class="option-label">
+                                     <input type="checkbox" checked={isSelected} on:change={(e) => handleCheckChange(item.id, e.currentTarget.checked)} />
+                                     <span class="title-text" title={item.description}>{item.title}</span>
+                                     <button class="info-button" title="Show constitution info" on:click|stopPropagation={() => showInfo(item)}><IconInfo /></button>
+                                 </label>
+                                 {#if isSelected}
+                                     <div class="slider-container">
+                                         <input type="range" min="1" max="5" step="1" bind:value={selectedLevels[item.id]} class="adherence-slider" aria-label="{item.title} Adherence Level" />
+                                         <span class="level-display">{selectedLevels[item.id]}/5</span>
+                                     </div>
+                                 {/if}
+                             </div>
+                         {/each}
+                     {/if}
+
+                     {#if $localConstitutionsStore.length > 0}
+                         <h4 class="list-heading">Local</h4>
+                         {#each $localConstitutionsStore as item (item.id)}
+                             {@const isSelected = selectedLevels[item.id] !== undefined}
+                             <div class="option-item">
+                                 <label class="option-label">
+                                     <input type="checkbox" checked={isSelected} on:change={(e) => handleCheckChange(item.id, e.currentTarget.checked)} />
+                                     <span class="title-text"><span class="local-indicator">[Local]</span>{item.title}</span>
+                                     <button class="info-button" title="Show constitution info" on:click|stopPropagation={() => showInfo(item)}><IconInfo /></button>
+                                 </label>
+                                 {#if isSelected}
+                                     <div class="slider-container">
+                                         <input type="range" min="1" max="5" step="1" bind:value={selectedLevels[item.id]} class="adherence-slider" aria-label="{item.title} Adherence Level" />
+                                         <span class="level-display">{selectedLevels[item.id]}/5</span>
+                                     </div>
+                                 {/if}
+                             </div>
+                         {/each}
+                     {/if}
+
+                     {#if $globalConstitutions.length === 0 && $localConstitutionsStore.length === 0}
+                          <p class="loading-text">No constitutions available.</p>
+                     {/if}
+                </div>
             {/if}
         </div>
     {/if}
@@ -240,9 +213,6 @@
         color: var(--text-secondary);
         transition: transform 0.2s ease-in-out;
     }
-    .toggle-icon.rotated {
-        transform: rotate(180deg);
-    }
 
     .options-container {
         padding: var(--space-sm) var(--space-md);
@@ -251,38 +221,6 @@
         @include custom-scrollbar($track-bg: var(--bg-surface), $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
     }
     
-    .add-constitution-container {
-        margin-bottom: var(--space-sm);
-        padding-bottom: var(--space-sm);
-        border-bottom: 1px solid var(--input-border);
-        display: flex;
-        justify-content: center;
-    }
-    
-    .add-button {
-        display: flex;
-        align-items: center;
-        gap: var(--space-xs);
-        background-color: var(--primary-lightest);
-        color: var(--primary);
-        border: 1px solid var(--primary-light);
-        border-radius: var(--radius-sm);
-        padding: var(--space-xs) var(--space-md);
-        cursor: pointer;
-        font-size: 0.9em;
-        transition: background-color 0.2s ease, transform 0.1s ease;
-        justify-content: center;
-        min-width: 180px;
-    }
-    
-    .add-button:hover {
-        background-color: var(--primary);
-        color: white;
-    }
-    
-    .add-button:active {
-        transform: scale(0.98);
-    }
     // Scrollbar styles handled by mixin above
 
     .options-wrapper {
