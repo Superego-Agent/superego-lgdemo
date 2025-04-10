@@ -30,25 +30,25 @@
     let messages: MessageType[] = [];
     $: messages = history?.values?.messages ?? [];
 
-    // Reactive statement for conditional auto-scrolling
-    $: if (messageListContainer && messages) {
-        const scrollToBottomIfNear = async () => {
-            const { scrollHeight, scrollTop, clientHeight } = messageListContainer;
-            // Threshold in pixels - adjust as needed
-            const scrollThreshold = 50;
-            // Check if user is near the bottom *before* the DOM updates
-            const isNearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
+    // // Reactive statement for conditional auto-scrolling
+    // $: if (messageListContainer && messages) {
+    //     const scrollToBottomIfNear = async () => {
+    //         const { scrollHeight, scrollTop, clientHeight } = messageListContainer;
+    //         // Threshold in pixels - adjust as needed
+    //         const scrollThreshold = 50;
+    //         // Check if user is near the bottom *before* the DOM updates
+    //         const isNearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
 
-            // Wait for DOM update after messages change
-            await tick();
+    //         // Wait for DOM update after messages change
+    //         await tick();
 
-            // Only scroll if the user was already near the bottom
-            if (isNearBottom) {
-                messageListContainer.scrollTop = messageListContainer.scrollHeight;
-            }
-        };
-        scrollToBottomIfNear();
-    }
+    //         // Only scroll if the user was already near the bottom
+    //         if (isNearBottom) {
+    //             messageListContainer.scrollTop = messageListContainer.scrollHeight;
+    //         }
+    //     };
+    //     scrollToBottomIfNear();
+    // }
 
 </script>
 

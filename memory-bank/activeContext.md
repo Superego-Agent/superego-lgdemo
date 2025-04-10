@@ -78,6 +78,6 @@
  *   **Component Prop Types:** Ensure component props (`MessageCard`'s `message` prop) correctly use defined types and internal logic respects the type structure (e.g., using `message.type` not `message.sender`). (Mistake Tally: 1)
  *   **Backend Imports:** Ensure all necessary models/modules (e.g., Pydantic models for SSE, `json`, `StateSnapshot`) are imported in backend Python files using the correct path. (Mistake Tally: 6)
  *   **Pydantic Validation:** Understand how to validate Pydantic models, especially `Union` types. `model_validate` cannot be called directly on a `Union`. (Mistake Tally: 1)
- *   **Mode Restrictions:** Be aware of file editing restrictions in different modes (e.g., Architect mode cannot edit `.py` files). Switch modes when necessary. (Mistake Tally: 1)
+ *   **Mode Restrictions:** Be aware of file editing restrictions in different modes (e.g., Architect mode cannot edit `.py` or `.svelte` files). Switch modes when necessary. (Mistake Tally: 2)
  *   **Server Caching:** Remember that backend server changes (especially Python code) may require a server restart to take effect due to caching (`.pyc` files, module caching). (Mistake Tally: 1)
  *   **Data Source Confusion:** Clearly distinguish between `CheckpointTuple` (from `aget_tuple`) and `StateSnapshot` (from `aget_state`). Use the correct data source as instructed. (Mistake Tally: 3)

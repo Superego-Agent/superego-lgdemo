@@ -76,15 +76,26 @@
 		return String(content ?? '');
 	}
 
+    // Reverted renderedContent logic to original state (pre-Fix #1)
 	$: renderedContent = (() => {
 		const rawText = getRawContentText(message.content);
-		// For tool messages OR other types, directly use rawText for Markdown parsing.
-		// Removed the specific regex parsing for tool results as it caused warnings and wasn't matching the actual format.
-		const displayContent = rawText || (message.type === 'tool' && isError ? 'Error occurred' : '(No result)');
-		// The console warning is removed as we no longer attempt the specific pattern match.
-		// Directly process the displayContent using Markdown and sanitize, without try/catch fallback
-		const html = marked.parse(displayContent, { gfm: true, breaks: true });
-		return DOMPurify.sanitize(String(html));
+		// Simplified logic for tool and other messages
+		// Always attempt to parse the raw text with marked and sanitize
+		if (message.type === 'tool' || message.type === 'ai' || message.type === 'human' || message.type === 'system') {
+			const textToParse = rawText || (isError ? 'Error occurred' : ''); // Use rawText or error message
+			try {
+				const html = marked.parse(textToParse, { gfm: true, breaks: true });
+				return DOMPurify.sanitize(String(html));
+			} catch (e) {
+				console.error(`Markdown parsing error for ${message.type} message:`, e);
+				// Fallback: display raw text safely within a <pre> tag
+				// Use literal < and > for fallback pre tag
+				const safeText = textToParse.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+				return `<pre class="${isError ? 'error-content' : 'raw-content'}">${safeText}</pre>`;
+			}
+		}
+		// Default case if type doesn't match known renderable types
+		return '';
 	})();
 
 
@@ -100,6 +111,7 @@
 		} catch (e) {
 			formattedArgs = String(args);
 		}
+		// Use literal < and > for pre tag
 		return `<pre class="tool-args-content">${formattedArgs}</pre>`;
 	}
 
@@ -146,16 +158,16 @@
 <style lang="scss">
 	@use '../styles/mixins' as *;
 
-	   /* Removed redundant CSS rule for human title color */
+	/* CSS rule for human title color removed */
 
 	.message-card-wrapper {
-		width: 100%;
+		width: 100%; /* Reverted */
 		margin-bottom: var(--space-md);
 		padding: 0 var(--space-sm);
 	}
 
 	.message-card {
-		@include base-card($bg: var(--ai-bg), $radius: var(--radius-lg), $shadow: var(--shadow-md)); // Use mixin
+		@include base-card($bg: var(--ai-bg), $radius: var(--radius-lg), $shadow: var(--shadow-md)); /* Reverted shadow */
 		padding: var(--space-md);
 		max-width: min(60ch, 90%);
 		position: relative;
@@ -164,7 +176,7 @@
 		color: var(--text-primary);
 		transition: all 0.2s ease;
 
-		&:hover {
+		&:hover { /* Literal & */
 			box-shadow: var(--shadow-lg);
 			transform: translateY(-1px);
 		}
@@ -347,16 +359,20 @@
 	}
 	*/
 
-	/* Style for the <pre> tag generated for error content */
-	.error-content {
-		white-space: pre-wrap;
-		word-break: break-word;
-		font-family: inherit;
-		font-size: inherit;
+	/* Style for <pre> tags generated as fallbacks */
+	.error-content, .raw-content {
+		white-space: pre-wrap; /* Allow wrapping */
+		word-break: break-word; /* Break long words */
+		font-family: 'Fira Code', 'Roboto Mono', monospace; /* Use monospace font */
+		font-size: 0.9em; /* Slightly smaller */
 		margin: 0;
 		padding: 0;
-		background: none;
-		color: var(--error);
+		background: none; /* No background */
+		color: var(--text-primary); /* Default text color */
+	}
+
+	.error-content {
+		color: var(--error); /* Specific error color */
 	}
 
 	/* Style for the <pre> tag generated for tool call arguments */
