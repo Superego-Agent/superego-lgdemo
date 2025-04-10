@@ -79,23 +79,31 @@
     // Reverted renderedContent logic to original state (pre-Fix #1)
 	$: renderedContent = (() => {
 		const rawText = getRawContentText(message.content);
-		// Simplified logic for tool and other messages
-		// Always attempt to parse the raw text with marked and sanitize
-		if (message.type === 'tool' || message.type === 'ai' || message.type === 'human' || message.type === 'system') {
-			const textToParse = rawText || (isError ? 'Error occurred' : ''); // Use rawText or error message
+		// Simplified logic: directly use rawText for parsing for all types,
+		// as the stream processor now sends the correct raw content.
+		if (message.type === 'tool') {
+			// Use rawText directly. The faulty regex parsing is removed.
+			const displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
+			// Original try/catch for tool content
 			try {
-				const html = marked.parse(textToParse, { gfm: true, breaks: true });
+				const html = marked.parse(displayContent, { gfm: true, breaks: true });
 				return DOMPurify.sanitize(String(html));
 			} catch (e) {
-				console.error(`Markdown parsing error for ${message.type} message:`, e);
-				// Fallback: display raw text safely within a <pre> tag
+				console.error("Markdown parsing error for tool result:", e);
 				// Use literal < and > for fallback pre tag
-				const safeText = textToParse.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-				return `<pre class="${isError ? 'error-content' : 'raw-content'}">${safeText}</pre>`;
+				return `<pre class="error-content">${displayContent.replace(/</g, '<').replace(/>/g, '>')}</pre>`;
+			}
+		} else {
+			// Original try/catch for other content
+			try {
+				const html = marked.parse(rawText, { gfm: true, breaks: true });
+				return DOMPurify.sanitize(String(html));
+			} catch (e) {
+				console.error("Markdown parsing error:", e);
+				// Use literal < and > for fallback pre tag
+				return `<pre class="error-content">${rawText.replace(/</g, '<').replace(/>/g, '>')}</pre>`;
 			}
 		}
-		// Default case if type doesn't match known renderable types
-		return '';
 	})();
 
 
@@ -359,20 +367,16 @@
 	}
 	*/
 
-	/* Style for <pre> tags generated as fallbacks */
-	.error-content, .raw-content {
-		white-space: pre-wrap; /* Allow wrapping */
-		word-break: break-word; /* Break long words */
-		font-family: 'Fira Code', 'Roboto Mono', monospace; /* Use monospace font */
-		font-size: 0.9em; /* Slightly smaller */
+	/* Style for the <pre> tag generated for error content */
+	.error-content {
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-family: inherit;
+		font-size: inherit;
 		margin: 0;
 		padding: 0;
-		background: none; /* No background */
-		color: var(--text-primary); /* Default text color */
-	}
-
-	.error-content {
-		color: var(--error); /* Specific error color */
+		background: none;
+		color: var(--error);
 	}
 
 	/* Style for the <pre> tag generated for tool call arguments */

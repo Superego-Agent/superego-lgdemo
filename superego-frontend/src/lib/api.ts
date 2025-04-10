@@ -202,9 +202,6 @@ function handleRunStartEvent(
     }
 }
 
-// Removed handleThreadInfoEvent as 'run_start' now contains all necessary initial info
-// and the logic to add known thread/session was already present in handleRunStartEvent below.
-// Combined handler for events that update the message stream
 function handleStreamUpdateEvent(
     eventType: 'chunk' | 'ai_tool_chunk' | 'tool_result',
     eventData: SSEChunkData | SSEToolCallChunkData | SSEToolResultData,

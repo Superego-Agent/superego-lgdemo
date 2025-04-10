@@ -1,8 +1,5 @@
-// src/lib/streamProcessor.ts
-// Contains functions to mutate a HistoryEntry based on SSE events.
-// Assumes the input entryToMutate is a deep clone made by the caller (api.ts).
 
-import { parseToolResultString } from './utils';
+// Contains functions to mutate a HistoryEntry based on SSE events.
 
 // Types are globally available from src/global.d.ts
 
@@ -113,17 +110,24 @@ export function handleToolChunk(entryToMutate: HistoryEntry, toolChunkData: SSET
  * Expects toolResultData to be of type SSEToolResultData (containing node, tool_name, content, etc.).
  */
 export function handleToolResult(entryToMutate: HistoryEntry, toolResultData: SSEToolResultData): void {
-    // Parse the result string to extract content, name, and tool_call_id
-    const parsedResult = parseToolResultString(toolResultData.content); // Use 'content' field now
-
+    // Construct the ToolApiMessage directly from the SSE event data fields.
+    // Assumes toolResultData contains the necessary fields like content, tool_name, tool_call_id, node, is_error.
+    // We no longer use the faulty parseToolResultString utility.
+   
     const newToolMessage: ToolApiMessage = {
-        type: 'tool',
-        content: parsedResult.content ?? '', // Use extracted content
-        tool_call_id: parsedResult.tool_call_id ?? '', // Use extracted ID, ensure string type
-        name: parsedResult.name ?? toolResultData.tool_name, // Prefer parsed name, fallback to event tool_name
-        nodeId: toolResultData.node, // Use node from the data payload
-        is_error: toolResultData.is_error
+    	type: 'tool',
+    	// Use the raw content string directly from the event data
+    	content: toolResultData.content ?? '',
+    	// Use tool_call_id if provided in the event data, otherwise default (e.g., empty string or null)
+    	// Ensure it's a string if required by the type, adjust default as needed.
+    	tool_call_id: String(toolResultData.tool_call_id ?? ''),
+    	// Use the tool_name provided in the event data
+    	name: toolResultData.tool_name,
+    	// Use the node ID from the event data
+    	nodeId: toolResultData.node,
+    	// Use the error flag from the event data
+    	is_error: toolResultData.is_error
     };
-
+   
     entryToMutate.values.messages.push(newToolMessage);
 }

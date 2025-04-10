@@ -68,24 +68,6 @@ export async function logExecution<T>(description: string, fn: () => Promise<T>)
     }
 }
 
-/**
- * Parses the string representation of a tool result from the backend SSE stream.
- * Expected format: "content='...' name='...' tool_call_id='...'"
- * @param resultString The raw string from the SSE tool_result event data.
- * @returns An object containing the extracted content, name, and tool_call_id, or nulls if parsing fails.
- */
-export function parseToolResultString(resultString: string): { content: string | null; name: string | null; tool_call_id: string | null } {
-    const contentMatch = resultString.match(/content='(.*?)'/);
-    const nameMatch = resultString.match(/name='(.*?)'/); // Added name extraction
-    const toolCallIdMatch = resultString.match(/tool_call_id='(.*?)'/);
-
-    return {
-        content: contentMatch ? contentMatch[1] : null,
-        name: nameMatch ? nameMatch[1] : null, // Added name to return object
-        tool_call_id: toolCallIdMatch ? toolCallIdMatch[1] : null,
-    };
-}
-
 
 
 /**
