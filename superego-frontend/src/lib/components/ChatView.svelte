@@ -22,8 +22,8 @@
 		history = entry?.history ?? null;
 		isStreaming = entry?.isStreaming ?? false;
 		error = entry?.error ?? null;
-        // Show spinner if actively streaming OR if it's the initial load state (no history, no error, not yet streaming)
-        showSpinner = isStreaming || (!history && !error);
+        // Show spinner only if actively streaming
+        showSpinner = isStreaming;
 	}
 
     // Reactive statement to derive messages array
