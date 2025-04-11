@@ -2,5 +2,11 @@
 *.env.example
 *.env.local
 *.env.staging
+
+*.venv
+**/__pycache__/
+data/sessions/*.db
+data/sessions/*.bin
+uv.lock
 .clinerules
 .clinerules/*
