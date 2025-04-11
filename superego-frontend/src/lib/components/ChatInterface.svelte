@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { globalError, setGlobalError, persistedActiveSessionId, persistedUiSessions } from '../stores.svelte';
+    import { appState, persistedActiveSessionId, persistedUiSessions } from '../stores.svelte';
     import { sendUserMessage } from '../services/chatService';
     import ChatInput from './ChatInput.svelte';
     import RunConfigurationPanel from './RunConfigurationPanel.svelte';
@@ -31,7 +31,7 @@
         if (!sessionState) {
              // Setting globalError here might be redundant if sendUserMessage handles it,
              // but it provides immediate feedback if the session is missing.
-             setGlobalError("Cannot send message: Active session not found.");
+             appState.globalError = "Cannot send message: Active session not found.";
              console.error('[ChatInterface] Send prevented: Session state not found for ID:', currentSessionId);
              return;
         }
@@ -45,10 +45,10 @@
 
 <div class="chat-interface">
     <!-- === Global Error Banner === -->
-    {#if globalError}
+    {#if appState.globalError}
         <div class="error-banner" >
              <div class="error-content">
-                 <span>Error: {globalError}</span>
+                 <span>Error: {appState.globalError}</span>
              </div>
          </div>
     {/if}

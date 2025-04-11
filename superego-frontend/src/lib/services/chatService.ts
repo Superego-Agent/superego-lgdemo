@@ -1,6 +1,6 @@
 // import { get } from 'svelte/store'; // Removed
 import { streamRun } from './sseService';
-import { globalError, setGlobalError, persistedUiSessions, persistedActiveSessionId } from '../stores.svelte';
+import { appState, persistedUiSessions, persistedActiveSessionId } from '../stores.svelte';
 
 // Removed updateChatConfig and currentRunConfigModules store,
 // as configuration is now managed directly within UISessionState.threads
@@ -12,28 +12,28 @@ import { globalError, setGlobalError, persistedUiSessions, persistedActiveSessio
  * @param userInput - The text entered by the user.
  */
 export async function sendUserMessage(userInput: string): Promise<void> {
-    setGlobalError(null); // Clear global error before sending
+    appState.globalError = null;
 
     const currentSessionId = persistedActiveSessionId.state;
     if (!currentSessionId) {
         console.error("[chatService] Cannot send message: No active session ID.");
-        setGlobalError("No active session selected.");
+        appState.globalError = "No active session selected.";
         return;
     }
 
     const sessionState = persistedUiSessions.state[currentSessionId];
     if (!sessionState || !sessionState.threads) {
         console.error(`[chatService] Cannot send message: Session state or threads not found for ID ${currentSessionId}.`);
-        setGlobalError("Session data not found.");
+        appState.globalError = "Session data not found.";
         return;
     }
 
     const enabledConfigs = Object.entries(sessionState.threads)
-        .filter(([_, config]) => config.isEnabled);
+        .filter(([_, config]) => (config as ThreadConfigState).isEnabled);
 
     if (enabledConfigs.length === 0) {
         console.warn("[chatService] No enabled configurations to run.");
-        setGlobalError("No configurations enabled to run.");
+        appState.globalError = "No configurations enabled to run.";
         return;
     }
 
@@ -42,10 +42,10 @@ export async function sendUserMessage(userInput: string): Promise<void> {
     // Sequentially initiate runs for each enabled config
     // Backend handles concurrency
     for (const [threadId, config] of enabledConfigs) {
-        console.log(`[chatService] Initiating run for thread ${threadId} with config:`, config.runConfig);
+        console.log(`[chatService] Initiating run for thread ${threadId} with config:`, (config as ThreadConfigState).runConfig);
         try {
             // Call the updated streamRun, passing the specific threadId and runConfig
-            await streamRun(userInput, config.runConfig, threadId);
+            await streamRun(userInput, (config as ThreadConfigState).runConfig, threadId);
         } catch (error: unknown) {
             // Log error for this specific run but continue trying others
             console.error(`[chatService] Error initiating run for thread ${threadId}:`, error);

@@ -1,7 +1,7 @@
 <script lang="ts">
     // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
     import { persistedActiveSessionId, persistedUiSessions } from '../stores.svelte'; 
-    import { activeConfigEditorId, setActiveConfigEditorId } from "$lib/stores/uiState.svelte";
+    import { uiState } from "$lib/stores/uiState.svelte";
     import ConfigCard from './ConfigCard.svelte';
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
 
@@ -15,7 +15,7 @@
     function handleCardSelect(event: CustomEvent<{ threadId: string }>) {
         const selectedThreadId = event.detail.threadId;
         if (currentSessionId) {
-            setActiveConfigEditorId(selectedThreadId); 
+            uiState.activeConfigEditorId = selectedThreadId;
         }
     }
 
@@ -34,7 +34,7 @@
         // Use .state for persisted store and direct mutation
         if (currentSessionId && persistedUiSessions.state[currentSessionId]) {
             persistedUiSessions.state[currentSessionId].threads[newThreadId] = newConfig;
-            setActiveConfigEditorId(newThreadId); 
+            uiState.activeConfigEditorId = newThreadId;
         } else {
             console.warn("RunConfigManager: Cannot add configuration, no active session found in store.");
         }
@@ -48,8 +48,8 @@
         {#each configEntries as [threadId, config] (threadId)}
             <ConfigCard
                 {threadId}
-                {config}
-                isActive={activeConfigEditorId === threadId} 
+                config={config as ThreadConfigState}
+                isActive={uiState.activeConfigEditorId === threadId}
                 on:select={handleCardSelect}
             />
         {/each}

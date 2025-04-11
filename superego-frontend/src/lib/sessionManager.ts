@@ -1,7 +1,7 @@
 // import { get } from 'svelte/store'; // Removed
 import { v4 as uuidv4 } from 'uuid';
 import { persistedUiSessions, persistedActiveSessionId, persistedKnownThreadIds } from './stores.svelte'; // Import renamed state instances
-import { activeConfigEditorId, setActiveConfigEditorId } from './stores/uiState.svelte'; 
+import { uiState } from './stores/uiState.svelte';
 import { logOperationStatus } from './utils'; // Keep for now
 
 /**
@@ -31,7 +31,7 @@ export function createNewSession(name: string = "New Session"): UISessionState {
 
     persistedUiSessions.state[newSessionId] = newSession;
     persistedActiveSessionId.state = newSessionId;
-    setActiveConfigEditorId(defaultThreadId); // Set default config as active editor
+    uiState.activeConfigEditorId = defaultThreadId;
     console.log(`[OK] Created new session: ${newSessionId} (${name})`);
     return newSession;
 }
@@ -115,10 +115,10 @@ export function removeThreadFromSession(sessionId: string, threadId: string): vo
         sessionToRemoveFrom.lastUpdatedAt = new Date().toISOString();
         console.log(`[OK] Removed thread ${threadId} from session ${sessionId}`);
         // Also check if the removed thread was the active editor
-        if (activeConfigEditorId === threadId) {
+        if (uiState.activeConfigEditorId === threadId) {
             const remainingThreadIds = Object.keys(sessionToRemoveFrom.threads);
-            setActiveConfigEditorId(remainingThreadIds.length > 0 ? remainingThreadIds[0] : null);
-            console.log(`[OK] Active config editor was removed. New active editor: ${activeConfigEditorId}`);
+            uiState.activeConfigEditorId = remainingThreadIds.length > 0 ? remainingThreadIds[0] : null;
+            console.log(`[OK] Active config editor was removed. New active editor: ${uiState.activeConfigEditorId}`);
         }
     } else {
          console.warn(`Attempted removeThreadFromSession for non-existent session ${sessionId} or thread ${threadId}`);

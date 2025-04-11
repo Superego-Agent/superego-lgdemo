@@ -1,14 +1,14 @@
 <!-- @migration-task Error while migrating Svelte code: can't migrate `$: messages = history?.values?.messages ?? [];` to `$derived` because there's a variable named derived.
      Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
-	import { threadCacheStore } from '$lib/stores.svelte';
+	import { appState } from '$lib/stores.svelte';
 	import { tick } from 'svelte';
 	// import { derived } from 'svelte/store'; // Removed
 	import MessageCard from './MessageCard.svelte';
 
 	let { threadId } = $props<{ threadId: string }>(); // Use $props for runes mode
 	// Derive directly from the $state variable
-	const cacheEntry = $derived(threadCacheStore[threadId]);
+	const cacheEntry = $derived(appState.threadCacheStore[threadId]);
 
 	let messageListContainer: any = $state(); 
 
@@ -28,7 +28,6 @@
 
 
 </script>
-
 <div class="chat-view">
 	{#if error}
 		<div class="error-message">Error loading/streaming thread: {error}</div>

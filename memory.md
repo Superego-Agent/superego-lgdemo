@@ -241,7 +241,9 @@ The primary goal is to reorganise the codebase (starting with the frontend) to *
 *   **J. Other:** Check global types (`global.d.ts`), component props/types, backend imports, Pydantic validation, mode restrictions, server caching effects. (Mistake Tally: ~12)
 *   **K. Adapt to Feedback:** Refine policies (like commenting) and approaches based on user feedback and evolving requirements. (Mistake Tally: ~1)
 
-*(Mistake tallies are approximate aggregates from previous context)*
+*   **L. Narrative Commenting:** Avoided narrative/obvious comments. (Rule 3.8 / System Pattern 5.D / Active Context E) (Mistake Tally: 46)
+*   **M. Global Type Imports:** Avoided importing types already globally defined in `global.d.ts`. (Superego Rule 2.2 / System Pattern 6.B / Active Context J) (Mistake Tally: 12)
+*   **N. LOP Adherence:** MUST actually perform LOP logging actions (e.g., memory updates), not simulate them. (Memory Rule 5 / LOP Step 2 / Active Context G) (Mistake Tally: 1)
 
 ---
 # Progress (As of 2025-04-11 ~11:02 AM)

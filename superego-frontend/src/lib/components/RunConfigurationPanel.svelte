@@ -8,7 +8,7 @@
     globalConstitutionsError,
   } from "../stores/globalConstitutionsStore";
   import { persistedUiSessions, persistedActiveSessionId } from '../stores.svelte';
-  import { activeConfigEditorId, setActiveConfigEditorId } from "$lib/stores/uiState.svelte";
+  import { uiState } from "$lib/stores/uiState.svelte";
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
@@ -19,9 +19,7 @@
   import { fetchConstitutionContent } from "../api";
 
 
-  let isExpanded = $state(true); // Start expanded
-  // Removed internal selectedLevels state and sync block
-
+  let isExpanded = $state(true); 
   let showModal = $state(false);
   let modalIsLoading = $state(false);
   let modalError: string | null = $state(null);
@@ -69,7 +67,7 @@
       const currentSessionId = persistedActiveSessionId.state;
       if (!currentSessionId) return null;
       const currentSession = persistedUiSessions.state[currentSessionId];
-      const activeId = activeConfigEditorId;
+      const activeId = uiState.activeConfigEditorId;
       if (!activeId || !currentSession?.threads) return null;
       return currentSession.threads[activeId] ?? null;
   }
@@ -87,7 +85,7 @@
           return;
       }
       const currentSession = persistedUiSessions.state[currentSessionId];
-      const activeThreadConfigId = activeConfigEditorId;
+      const activeThreadConfigId = uiState.activeConfigEditorId;
       if (!activeThreadConfigId) {
           console.warn("RunConfigurationPanel: No active thread config ID found, cannot update modules.");
           return;

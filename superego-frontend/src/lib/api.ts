@@ -1,12 +1,11 @@
 import { get } from 'svelte/store';
 import { logExecution } from './utils';
-import { globalError } from './stores.svelte'; // Removed threadCacheStore
-import { persistedUiSessions, persistedKnownThreadIds, persistedActiveSessionId, setGlobalError } from './stores.svelte';
+import { appState, persistedUiSessions, persistedKnownThreadIds, persistedActiveSessionId } from './stores.svelte';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-    setGlobalError(null);
+    appState.globalError = null;
 
     try {
         const response = await fetch(url, {
@@ -43,7 +42,7 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
             console.error('API Fetch Error:', url, error);
             const errorMsg = error instanceof Error ? error.message : String(error);
-            setGlobalError(errorMsg || 'An unknown API error occurred.');
+            appState.globalError = errorMsg || 'An unknown API error occurred.';
             throw error;
         } else {
             console.log('API Fetch aborted:', url);
@@ -84,7 +83,7 @@ export const fetchAvailableConstitutions = (signal?: AbortSignal): Promise<Const
 export const fetchConstitutionContent = (constitutionId: string, signal?: AbortSignal): Promise<string> => {
     return logExecution(`Fetch content for constitution ${constitutionId}`, async () => {
         // Assuming the endpoint returns plain text
-        setGlobalError(null);
+        appState.globalError = null;
         try {
             // Note: apiFetch assumes JSON response, so use raw fetch here for text/plain
             const response = await fetch(`${BASE_URL}/constitutions/${constitutionId}/content`, {
@@ -101,7 +100,7 @@ export const fetchConstitutionContent = (constitutionId: string, signal?: AbortS
             if (!(error instanceof DOMException && error.name === 'AbortError')) {
                 console.error(`API Fetch Error (Text): ${BASE_URL}/constitutions/${constitutionId}/content`, error);
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                setGlobalError(errorMsg || 'An unknown API error occurred fetching constitution content.');
+                appState.globalError = errorMsg || 'An unknown API error occurred fetching constitution content.';
                 throw error;
             } else {
                 console.log(`API Fetch aborted: ${BASE_URL}/constitutions/${constitutionId}/content`);

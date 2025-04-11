@@ -1,7 +1,5 @@
+// UI-specific, non-persisted state
 class UIStateStore {
-	/**
-	 * Tracks the threadId of the configuration card currently being edited
-	 */
 	activeConfigEditorId = $state<string | null>(null);
 }
 
