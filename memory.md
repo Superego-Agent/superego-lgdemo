@@ -90,12 +90,12 @@ Current User Flow:
 
 *   Framework: Svelte single-page application (SPA).
 *   Pattern: Thin client interacting with the backend API.
-*   State Management:
+*   State Management (Evolving Pattern - Refactoring in Progress):
     *   Relies on backend checkpoints as the source of truth for conversation history.
-    *   `svelte-persisted-store`: Manages minimal persistent UI state (`uiSessions`, `knownThreadIds`).
-    *   `svelte/store`: Manages transient UI state (`activeSessionId`, `threadCacheStore`).
-    *   `threadCacheStore`: `Writable<Record<string, ThreadCacheData>>`. In-memory cache holding the frontend's view of each thread's state (`history`, `isStreaming`, `error`). UI components derive state from this store based on `threadId`.
-    *   Service Layer: Modules (e.g., `chatService.ts`) encapsulate API logic and related state management (e.g., constitution selection).
+    *   **Target Pattern (Rune-based):** Utilize Svelte 5 Runes (`$state`, `$derived`, `$effect`) within **classes** defined in `.svelte.ts` files, typically located in `src/lib/state/`. Export instances of these classes (e.g., `appState` from `state/app.svelte.ts`, `uiState` from `state/ui.svelte.ts`). State properties and mutation methods are accessed via these instances.
+    *   **Persistence:** Use the `persistedLocalState` utility (`src/lib/utils/persistedLocalState.svelte.ts`) to wrap exported state class instances requiring `localStorage` persistence (e.g., `sessionState`).
+    *   **API Logic:** Encapsulate API interactions (REST, SSE) in dedicated modules within `src/lib/api/` (e.g., `api/sse.svelte.ts`, `api/rest.svelte.ts`). State classes may call functions from these API modules.
+    *   **(Legacy Pattern):** Older parts of the codebase might still use `svelte/store` (`writable`) or `svelte-persisted-store`. These are being phased out. `threadCacheStore` (now part of `appState`) holds thread view state.
 
 ## 3. Communication
 
@@ -194,28 +194,16 @@ Current User Flow:
 *   Backend History Fix: COMPLETE. `nodeId` is correctly handled.
 *   ChatView Spinner Fix: COMPLETE. Spinner now only shows during active streaming.
 *   **Svelte 5 Migration:** Automated migration tool run (2025-04-11). Components now use Svelte 5 syntax (`$props`, etc.). Note: The migration might require cleanup.
-*   **Immediate Focus:** **Svelte 5 Code Cleanup.** Address potential bugs/artifacts from automated migration (e.g., unnecessary `run()` calls), improve code quality post-migration before resuming other refactoring.
-*   **Future State Refactor:** Plan exists (`rune_refactor_plan.md`) to refactor state management using Runes (`$state`, `.svelte.ts` modules in `src/lib/state/`). **This is deferred until after cleanup.**
+*   **Immediate Focus:** **Execute Rune Refactoring & Structure Standardization.** Implement the phased plan documented in `rune_refactor_implementation_plan.md`. This involves migrating state to the class-based Rune pattern and organizing files into `src/lib/state/` and `src/lib/api/`.
+*   **Current Step:** Delegating Phase 0 & 1 (Prepare Dirs, Refactor Stream State & SSE API) to the Code agent.
 
-## 2. Current Task: Svelte 5 Code Cleanup
+## 2. Current Task: Execute Rune Refactoring & Structure Standardization
 
-The primary goal is to reorganise the codebase (starting with the frontend) to **minimise the cognitive load (context size in tokens/concepts) required to understand or modify a specific piece of functionality.** This involves applying principles of good code design pragmatically, focusing on clarity and logical grouping rather than just superficial changes like line spacing.
+**Goal:** Implement the phased plan defined in `rune_refactor_implementation_plan.md`. This involves migrating state management to Svelte 5 Runes using the established class-based pattern and reorganizing files into dedicated `src/lib/state/` and `src/lib/api/` directories.
 
-**Method 1: Code Structure & Patterns (Current Focus)**
-*   **File-Level Analysis:** Examine individual files (especially Svelte components and TS modules) for anti-patterns or areas where code principles aren't effectively used. Examples:
-    *   Replacing complex `if/else` towers with simpler structures (e.g., dictionary lookups, polymorphism if applicable).
-    *   Identifying overly complex reactive blocks (`$: {}`) that could be simplified using Svelte's declarative reactivity (derived stores, reactive declarations `$: variable = ...`).
-*   **Cross-Codebase Structure:** Evaluate the overall hierarchy and placement of components and functions.
-    *   Does the location of code make sense? Is related logic grouped together?
-    *   Are there opportunities to extract *pure* functions into utilities (`utils.ts`) if they are clearly defined and potentially reusable? Balance this against the overhead – small, single-use functions might be better left inline.
-*   **Context Isolation:** Ensure each file/component has a clear, single responsibility. Avoid mixing unrelated concerns within the same file, making it easier to understand a specific part without needing to load irrelevant code into context.
+**Method:** Delegate implementation phase by phase to the Code agent, providing specific instructions and context for each phase based on the plan.
 
-*   **Prioritized Actions (Focus for Implementation):**
-    1.  **Separate SSE Logic:** Move the complex SSE stream handling logic (`streamRun` and helpers) from `api.ts` into a new dedicated service file (e.g., `sseService.ts`) to isolate context and simplify `api.ts`.
-    2.  **Extract Pagination Component:** Move the bulky pagination logic (state, calculations, UI controls) from `ChatInterface.svelte` into a new reusable component (`Paginator.svelte`) to simplify the chat interface component.
-**Method 2: Styling Refactor (Future Investigation)**
-*   **CSS Variables vs. Sass:** Evaluate migrating theme definitions and other styling from CSS variables to Sass.
-*   **Sass Features:** Look for opportunities to leverage Sass features (mixins, functions, loops, nesting) to reduce repetition and improve the structure of CSS, especially where patterns are repeated across components.
+**Current Phase Delegation:** Phase 0 & 1 (Prepare Dirs, Refactor Stream State & SSE API).
 ## 3. Upcoming Roadmap Items (High-Level)
 
 *   Config Card Enhancements (Rename, Delete, Toggle, Constitution Display).

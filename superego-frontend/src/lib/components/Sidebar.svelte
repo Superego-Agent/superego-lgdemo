@@ -2,12 +2,7 @@
   import { preventDefault } from 'svelte/legacy';
 
   import { tick } from "svelte";
-  import { persistedUiSessions, persistedActiveSessionId } from "../stores.svelte";
-  import {
-    createNewSession,
-    renameSession,
-    deleteSession,
-  } from "../sessionManager";
+  import { sessionState } from "../state/session.svelte";
 
   import IconEdit from "~icons/fluent/edit-24-regular";
   import IconDelete from "~icons/fluent/delete-24-regular";
@@ -20,22 +15,20 @@
   let renameInput: HTMLInputElement | null = $state(null);
 
   // --- Reactive Derivations ---
-  // Reactive statement uses the uiSessions store directly
-  let sortedSessions = $derived(Object.values(persistedUiSessions.state).sort(
+  let sortedSessions = $derived(Object.values(sessionState.uiSessions).sort(
     (a: UISessionState, b: UISessionState) =>
       new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
   ));
 
   // --- Functions ---
   function handleNewChat() {
-    createNewSession();
+    sessionState.createNewSession();
   }
 
   function selectConversation(sessionId: string) {
-    // Use $activeSessionId store directly
-    if (sessionId === persistedActiveSessionId.state) return;
+    if (sessionId === sessionState.activeSessionId) return;
     editingSessionId = null;
-    persistedActiveSessionId.state = sessionId;
+    sessionState.activeSessionId = sessionId;
   }
 
   function startRename(event: MouseEvent, session: UISessionState) {
@@ -62,7 +55,7 @@
       return;
     }
 
-    renameSession(sessionIdToRename, newName);
+    sessionState.renameSession(sessionIdToRename, newName);
   }
 
   function handleRenameKeyDown(event: KeyboardEvent) {
@@ -78,7 +71,7 @@
     event.stopPropagation();
 
     // Use $uiSessions store directly
-    const sessionToDelete = persistedUiSessions.state[sessionId];
+    const sessionToDelete = sessionState.uiSessions[sessionId];
     if (!sessionToDelete) return;
 
     if (
@@ -90,7 +83,9 @@
     }
 
     // Call imported function to delete frontend session state
-    deleteSession(sessionId); // Manager function handles updating activeSessionId if needed
+    // Direct mutation for now, assuming SessionStateStore handles persistence via $effect
+    // and sessionManager.deleteSession will be updated/removed later.
+    sessionState.deleteSession(sessionId);
   }
 </script>
 
@@ -114,7 +109,7 @@
       {#each sortedSessions as session (session.sessionId)}
         <!-- Use $activeSessionId store directly -->
         <li
-          class:active={session.sessionId === persistedActiveSessionId.state}
+          class:active={session.sessionId === sessionState.activeSessionId}
           class:editing={editingSessionId === session.sessionId}
         >
           {#if editingSessionId === session.sessionId}

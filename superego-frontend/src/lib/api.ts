@@ -1,6 +1,5 @@
-import { get } from 'svelte/store';
 import { logExecution } from './utils';
-import { appState, persistedUiSessions, persistedKnownThreadIds, persistedActiveSessionId } from './stores.svelte';
+import { appState } from './state/app.svelte'; // Corrected path
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -57,14 +56,6 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
  * Fetches the latest history entry (state) for a given thread.
  */
 
-/**
- * Fetches all relevant history entries for a given thread.
- */
-export const getFullHistory = (threadId: string, signal?: AbortSignal): Promise<HistoryEntry[]> => {
-    return logExecution(`Fetch full history for thread ${threadId}`, () =>
-        apiFetch<HistoryEntry[]>(`${BASE_URL}/threads/${threadId}/history`, {}, signal)
-    );
-};
 
 /**
  * Fetches the list of available global constitutions.
@@ -127,11 +118,3 @@ export const submitConstitution = (
     );
 };
 
-/**
- * Fetches the latest history entry (state) for a given thread.
- */
-export const getLatestHistory = (threadId: string, signal?: AbortSignal): Promise<HistoryEntry> => {
-    return logExecution(`Fetch latest history for thread ${threadId}`, () =>
-        apiFetch<HistoryEntry>(`${BASE_URL}/threads/${threadId}/latest`, {}, signal)
-    );
-};

@@ -7,8 +7,8 @@
     isLoadingGlobalConstitutions,
     globalConstitutionsError,
   } from "../stores/globalConstitutionsStore";
-  import { persistedUiSessions, persistedActiveSessionId } from '../stores.svelte';
-  import { uiState } from "$lib/stores/uiState.svelte";
+  import { sessionState } from '../state/session.svelte'; 
+  import { uiState } from "$lib/state/ui.svelte";
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
@@ -64,9 +64,9 @@
   // --- Helper Functions for Direct Store Interaction ---
 
   function getActiveConfig(): ThreadConfigState | null {
-      const currentSessionId = persistedActiveSessionId.state;
+      const currentSessionId = sessionState.activeSessionId;
       if (!currentSessionId) return null;
-      const currentSession = persistedUiSessions.state[currentSessionId];
+      const currentSession = sessionState.uiSessions[currentSessionId];
       const activeId = uiState.activeConfigEditorId;
       if (!activeId || !currentSession?.threads) return null;
       return currentSession.threads[activeId] ?? null;
@@ -79,19 +79,19 @@
 
   // Generic helper to update the configuredModules array in the store
   function updateModules(modulesUpdater: (currentModules: ConfiguredConstitutionModule[]) => ConfiguredConstitutionModule[]) {
-      const currentSessionId = persistedActiveSessionId.state;
+      const currentSessionId = sessionState.activeSessionId;
       if (!currentSessionId) {
           console.warn("RunConfigurationPanel: No active session ID found, cannot update modules.");
           return;
       }
-      const currentSession = persistedUiSessions.state[currentSessionId];
+      const currentSession = sessionState.uiSessions[currentSessionId];
       const activeThreadConfigId = uiState.activeConfigEditorId;
       if (!activeThreadConfigId) {
           console.warn("RunConfigurationPanel: No active thread config ID found, cannot update modules.");
           return;
       }
 
-      const session = persistedUiSessions.state[currentSessionId];
+      const session = sessionState.uiSessions[currentSessionId];
       if (session?.threads?.[activeThreadConfigId]) {
           if (!session.threads[activeThreadConfigId].runConfig) {
               session.threads[activeThreadConfigId].runConfig = { configuredModules: [] };

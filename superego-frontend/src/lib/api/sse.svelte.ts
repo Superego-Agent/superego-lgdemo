@@ -1,12 +1,129 @@
-// import { get } from 'svelte/store'; // Removed
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { logExecution, deepClone } from '../utils';
-import { appState, persistedActiveSessionId, persistedUiSessions } from '../stores.svelte';
+import { appState } from '../state/app.svelte'; // Corrected import path (no .ts)
+// Removed legacy store imports
+import { sessionState } from '../state/session.svelte'; // Import new session state
 import { addThreadToSession, addKnownThreadId } from '../sessionManager';
-import { handleChunk, handleToolChunk, handleToolResult } from '../streamProcessor';
-import { getLatestHistory } from '../api';
+// Removed import for streamProcessor functions
+import { getLatestHistory } from './session.svelte'; // Corrected import path
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+// --- Stream Processing Logic (Moved from streamProcessor.ts) ---
+
+/**
+ * Mutates the entry by appending text content from a 'chunk' event.
+ * Creates a new AI message if the node changes.
+ */
+function handleChunk(entryToMutate: HistoryEntry, chunkData: SSEChunkData): void {
+    const messages = entryToMutate.values.messages;
+
+    // Create new AI message if node changes or message list is empty
+    if (messages.at(-1)?.nodeId !== chunkData.node) {
+        messages.push({
+            type: 'ai',
+            content: '',
+            nodeId: chunkData.node,
+            tool_calls: [] // Initialize tool_calls for potential subsequent tool chunks
+        });
+    }
+
+    const lastMessage = messages.at(-1);
+    // Append content if last message is AI and from the same node
+    if (lastMessage && lastMessage.type === 'ai') {
+         if (typeof lastMessage.content !== 'string') {
+            console.warn("Appending chunk to non-string AI content, converting existing content.");
+            lastMessage.content = String(lastMessage.content);
+         }
+         lastMessage.content += chunkData.content;
+    // Handle unexpected case: chunk received after non-AI message from same node
+    } else if (lastMessage) {
+         messages.push({
+            type: 'ai',
+            content: chunkData.content,
+            nodeId: chunkData.node,
+            tool_calls: []
+        });
+        console.warn("Received chunk after non-AI message from same node. Creating new AI message.");
+    }
+}
+
+/**
+ * Mutates the entry by adding/updating tool call info from an 'ai_tool_chunk' event.
+ * Creates a new AI message if the node changes.
+ */
+function handleToolChunk(entryToMutate: HistoryEntry, toolChunkData: SSEToolCallChunkData): void {
+    const messages = entryToMutate.values.messages;
+    let lastMessage = messages.at(-1);
+
+    // Create new AI message if node changes or message list is empty
+    if (!lastMessage || lastMessage.nodeId !== toolChunkData.node) {
+        const newAiMessage: AiApiMessage = {
+            type: 'ai',
+            content: '',
+            nodeId: toolChunkData.node,
+            tool_calls: []
+        };
+        messages.push(newAiMessage);
+        lastMessage = newAiMessage;
+    // Handle unexpected case: tool chunk received after non-AI message from same node
+    } else if (lastMessage.type !== 'ai') {
+         const newAiMessage: AiApiMessage = {
+            type: 'ai',
+            content: '',
+            nodeId: toolChunkData.node,
+            tool_calls: []
+        };
+        messages.push(newAiMessage);
+        lastMessage = newAiMessage;
+        console.warn("Received ai_tool_chunk after non-AI message from same node. Creating new AI message.");
+    }
+
+    if (!lastMessage.tool_calls) {
+        lastMessage.tool_calls = [];
+    }
+
+    // If 'id' is present, start a new tool call structure
+    if (toolChunkData.id) {
+        lastMessage.tool_calls.push({
+            id: toolChunkData.id,
+            name: toolChunkData.name || '',
+            args: toolChunkData.args || ''
+        });
+    } else if (toolChunkData.args && lastMessage.tool_calls.length > 0) {
+        // If only 'args' are present, append to the *last* tool call's args
+        // If only args are present, append to the args of the *last* tool call in the array
+        const lastToolCall = lastMessage.tool_calls.at(-1);
+        if (lastToolCall) {
+            lastToolCall.args += toolChunkData.args;
+        } else {
+             console.error("Received tool chunk args, but no existing tool call structure found on the message.", lastMessage);
+        }
+    }
+     // Ignore chunks with neither id nor args for now.
+     // Ignore chunks with neither id nor args? Or log warning? For now, ignore.
+}
+
+/**
+ * Mutates the entry by adding a ToolApiMessage based on a 'tool_result' event.
+ */
+function handleToolResult(entryToMutate: HistoryEntry, toolResultData: SSEToolResultData): void {
+    // Construct the ToolApiMessage directly from the SSE event data fields.
+    // Assumes toolResultData contains the necessary fields like content, tool_name, tool_call_id, node, is_error.
+    // We no longer use the faulty parseToolResultString utility.
+
+    const newToolMessage: ToolApiMessage = {
+    	type: 'tool',
+    	content: toolResultData.content ?? '',
+    	tool_call_id: String(toolResultData.tool_call_id ?? ''),
+    	name: toolResultData.tool_name,
+    	nodeId: toolResultData.node,
+    	is_error: toolResultData.is_error
+    };
+
+    entryToMutate.values.messages.push(newToolMessage);
+}
+
 
 // --- SSE Event Handlers ---
 
@@ -153,7 +270,7 @@ export const streamRun = async (
     appState.globalError = null;
     const controller = new AbortController();
     // Access .state for persisted store
-    const currentActiveSessionId = persistedActiveSessionId.state; // Correctly uses .state
+    const currentActiveSessionId = sessionState.activeSessionId; // Use new session state
 
     if (!currentActiveSessionId) {
         const errorMsg = "Cannot start run: No active session selected.";
@@ -164,8 +281,8 @@ export const streamRun = async (
     }
 
     // Access .state for persisted store
-    const sessionState = persistedUiSessions.state[currentActiveSessionId]; // Correctly uses .state
-    if (!sessionState) {
+    const currentSessionData = sessionState.uiSessions[currentActiveSessionId]; // Use new session state (renamed variable to avoid conflict)
+    if (!currentSessionData) {
         const errorMsg = `Cannot start run: Active session state not found for ID ${currentActiveSessionId}.`;
         console.error(errorMsg);
         appState.globalError = errorMsg;

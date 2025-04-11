@@ -6,7 +6,9 @@ export class PersistedLocalState<T> {
     this.key = key;
     this._state = value; // Initialize internal state
 
-    const item = localStorage.getItem(key);
+    // Only access localStorage if in a browser environment
+    if (typeof window !== 'undefined') {
+        const item = localStorage.getItem(key);
     // Only parse if item exists and is not null/undefined
     if (item != null) { 
     try {
@@ -17,8 +19,8 @@ export class PersistedLocalState<T> {
         // localStorage.setItem(this.key, this.serialize(value)); 
         }
     }
+} // End browser check for getItem
 
-    // Removed $effect
   }
 
   get state(): T {
@@ -27,7 +29,10 @@ export class PersistedLocalState<T> {
 
   set state(newValue: T) {
     this._state = newValue; // Update internal state
-    localStorage.setItem(this.key, this.serialize(newValue)); // Save on set
+    // Only access localStorage if in a browser environment
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(this.key, this.serialize(newValue)); // Save on set
+    }
   }
 
   // Default serialization/deserialization

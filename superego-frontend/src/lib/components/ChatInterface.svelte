@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { appState, persistedActiveSessionId, persistedUiSessions } from '../stores.svelte';
-    import { sendUserMessage } from '../services/chatService';
+    import { appState } from '../state/app.svelte'; // Use new app state
+    import { sessionState } from '../state/session.svelte'; // Import new session state
+    import { sendUserMessage } from '../services/chat.svelte';
     import ChatInput from './ChatInput.svelte';
     import RunConfigurationPanel from './RunConfigurationPanel.svelte';
     import ChatView from './ChatView.svelte';
@@ -14,8 +15,8 @@
     let containerWidth: number = $state(0);
 
     // --- Reactive State Derivations ---
-    let currentSessionId = $derived(persistedActiveSessionId.state);
-    let currentSessionState = $derived(currentSessionId ? persistedUiSessions.state[currentSessionId] : null);
+    let currentSessionId = $derived(sessionState.activeSessionId);
+    let currentSessionState = $derived(currentSessionId ? sessionState.uiSessions[currentSessionId] : null);
     let activeThreadIds = $derived(currentSessionState?.threads ? Object.keys(currentSessionState.threads) : []);
 
 
@@ -27,8 +28,8 @@
             return;
         }
 
-        const sessionState = persistedUiSessions.state[currentSessionId];
-        if (!sessionState) {
+        const currentSessionData = sessionState.uiSessions[currentSessionId]; // Renamed to avoid conflict
+        if (!currentSessionData) {
              // Setting globalError here might be redundant if sendUserMessage handles it,
              // but it provides immediate feedback if the session is missing.
              appState.globalError = "Cannot send message: Active session not found.";

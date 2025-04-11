@@ -1,14 +1,14 @@
 <script lang="ts">
     // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
-    import { persistedActiveSessionId, persistedUiSessions } from '../stores.svelte'; 
-    import { uiState } from "$lib/stores/uiState.svelte";
+    import { sessionState } from '../state/session.svelte'; // Import new session state
+    import { uiState } from "$lib/state/ui.svelte"; // Import new ui state
     import ConfigCard from './ConfigCard.svelte';
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
 
     // Reactive access to the current session's configurations
     // Access .state for persisted stores in derived
-    let currentSessionId = $derived(persistedActiveSessionId.state);
-    let currentSession = $derived(currentSessionId ? persistedUiSessions.state[currentSessionId] : null);
+    let currentSessionId = $derived(sessionState.activeSessionId);
+    let currentSession = $derived(currentSessionId ? sessionState.uiSessions[currentSessionId] : null);
     let threadConfigs = $derived(currentSession?.threads ?? {});
     let configEntries = $derived(Object.entries(threadConfigs));
 
@@ -32,8 +32,10 @@
         };
 
         // Use .state for persisted store and direct mutation
-        if (currentSessionId && persistedUiSessions.state[currentSessionId]) {
-            persistedUiSessions.state[currentSessionId].threads[newThreadId] = newConfig;
+        if (currentSessionId && sessionState.uiSessions[currentSessionId]) {
+          sessionState.uiSessions[currentSessionId].threads[newThreadId] = newConfig;
+          // Ensure lastUpdatedAt is updated for sorting in Sidebar
+          sessionState.uiSessions[currentSessionId].lastUpdatedAt = new Date().toISOString();
             uiState.activeConfigEditorId = newThreadId;
         } else {
             console.warn("RunConfigManager: Cannot add configuration, no active session found in store.");

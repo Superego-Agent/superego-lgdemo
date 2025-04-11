@@ -8,8 +8,7 @@ import { loadLocalConstitutions } from './lib/localConstitutions';
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
-import { persistedUiSessions, persistedActiveSessionId } from './lib/stores.svelte';
-import { createNewSession } from './lib/sessionManager';
+import { sessionState } from '$lib/state/session.svelte'; // Import new session state
 onMount( async () => {
     try {
         await Promise.all([
@@ -22,19 +21,19 @@ onMount( async () => {
     }
 
         // --- START: Add Session Initialization Logic ---
-        const currentActiveId = persistedActiveSessionId.state;
+        const currentActiveId = sessionState.activeSessionId;
         if (currentActiveId === null) {
             // Access .state directly
-            const currentSessions = persistedUiSessions.state;
+            const currentSessions = sessionState.uiSessions;
             const sessionIds = Object.keys(currentSessions);
             if (sessionIds.length > 0) {
                 // Activate the first existing session found
-                persistedActiveSessionId.state = sessionIds[0];
+                sessionState.activeSessionId = sessionIds[0];
                 console.log(`[App.svelte] Activated existing session: ${sessionIds[0]}`);
             } else {
                 // No sessions exist, create a new one
                 console.log('[App.svelte] No existing sessions found, creating a new one.');
-                createNewSession(); // This function already sets it as active
+                sessionState.createNewSession(); // This function already sets it as active
             }
         }
         // --- END: Add Session Initialization Logic ---

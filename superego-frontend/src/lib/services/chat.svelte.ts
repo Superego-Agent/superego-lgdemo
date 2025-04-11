@@ -1,10 +1,6 @@
-// import { get } from 'svelte/store'; // Removed
-import { streamRun } from './sseService';
-import { appState, persistedUiSessions, persistedActiveSessionId } from '../stores.svelte';
-
-// Removed updateChatConfig and currentRunConfigModules store,
-// as configuration is now managed directly within UISessionState.threads
-// and bound in RunConfigurationPanel.svelte
+import { streamRun } from '../api/sse.svelte';
+import { appState } from '../state/app.svelte';
+import { sessionState } from '../state/session.svelte';
 
 /**
  * Sends the user's input to the backend via the streamRun API.
@@ -14,21 +10,21 @@ import { appState, persistedUiSessions, persistedActiveSessionId } from '../stor
 export async function sendUserMessage(userInput: string): Promise<void> {
     appState.globalError = null;
 
-    const currentSessionId = persistedActiveSessionId.state;
+    const currentSessionId = sessionState.activeSessionId;
     if (!currentSessionId) {
         console.error("[chatService] Cannot send message: No active session ID.");
         appState.globalError = "No active session selected.";
         return;
     }
 
-    const sessionState = persistedUiSessions.state[currentSessionId];
-    if (!sessionState || !sessionState.threads) {
+    const currentSessionData = sessionState.uiSessions[currentSessionId]; // Renamed variable
+    if (!currentSessionData || !currentSessionData.threads) {
         console.error(`[chatService] Cannot send message: Session state or threads not found for ID ${currentSessionId}.`);
         appState.globalError = "Session data not found.";
         return;
     }
 
-    const enabledConfigs = Object.entries(sessionState.threads)
+    const enabledConfigs = Object.entries(currentSessionData.threads)
         .filter(([_, config]) => (config as ThreadConfigState).isEnabled);
 
     if (enabledConfigs.length === 0) {
