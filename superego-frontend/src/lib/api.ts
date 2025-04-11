@@ -1,4 +1,3 @@
-// src/lib/api.ts
 import { get } from 'svelte/store';
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { logExecution, deepClone } from './utils';
@@ -10,7 +9,6 @@ import { handleChunk, handleToolChunk, handleToolResult } from './streamProcesso
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-// --- Core API Fetch Helper (Simplified) ---
 async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
     globalError.set(null);
 
@@ -59,7 +57,6 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
 }
 
 
-// --- New API Functions ---
 
 /**
  * Fetches the latest history entry (state) for a given thread.
@@ -141,9 +138,7 @@ export const submitConstitution = (
 };
 
 
-// --- Stream Run Function ---
 
-// --- Event Handler Functions ---
 
 function handleRunStartEvent(
     startData: SSERunStartData,
@@ -232,7 +227,7 @@ function handleStreamUpdateEvent(
             handleChunk(historyToMutate, eventData as SSEChunkData);
         } else if (eventType === 'ai_tool_chunk') {
             handleToolChunk(historyToMutate, eventData as SSEToolCallChunkData);
-        } else { // tool_result
+        } else {
             handleToolResult(historyToMutate, eventData as SSEToolResultData);
         }
 
@@ -319,10 +314,8 @@ async function handleEndEvent(
     }
 }
 
-// --- Event Handler Map ---
 const eventHandlers: { [key: string]: Function } = {
     'run_start': handleRunStartEvent,
-    // 'thread_info': handleThreadInfoEvent, // Removed
     'chunk': handleStreamUpdateEvent,
     'ai_tool_chunk': handleStreamUpdateEvent,
     'tool_result': handleStreamUpdateEvent,
@@ -408,14 +401,11 @@ export const streamRun = async (
                             return;
                         }
 
-                        // --- Dispatch using Handler Map ---
                         const handler = eventHandlers[eventType];
                         if (handler) {
                             // Call the appropriate handler, passing necessary context
                             if (eventType === 'run_start') {
                                 handler(eventData as SSERunStartData, currentActiveSessionId, threadIdToSend);
-                            // } else if (eventType === 'thread_info') { // Removed
-                            //     handler(eventData as SSEThreadInfoData, currentActiveSessionId, threadIdToSend);
                             } else if (eventType === 'chunk' || eventType === 'ai_tool_chunk' || eventType === 'tool_result') {
                                 if (targetThreadId) {
                                     handler(eventType, eventData as any, targetThreadId); // Pass eventType to combined handler
@@ -472,4 +462,3 @@ export const streamRun = async (
     return controller;
 };
 
-// Removed Old Functions

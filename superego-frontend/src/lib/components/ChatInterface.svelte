@@ -74,6 +74,7 @@
 </script>
 
 <div class="chat-interface">
+    <!-- === Global Error Banner === -->
     {#if $globalError}
         <div class="error-banner" >
              <div class="error-content">
@@ -82,6 +83,7 @@
          </div>
     {/if}
 
+    <!-- === Main Chat Display Area === -->
     <div class="messages-container" bind:clientWidth={containerWidth}>
         {#if activeThreadIds.length > 0}
             <!-- Page Content: Displays ChatViews for the current page -->
@@ -126,6 +128,7 @@
         {/if}
     </div>
 
+    <!-- === Input Area (Config Panel + Chat Input) === -->
     <div class="input-area">
         <RunConfigurationPanel />
         <ChatInput on:send={handleSend} disabled={!currentSessionId} />

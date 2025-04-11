@@ -1,9 +1,7 @@
-// src/lib/stores.ts
 import { persisted } from 'svelte-persisted-store';
 import { writable } from 'svelte/store';
 import type { Writable } from 'svelte/store';
 
-// Types are defined in src/global.d.ts and are globally available
 
 /**
  * List of all LangGraph thread IDs known to this client. Acts as an index.
@@ -28,13 +26,6 @@ export const activeSessionId: Writable<string | null> = writable(null);
  * Keyed by threadId. NOT persisted.
  */
 export const threadCacheStore: Writable<Record<string, ThreadCacheData>> = writable({});
-
-
-
-/**
- * Tracks the threadId of the configuration card currently being edited
- */
-export const activeConfigEditorId: Writable<string | null> = writable(null);
 
 /** Store for displaying global errors */
 export const globalError: Writable<string | null> = writable(null);

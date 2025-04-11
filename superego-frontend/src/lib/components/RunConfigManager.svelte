@@ -1,6 +1,7 @@
 <script lang="ts">
     // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
-    import { activeSessionId, uiSessions, activeConfigEditorId } from '../stores'; // Import new store
+    import { activeSessionId, uiSessions } from '../stores'; 
+    import { activeConfigEditorId } from "$lib/stores/uiState";
     import ConfigCard from './ConfigCard.svelte';
     import { createEventDispatcher } from 'svelte';
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
@@ -50,7 +51,6 @@
 <div class="run-config-manager">
     <div class="cards-container">
         
-        <!-- Need to remove this from its component so we can style the 'add' button the same way, or make a wrapper -->
         {#each configEntries as [threadId, config] (threadId)}
             <ConfigCard
                 {threadId}

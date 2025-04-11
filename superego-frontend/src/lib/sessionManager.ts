@@ -1,8 +1,7 @@
-// src/lib/sessionManager.ts
 import { get } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import { uiSessions, activeSessionId, knownThreadIds } from './stores';
-import { logOperationStatus } from './utils'; // Import the helper
+import { logOperationStatus } from './utils';
 
 /** Helper to safely update a session if it exists - returns boolean for logging */
 function _updateSessionIfExists(
@@ -15,14 +14,13 @@ function _updateSessionIfExists(
         if (session) {
             const result = updateFn(session);
             sessions[sessionId] = result === undefined ? session : result;
-            updated = true; // Mark as updated if session was found and callback executed
+            updated = true;
         } else {
             console.warn(`Attempted operation on non-existent session: ${sessionId}`);
-            // updated remains false
         }
         return sessions;
     });
-    return updated; // Return true if the session existed and was processed
+    return updated;
 }
 
 /** Helper to update known threads - returns boolean for logging */
@@ -53,14 +51,14 @@ export function createNewSession(name: string = "New Session"): UISessionState {
         name: name,
         createdAt: now,
         lastUpdatedAt: now,
-        threadIds: []
+        threads: {}
     };
 
     uiSessions.update(sessions => {
         sessions[newSessionId] = newSession;
         return sessions;
     });
-    activeSessionId.set(newSessionId); // Automatically activate
+    activeSessionId.set(newSessionId);
     console.log(`[OK] Created new session: ${newSessionId} (${name})`);
     return newSession;
 }
@@ -110,14 +108,13 @@ export function deleteSession(sessionId: string): void {
 export function addThreadToSession(sessionId: string, threadId: string): void {
     logOperationStatus(`Add thread ${threadId} to session ${sessionId}`, () =>
         _updateSessionIfExists(sessionId, (session) => {
-            if (!session.threadIds.includes(threadId)) {
-                session.threadIds.push(threadId);
-                session.lastUpdatedAt = new Date().toISOString();
-                // Log adding to known threads separately
-                logOperationStatus(`Add thread ${threadId} to knownThreadIds`, () =>
-                    _addKnownThreadIdInternal(threadId)
-                );
-            }
+            // The presence of threadId as a key in session.threads implies association.
+            // We just need to update the timestamp and ensure it's known globally.
+            session.lastUpdatedAt = new Date().toISOString();
+            // Log adding to known threads separately
+            logOperationStatus(`Add thread ${threadId} to knownThreadIds`, () =>
+                _addKnownThreadIdInternal(threadId)
+            );
         })
     );
 }
@@ -131,9 +128,8 @@ export function addThreadToSession(sessionId: string, threadId: string): void {
 export function removeThreadFromSession(sessionId: string, threadId: string): void {
     logOperationStatus(`Remove thread ${threadId} from session ${sessionId}`, () =>
         _updateSessionIfExists(sessionId, (session) => {
-            const index = session.threadIds.indexOf(threadId);
-            if (index > -1) {
-                session.threadIds.splice(index, 1);
+            if (threadId in session.threads) {
+                delete session.threads[threadId];
                 session.lastUpdatedAt = new Date().toISOString();
             }
         })
@@ -150,18 +146,3 @@ export function addKnownThreadId(threadId: string): void {
      );
 }
 
-// Optional: Function to remove a thread ID from knownThreadIds if needed later
-// export function removeKnownThreadId(threadId: string): void {
-//     logOperationStatus(`Remove thread ${threadId} from knownThreadIds`, () => {
-//         let removed = false;
-//         knownThreadIds.update(ids => {
-//             const index = ids.indexOf(threadId);
-//             if (index > -1) {
-//                 ids.splice(index, 1);
-//                 removed = true;
-//             }
-//             return ids;
-//         });
-//         return removed;
-//     });
-// }

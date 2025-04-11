@@ -40,16 +40,3 @@ export async function loadGlobalConstitutions(): Promise<void> {
         isLoadingGlobalConstitutions.set(false);
     }
 }
-
-// Helper function to get a constitution title by ID from either global or local store
-// Note: This might be better placed elsewhere or handled differently depending on usage.
-// import { get } from 'svelte/store'; // Add if using get outside component
-// import { localConstitutionsStore } from '../localConstitutions';
-// export function getConstitutionTitleById(id: string): string | undefined {
-//     const globalList = get(globalConstitutions);
-//     const localList = get(localConstitutionsStore);
-//     const foundGlobal = globalList.find(c => c.id === id);
-//     if (foundGlobal) return foundGlobal.title;
-//     const foundLocal = localList.find(c => c.id === id);
-//     return foundLocal?.title;
-// }

@@ -4,11 +4,9 @@ import { nanoid } from 'nanoid';
 // Use a specific key for local storage
 const LOCAL_STORAGE_KEY = 'superego_local_constitutions';
 
-// --- Store ---
 // Initialize with an empty array, load attempts to fill it
 export const localConstitutionsStore = writable<LocalConstitution[]>([]);
 
-// --- Helper Functions ---
 
 /** Saves the current state of the local constitutions store to localStorage. */
 function saveLocalConstitutions(): void {
@@ -17,11 +15,9 @@ function saveLocalConstitutions(): void {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(constitutions));
     } catch (error) {
         console.error("Failed to save local constitutions to localStorage:", error);
-        // Optionally, notify the user via a global error store or other mechanism
     }
 }
 
-// --- Public API ---
 
 /** Loads constitutions from localStorage into the store. Should be called on app startup. Returns a promise to indicate completion/error. */
 export async function loadLocalConstitutions(): Promise<void> {
@@ -30,7 +26,6 @@ export async function loadLocalConstitutions(): Promise<void> {
         const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (storedData) {
             const parsedData: LocalConstitution[] = JSON.parse(storedData);
-            // Basic validation could be added here (e.g., check if it's an array)
             if (Array.isArray(parsedData)) {
                 localConstitutionsStore.set(parsedData);
             } else {
@@ -44,8 +39,6 @@ export async function loadLocalConstitutions(): Promise<void> {
     } catch (error) {
         console.error("Failed to load local constitutions from localStorage:", error);
         localConstitutionsStore.set([]); // Reset store on error
-        // Optionally, clear potentially corrupted storage item
-        // localStorage.removeItem(LOCAL_STORAGE_KEY);
     }
 }
 
@@ -77,7 +70,6 @@ export function updateLocalConstitution(id: string, title: string, text: string)
                 ...constitutions[index],
                 title: title.trim(),
                 text: text,
-                // Optionally update a 'lastUpdatedAt' field here if added to the interface
             };
             updated = true;
             return [...constitutions]; // Return new array for reactivity

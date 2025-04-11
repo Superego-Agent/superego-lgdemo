@@ -7,42 +7,44 @@
 
     const dispatch = createEventDispatcher();
 
-    // Form State
+    // --- Component State ---
     let constitutionTitle = '';
     let constitutionText = '';
     let submitForReview = false; // Replaces isPrivate, default false
-    let selectedTemplateId: string | null = null; // For the template dropdown
+    let selectedTemplateId: string | null = null;
 
-    // Submission State
+    // Submission & Loading State
     let isSubmitting = false;
     let submitStatus: { success?: boolean; message?: string } | null = null;
-    let templateLoading = false; // Loading state for template content
+    let templateLoading = false;
 
+    // --- Template Handling ---
     // Combine global and local for template dropdown
     type TemplateOption =
         | { type: 'global'; id: string; title: string }
         | { type: 'local'; id: string; title: string; text: string }; // Include text for local
 
-    // Correct reactive declaration syntax
     $: allConstitutionsForTemplate = [
         ...$globalConstitutions
-            .filter((c: ConstitutionItem) => c.id !== 'none') // Add type ConstitutionItem
-            .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })), // Add type ConstitutionItem
-        ...$localConstitutionsStore.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text })) // Add type LocalConstitution
+            .filter((c: ConstitutionItem) => c.id !== 'none')
+            .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })),
+        ...$localConstitutionsStore.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text }))
     ].sort((a, b) => a.title.localeCompare(b.title));
 
+    // --- Reactive Logic ---
     // Reactive statement to load template when selectedTemplateId changes
     $: if (selectedTemplateId) {
         loadTemplateContent(selectedTemplateId);
     }
 
+    // --- Functions ---
     async function loadTemplateContent(templateId: string) {
         const selectedTemplate = allConstitutionsForTemplate.find(t => t.id === templateId);
         if (!selectedTemplate) return;
 
         constitutionTitle = selectedTemplate.title; // Pre-fill title
         templateLoading = true;
-        constitutionText = 'Loading template content...'; // Placeholder while loading
+        constitutionText = 'Loading template content...';
 
         try {
             if (selectedTemplate.type === 'local') {
@@ -72,11 +74,9 @@
         let submitApiMessage = '';
 
         try {
-            // 1. Always add locally
             addLocalConstitution(constitutionTitle, constitutionText);
             localAddSuccess = true;
 
-            // 2. Optionally submit for review
             if (submitForReview) {
                 const response = await submitConstitution({
                     text: constitutionText,
@@ -86,15 +86,14 @@
                 submitApiMessage = response.message || (submitApiSuccess ? 'Submitted for review.' : 'Submission failed.');
             }
 
-            // Determine overall status
             if (localAddSuccess) {
                  submitStatus = {
                     success: true,
                     message: `Constitution '${constitutionTitle}' saved locally.` + (submitForReview ? ` ${submitApiMessage}` : '')
                 };
-                constitutionTitle = ''; // Clear form
+                constitutionTitle = '';
                 constitutionText = '';
-                selectedTemplateId = null; // Reset dropdown
+                selectedTemplateId = null;
 
                 dispatch('constitutionAdded', { success: true });
 
@@ -121,7 +120,7 @@
 <div class="add-constitution">
     <h2>Add New Constitution</h2>
     <div class="form-group">
-        <!-- Template Dropdown -->
+        <!-- === Template Selection === -->
         <div class="form-row">
              <label for="template-select">Use as Template (Optional):</label>
              <select id="template-select" bind:value={selectedTemplateId} disabled={isSubmitting || templateLoading}>
@@ -134,7 +133,7 @@
              </select>
         </div>
 
-         <!-- Title Input -->
+         <!-- === Constitution Title === -->
          <div class="form-row">
             <label for="constitution-title">Title:</label>
             <input
@@ -147,7 +146,7 @@
             />
         </div>
 
-        <!-- Text Area -->
+        <!-- === Constitution Text === -->
         <textarea
             bind:value={constitutionText}
             placeholder="Enter your constitution text here..."
@@ -156,7 +155,7 @@
             disabled={isSubmitting || templateLoading}
         ></textarea>
 
-        <!-- Submit for Review Checkbox -->
+        <!-- === Submit for Review Option === -->
         <div class="review-toggle">
              <label>
                  <input
@@ -174,12 +173,14 @@
             </p>
         {/if}
 
+        <!-- === Status Message === -->
         {#if submitStatus}
             <p class="status-message {submitStatus.success ? 'success' : 'error'}">
                 {submitStatus.message}
             </p>
         {/if}
 
+        <!-- === Submit Button === -->
         <button
             class="submit-button"
             on:click={handleSubmit}

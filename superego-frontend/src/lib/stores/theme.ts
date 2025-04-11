@@ -7,7 +7,6 @@ export type Theme = 'light' | 'dark';
 function applyThemeToDocument(themeValue: Theme) {
   if (typeof document !== 'undefined') { // Ensure document exists (client-side)
     document.documentElement.setAttribute('data-theme', themeValue);
-    // console.log(`Applied theme to document: ${themeValue}`); // Optional debug log
   }
 }
 
@@ -22,7 +21,6 @@ const initialTheme = (): Theme => {
   return 'light';
 };
 
-// Create theme store
 const initialThemeValue = initialTheme();
 export const theme = writable<Theme>(initialThemeValue);
 
@@ -30,7 +28,6 @@ export const theme = writable<Theme>(initialThemeValue);
 // This ensures the theme is set even before App.svelte mounts
 applyThemeToDocument(initialThemeValue);
 
-// Theme toggle function
 export function toggleTheme(): void {
   theme.update(currentTheme => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';

@@ -11,26 +11,29 @@
   import IconDelete from "~icons/fluent/delete-24-regular";
   import IconAdd from "~icons/fluent/add-24-regular";
 
+  // --- Component State ---
   let editingSessionId: string | null = null;
   let editingName: string = "";
   let originalEditingName: string = "";
   let renameInput: HTMLInputElement | null = null;
 
+  // --- Reactive Derivations ---
   // Reactive statement uses the uiSessions store directly
   $: sortedSessions = Object.values($uiSessions).sort(
     (a: UISessionState, b: UISessionState) =>
       new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
   );
 
+  // --- Functions ---
   function handleNewChat() {
-    createNewSession(); // Call imported function
+    createNewSession();
   }
 
   function selectConversation(sessionId: string) {
     // Use $activeSessionId store directly
     if (sessionId === $activeSessionId) return;
     editingSessionId = null;
-    activeSessionId.set(sessionId); // Set store value
+    activeSessionId.set(sessionId);
   }
 
   function startRename(event: MouseEvent, session: UISessionState) {
@@ -57,7 +60,6 @@
       return;
     }
 
-    // Call imported function
     renameSession(sessionIdToRename, newName);
   }
 
@@ -86,18 +88,14 @@
     }
 
     // Call imported function to delete frontend session state
-    // Deleting backend threads is currently out of scope for this refactor
-    // and the corresponding API function was removed.
     deleteSession(sessionId); // Manager function handles updating activeSessionId if needed
-
-    // Removed the try/catch block that attempted to call deleteThread
   }
 </script>
 
 <div class="sidebar">
-  <!-- Button moved inside the list below -->
 
   <div class="sidebar-section threads-section">
+    <!-- === Session List === -->
     <ul class="thread-list">
       <!-- Iterate over sortedSessions derived from $uiSessions -->
       <!-- New Session Button as first list item -->
@@ -164,6 +162,7 @@
         </li>
       {:else}
         <li class="empty-list">No conversations yet.</li>
+        <!-- === Empty List Message === -->
       {/each}
     </ul>
   </div>
@@ -386,7 +385,5 @@
     border-bottom: none;
   }
 
-  @media (max-width: 768px) {
-    /* Mobile styles can be added here if needed */
-  }
+  @media (max-width: 768px) { }
 </style>

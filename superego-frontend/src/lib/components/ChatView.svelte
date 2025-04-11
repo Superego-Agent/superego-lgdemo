@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { threadCacheStore } from '$lib/stores';
-	import { tick } from 'svelte'; // Add tick import
+	import { tick } from 'svelte';
 	import { derived } from 'svelte/store';
-	import MessageCard from './MessageCard.svelte'; // Use existing component
+	import MessageCard from './MessageCard.svelte';
 
 	export let threadId: string;
 	const cacheEntry = derived(threadCacheStore, ($cache) => $cache[threadId]);
@@ -22,30 +22,8 @@
         showSpinner = isStreaming;
 	}
 
-    // Reactive statement to derive messages array
     let messages: MessageType[] = [];
     $: messages = history?.values?.messages ?? [];
-
-    // // Reactive statement for conditional auto-scrolling
-    // Don't delete this comment, but the code doesn't work and crashes the app for some reason. 
-    // $: if (messageListContainer && messages) {
-    //     const scrollToBottomIfNear = async () => {
-    //         const { scrollHeight, scrollTop, clientHeight } = messageListContainer;
-    //         // Threshold in pixels - adjust as needed
-    //         const scrollThreshold = 50;
-    //         // Check if user is near the bottom *before* the DOM updates
-    //         const isNearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
-
-    //         // Wait for DOM update after messages change
-    //         await tick();
-
-    //         // Only scroll if the user was already near the bottom
-    //         if (isNearBottom) {
-    //             messageListContainer.scrollTop = messageListContainer.scrollHeight;
-    //         }
-    //     };
-    //     scrollToBottomIfNear();
-    // }
 
 </script>
 
@@ -56,10 +34,9 @@
 
 	{#if history}
 		<div class="message-list" bind:this={messageListContainer}>
-			{#each messages as message, i (message.nodeId + '-' + i)} <!-- Basic key, might need improvement -->
+			{#each messages as message, i (message.nodeId + '-' + i)}
 				<MessageCard {message} />
 			{/each}
-            <!-- No explicit empty state message -->
 		</div>
 	{/if}
 
@@ -82,11 +59,11 @@
 
 	.message-list {
 		flex-grow: 1;
-		overflow-y: auto; // Allow scrolling through messages
+		overflow-y: auto;
 		padding: 1rem;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem; // Space between messages
+        gap: 0.75rem;
 	}
 
 	.error-message {
@@ -102,7 +79,7 @@
         position: absolute;
         bottom: 1rem;
         right: 1rem;
-        width: 24px; /* Adjust size as needed */
+        width: 24px;
         height: 24px;
         pointer-events: none; /* Prevent interaction */
     }

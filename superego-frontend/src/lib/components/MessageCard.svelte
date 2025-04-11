@@ -20,8 +20,6 @@
 	// Get AI message safely
 	$: aiMessage = message.type === 'ai' ? message : null;
 
-	// Get Tool message safely (used for tool_call_id if needed, though not currently used)
-	// $: toolApiMsg = message.type === 'tool' ? message : null;
 
 	const titleMap: Record<string, string | undefined> = {
 		human: 'You',
@@ -136,6 +134,7 @@
 	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
 			<div class="message-title" style:color={cardAccentColor}>
+		<!-- === Message Title (Type/Node/Tool Name) === -->
 				{#if message.type === 'tool'}
 					<span class="tool-icon"><ToolIcon /></span>
 				{/if}
@@ -147,10 +146,12 @@
 
 		<div class="message-content main-content">
 			{@html renderedContent}
+		<!-- === Main Message Content (Rendered Markdown) === -->
 		</div>
 
 		{#if message.type === 'ai' && aiMessage?.tool_calls && aiMessage.tool_calls.length > 0}
 			<div class="tool-calls-separator"></div>
+		<!-- === AI Tool Calls (If any) === -->
 			<div class="tool-calls-section">
 				{#each aiMessage.tool_calls as toolCall, i (toolCall.id || toolCall.name)}
 					<div class="tool-call-item" in:fade|local={{delay: 100 + i * 50, duration: 200}}>
@@ -353,19 +354,6 @@
 	}
 
 	/* Style for the <pre> tag generated for tool results content - REMOVED as <pre> is no longer used */
-	/*
-	.tool-result-content {
-		white-space: pre-wrap;
-		word-break: break-word;
-		overflow-wrap: break-word;
-		font-family: inherit;
-		font-size: inherit;
-		margin: 0;
-		padding: 0;
-		background: none;
-		color: inherit;
-	}
-	*/
 
 	/* Style for the <pre> tag generated for error content */
 	.error-content {

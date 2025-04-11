@@ -130,11 +130,21 @@ Planned Enhancements (See Roadmap in `# Project Brief` section):
     *   Leverage Svelte's reactivity (`$:` , derived stores) wherever possible.
     *   Avoid unnecessary local state variables; derive state from stores when feasible.
     *   Minimize imperative logic in components.
-*   D. Strict Commenting Policy:
-    *   Comments are ONLY for essential clarification of non-obvious logic *after* attempting self-documenting code.
-    *   NO narrative, obvious, or ephemeral (`// TODO`) comments.
-    *   NO placeholders for missing functionality; implement or leave clearly broken.
-    *   Use HTML comments (`<!-- -->`) in Svelte templates, JS comments (`//`, `/* */`) in `<script>`.
+*   D. Effective Commenting Policy (STRICTLY ENFORCED):
+    *   **Goal:** Improve code clarity and long-term maintainability through *thoughtful* commenting. This policy is strictly enforced regarding the *quality and purpose* of comments, not their mere presence. Comments are encouraged where they add value but avoided otherwise.
+    *   **Prioritize Self-Documenting Code:** Write clear, well-named code that minimizes the *need* for comments.
+    *   **Approved Uses (Add Comments Respectfully):**
+        *   Essential clarification of complex or non-obvious logic/algorithms.
+        *   Explaining the "why" behind a specific implementation choice if it's not immediately clear from the code.
+        *   Section headings (`// --- Section Name ---`) in scripts to delineate logical blocks.
+        *   Template structure guides (`<!-- === Section Name === -->`) in Svelte markup to improve readability.
+    *   **Strictly Prohibited:**
+        *   Narrative comments that just describe *what* the code does (e.g., `// loop through items`). The code should say *what*.
+        *   Obvious comments stating the trivial (e.g., `// increment counter`).
+        *   Ephemeral comments like `// TODO`, `// FIXME` (use issue tracking instead).
+        *   Commented-out code (use version control).
+        *   Placeholders for missing functionality (implement or remove).
+    *   **Formatting:** Use HTML comments (`<!-- -->`) in Svelte templates, JS comments (`//`, `/* */`) in `<script>`.
 *   E. Clean Code & Abstraction:
     *   Prioritize clear, concise, functional custom code.
     *   Use abstractions (utility functions, services, potentially SASS mixins later) to avoid repetition and improve structure. Move reusable logic out of components (e.g., into `utils.ts` or service files).
@@ -202,14 +212,25 @@ Planned Enhancements (See Roadmap in `# Project Brief` section):
 *   ChatView Spinner Fix: COMPLETE. Spinner now only shows during active streaming.
 *   Current Focus: Transitioning from refactoring/bugfixing to the new roadmap: UI polish, code cleanup, and feature implementation.
 
-## 2. Immediate Next Steps (Roadmap Phase 1 & 2)
+## 2. Current Task: Code Reorganisation (Context Minimisation)
 
-1.  UI Polish & Minor Fixes: Address outstanding minor UI issues as specified by the user. (Details TBD).
-2.  Code Cleanup & Refactoring:
-    *   Update `requirements.txt` (if needed).
-    *   Improve code quality (e.g., investigate Sass migration, add abstractions/utils).
-    *   Refactor components for better structure and reusability.
+The primary goal is to reorganise the codebase (starting with the frontend) to **minimise the cognitive load (context size in tokens/concepts) required to understand or modify a specific piece of functionality.** This involves applying principles of good code design pragmatically, focusing on clarity and logical grouping rather than just superficial changes like line spacing.
 
+**Method 1: Code Structure & Patterns (Current Focus)**
+*   **File-Level Analysis:** Examine individual files (especially Svelte components and TS modules) for anti-patterns or areas where code principles aren't effectively used. Examples:
+    *   Replacing complex `if/else` towers with simpler structures (e.g., dictionary lookups, polymorphism if applicable).
+    *   Identifying overly complex reactive blocks (`$: {}`) that could be simplified using Svelte's declarative reactivity (derived stores, reactive declarations `$: variable = ...`).
+*   **Cross-Codebase Structure:** Evaluate the overall hierarchy and placement of components and functions.
+    *   Does the location of code make sense? Is related logic grouped together?
+    *   Are there opportunities to extract *pure* functions into utilities (`utils.ts`) if they are clearly defined and potentially reusable? Balance this against the overhead – small, single-use functions might be better left inline.
+*   **Context Isolation:** Ensure each file/component has a clear, single responsibility. Avoid mixing unrelated concerns within the same file, making it easier to understand a specific part without needing to load irrelevant code into context.
+
+*   **Prioritized Actions (Focus for Implementation):**
+    1.  **Separate SSE Logic:** Move the complex SSE stream handling logic (`streamRun` and helpers) from `api.ts` into a new dedicated service file (e.g., `sseService.ts`) to isolate context and simplify `api.ts`.
+    2.  **Extract Pagination Component:** Move the bulky pagination logic (state, calculations, UI controls) from `ChatInterface.svelte` into a new reusable component (`Paginator.svelte`) to simplify the chat interface component.
+**Method 2: Styling Refactor (Future Investigation)**
+*   **CSS Variables vs. Sass:** Evaluate migrating theme definitions and other styling from CSS variables to Sass.
+*   **Sass Features:** Look for opportunities to leverage Sass features (mixins, functions, loops, nesting) to reduce repetition and improve the structure of CSS, especially where patterns are repeated across components.
 ## 3. Upcoming Roadmap Items (High-Level)
 
 *   Config Card Enhancements (Rename, Delete, Toggle, Constitution Display).
@@ -222,12 +243,13 @@ Planned Enhancements (See Roadmap in `# Project Brief` section):
 *   A. Verify, Don't Assume: ALWAYS verify assumptions about APIs (esp. LangGraph - e.g., `thread_id` handling), libraries, configs, state. Check docs/code or ask. (Mistake Tally: ~7)
 *   B. Iterate Carefully: Work step-by-step. Confirm understanding. Avoid large, unverified changes. (Mistake Tally: ~3)
 *   C. Use Svelte Reactivity: Leverage `$:` and derived stores. Avoid unnecessary local state. (Mistake Tally: ~2)
-*   D. Strict Commenting: ONLY essential comments for non-obvious logic. NO narrative, TODOs, placeholders, or obvious explanations. (Mistake Tally: ~41)
+*   D. Effective Commenting (Strictly Enforced): Comments must add value (clarify non-obvious logic/why, provide structure). Avoid obvious/narrative/TODOs. Quality over quantity. (Mistake Tally: ~43)
 *   E. Clean Code: Prioritize clarity, conciseness. Use abstractions/utils. Refactor monolithic components. (Mistake Tally: ~2)
 *   F. Correct Tool Usage: Use tools precisely (syntax, escaping). Re-read files on `apply_diff` errors. (Mistake Tally: ~12)
 *   G. State Management: Keep state lean. Use `threadCacheStore` for thread view state. Use wrappers (`ThreadCacheData`) to combine backend/frontend state cleanly. (Mistake Tally: ~3)
 *   H. Follow Plans & Instructions: Adhere to agreed plans. Confirm understanding before acting. (Mistake Tally: ~3)
 *   I. Other: Check global types (`global.d.ts`), component props/types, backend imports, Pydantic validation, mode restrictions, server caching effects. (Mistake Tally: ~12)
+*   J. Adapt to Feedback: Refine policies (like commenting) and approaches based on user feedback and evolving requirements. (Mistake Tally: ~1)
 
 *(Mistake tallies are approximate aggregates from previous context)*
 
@@ -245,16 +267,10 @@ Planned Enhancements (See Roadmap in `# Project Brief` section):
 *   Various UI Fixes (Dark mode, scrolling, message cards, etc.).
 *   ChatView Spinner Logic Fix.
 
-## 2. Current Phase: Polish, Cleanup & Feature Development
+## 2. Current Phase: Code Reorganisation (Context Minimisation)
 
-*   **Immediate Focus:**
-    1.  UI Polish & Minor Fixes (Details TBD by user).
-    2.  Code Cleanup & Refactoring (Update requirements, investigate Sass, abstractions/utils).
-*   **Next Major Features:**
-    *   Config Card Enhancements (Rename, Delete, Toggle, Constitution Display).
-    *   User API Key Input.
-    *   Model/Provider Selection.
-
+*   **Current Focus:** Applying **Method 1 (Code Structure & Patterns)** to the frontend codebase (`superego-frontend/src/`).
+*   **Next Steps (Post-Reorganisation):** Resume roadmap features like Config Card Enhancements, User API Key, Model Selection, etc. (See `# Project Brief` section).
 ## 3. Known Issues / Risks
 
 *   LangGraph API Complexity: Requires careful verification when used.

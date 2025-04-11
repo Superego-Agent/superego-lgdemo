@@ -1,4 +1,3 @@
-// src/lib/stores/events.ts
 import { writable } from 'svelte/store';
 
 // Event to trigger showing the thread configuration modal

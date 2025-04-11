@@ -5,7 +5,8 @@
     isLoadingGlobalConstitutions,
     globalConstitutionsError,
   } from "../stores/globalConstitutionsStore";
-  import { uiSessions, activeSessionId, activeConfigEditorId } from '../stores'; 
+  import { uiSessions, activeSessionId } from '../stores'; 
+  import { activeConfigEditorId } from "$lib/stores/uiState";
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
@@ -173,6 +174,7 @@
         </p>
       {:else}
         <div class="options-wrapper">
+          <!-- === Add New Constitution Item === -->
           <div
             class="option-item add-item"
             on:click={() => (showAddModal = true)}
@@ -188,6 +190,7 @@
             </div>
           </div>
 
+          <!-- === Local Constitutions List === -->
           {#each $localConstitutionsStore as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
@@ -226,6 +229,7 @@
             </div>
           {/each}
 
+          <!-- === Global Constitutions List === -->
           {#each $globalConstitutions as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
@@ -263,6 +267,7 @@
             </div>
           {/each}
 
+          <!-- === Empty State === -->
           {#if $globalConstitutions.length === 0 && $localConstitutionsStore.length === 0}
             <p class="loading-text">No constitutions available.</p>
           {/if}
@@ -272,6 +277,7 @@
   {/if}
 </div>
 
+<!-- === Modals === -->
 {#if showModal}
   <ConstitutionInfoModal
     title={modalTitle}
@@ -420,7 +426,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    /* min-width: 100px; */
   }
 
   .adherence-slider {

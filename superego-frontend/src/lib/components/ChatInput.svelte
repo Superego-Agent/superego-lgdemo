@@ -5,15 +5,19 @@
   import IconSend from '~icons/fluent/send-24-regular';
   import IconLoading from '~icons/fluent/arrow-sync-circle-24-regular';
 
+  // --- Component State ---
   let userInput: string = "";
   let inputElement: HTMLTextAreaElement;
   let isExpanded = false;
 
+  // --- Props ---
   /** Controls whether the input and button are disabled. Passed from parent. */
   export let disabled: boolean = false;
 
+  // --- Dispatcher ---
   const dispatch = createEventDispatcher();
 
+  // --- Event Handlers & Logic ---
   function handleSubmit() {
     const trimmedInput = userInput.trim();
     if (!trimmedInput || disabled) {
@@ -57,6 +61,7 @@
   class:expanded={isExpanded}
   on:submit|preventDefault={handleSubmit}
 >
+  <!-- Text Input Area -->
   <div class="textarea-container">
     <textarea
       bind:this={inputElement}
@@ -76,6 +81,7 @@
     ></textarea>
   </div>
 
+  <!-- Submit Button (Shows Loading/Send Icon) -->
   <button
     type="submit"
     disabled={!userInput.trim() || disabled}
@@ -105,7 +111,6 @@
     justify-content: center;
   }
   .chat-input-form.expanded {
-  //padding: var(--space-lg) 0px 0px 0px;
 
     padding: 0px;
   }
@@ -139,6 +144,7 @@
     @include custom-scrollbar($track-bg: transparent, $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
   }
 
+  // Style the container when the textarea inside it is focused
   .textarea-container:has(textarea:focus) {
     border-color: var(--input-focus);
     outline: none;
@@ -184,7 +190,4 @@
       border-color: transparent; /* Remove border when active */
    }
 
-  //  .loading-icon-animate {
-  //      animation: spin 1s linear infinite;
-  //  }
 </style>

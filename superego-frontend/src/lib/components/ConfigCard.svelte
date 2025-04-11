@@ -12,7 +12,6 @@
         dispatch('select', { threadId });
     }
 
-    // TODO (Deferred): Add constitution chip display with overflow
 </script>
 
 <button
@@ -25,7 +24,6 @@
     {#if !config.isEnabled}
         <span class="disabled-indicator" title="This configuration is disabled and won't run">(Disabled)</span>
     {/if}
-    <!-- Constitution chips will go here later -->
 </button>
 
 <style lang="scss">
