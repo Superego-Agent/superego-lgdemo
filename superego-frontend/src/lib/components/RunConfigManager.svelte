@@ -49,6 +49,8 @@
 
 <div class="run-config-manager">
     <div class="cards-container">
+        
+        <!-- Need to remove this from its component so we can style the 'add' button the same way, or make a wrapper -->
         {#each configEntries as [threadId, config] (threadId)}
             <ConfigCard
                 {threadId}
@@ -57,10 +59,11 @@
                 on:select={handleCardSelect}
             />
         {/each}
+        <button class="add-button" on:click={addConfiguration} title="Add new configuration">
+            + Add 
+        </button>
     </div>
-    <button class="add-button" on:click={addConfiguration} title="Add new configuration">
-        + Add Config
-    </button>
+
 </div>
 
 <style lang="scss">
@@ -77,14 +80,15 @@
         display: flex;
         flex-wrap: wrap; // Allow cards to wrap
         gap: var(--space-sm);
+        align-items: stretch;
     }
 
     .add-button {
-        // Basic styling, can be improved
-        align-self: flex-start;
+        margin: 0px;
+        height: 100%;
         padding: var(--space-xs) var(--space-sm);
         background-color: var(--bg-secondary);
-        border: 1px solid var(--border-color);
+        border: 2px dashed var(--secondary);
         border-radius: var(--radius-sm);
         cursor: pointer;
         color: var(--text-secondary);

@@ -142,7 +142,6 @@
   }
 </script>
 
-  <RunConfigManager />
 
 <div class="selector-card">
   <!-- Header with integrated toggle -->
@@ -153,7 +152,7 @@
     tabindex="0"
     on:keydown={(e) => e.key === "Enter" && toggleExpand()}
   >
-    <span class="header-title">Constitutions</span>
+    <span class="header-title">Flow Configurations</span>
     {#if isExpanded}
       <IconChevronDown class="toggle-icon" />
     {:else}
@@ -163,6 +162,8 @@
 
   <!-- Collapsible content area -->
   {#if isExpanded}
+    <RunConfigManager />
+
     <div class="options-container">
       {#if $isLoadingGlobalConstitutions}
         <p class="loading-text">Loading global constitutions...</p>
@@ -197,7 +198,7 @@
                   on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
                  />
                 <span class="title-text"
-                  ><span class="local-indicator">[Local]</span
+                  ><span class="local-indicator">Local</span
                   >{item.title}</span
                 >
                 <button
@@ -447,6 +448,10 @@
     font-weight: 600;
     color: var(--secondary); /* Or another distinct color */
     margin-right: var(--space-xs);
+    border: 1px solid var(--secondary);
+    border-radius: var(--radius-sm);
+    margin: 0 var(--space-xs);
+    padding: 0 var(--space-xs);
     font-size: 0.9em;
   }
 </style>
