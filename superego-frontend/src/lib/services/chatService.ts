@@ -1,7 +1,6 @@
 import { get } from 'svelte/store';
-import { streamRun } from '../api';
+import { streamRun } from './sseService';
 import { globalError, uiSessions, activeSessionId } from '../stores';
-// Types from global.d.ts are globally available
 
 // Removed updateChatConfig and currentRunConfigModules store,
 // as configuration is now managed directly within UISessionState.threads

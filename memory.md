@@ -10,11 +10,9 @@ Develop a multi-agent system using LangGraph featuring a "Superego" agent for in
 
 ## 2. Project Evolution
 
-*   Initial Phase (CLI - Historical): Demonstrated core Superego -> Inner Agent flow via a command-line interface.
 *   Current Phase (Svelte Frontend):
     *   Developed a Svelte frontend interacting with the LangGraph backend via REST API and SSE for streaming.
     *   Leverages LangGraph checkpoints as the source of truth for conversation state.
-    *   Implemented robust frontend state management (`threadCacheStore`).
     *   Focus now shifts to UI polish, code cleanup, and feature enhancements.
 
 ## 3. Future Roadmap (High-Level)
@@ -39,6 +37,7 @@ Develop a multi-agent system using LangGraph featuring a "Superego" agent for in
 
 *   Researchers/Developers exploring AI safety, constitutional AI, and multi-agent systems.
 *   Users investigating the impact of moderation rules on agent behavior.
+*   Note that it is a RESEARCH DEMO - extensive error handling, etc. for a production environment is not desirable. It should fail fast and loud. 
 
 ---
 # Product Context
@@ -71,12 +70,6 @@ Current User Flow:
 2.  Input: User submits a prompt through the chat interface.
 3.  Moderation & Execution: Backend Superego moderates; if allowed, Inner Agent executes. Results are streamed to the UI.
 4.  Observation: User observes the outcome in the context of the chosen configuration.
-
-Planned Enhancements (See Roadmap in `# Project Brief` section):
-*   Config Management: Enhanced UI for renaming, deleting, enabling/disabling configurations. Display configured constitutions on cards.
-*   Flexibility: Allow users to provide their own API keys and select different LLM models/providers.
-*   Polish: General UI improvements and minor fixes.
-*   Code Quality: Refactoring for better structure and maintainability (Sass, utils).
 
 ---
 # System Patterns
@@ -183,17 +176,7 @@ Planned Enhancements (See Roadmap in `# Project Brief` section):
 *   Package Management: npm (`package.json`, `package-lock.json`)
 *   Utility Libraries: `uuid` (frontend session IDs)
 
-## 3. Communication Protocol
-
-*   Frontend <-> Backend: REST API (control/history), SSE (real-time streaming via `/api/runs/stream`).
-
-## 4. Development Environment & Setup
-
-*   Backend: Python environment (Poetry/uv). Run via `python backend_server_async.py`.
-*   Frontend: Node.js/npm. Run via `npm run dev` in `superego-frontend/`.
-*   Database: SQLite file (e.g., `data/sessions/conversations.db`) for checkpointer.
-
-## 5. Technical Constraints & Considerations
+## 4. Technical Constraints & Considerations
 
 *   Checkpoint Alignment: Frontend `MessageType` (`global.d.ts`) must align with backend checkpoint message structure.
 *   Backend API Contract: Adhere strictly to defined request/response structures (esp. `configurable` object).
@@ -210,7 +193,7 @@ Planned Enhancements (See Roadmap in `# Project Brief` section):
 *   Frontend State Refactor: COMPLETE. The architecture based on `threadCacheStore` is implemented.
 *   Backend History Fix: COMPLETE. `nodeId` is correctly handled.
 *   ChatView Spinner Fix: COMPLETE. Spinner now only shows during active streaming.
-*   Current Focus: Transitioning from refactoring/bugfixing to the new roadmap: UI polish, code cleanup, and feature implementation.
+*   Current Focus: Continuing the **Code Reorganisation (Context Minimisation)** task. The first two high-priority refactoring steps (SSE logic separation, Pagination component extraction) are complete. The next step is to continue analyzing the frontend codebase for further opportunities to improve context isolation and reduce cognitive load, as per the overall goal.
 
 ## 2. Current Task: Code Reorganisation (Context Minimisation)
 
@@ -243,13 +226,16 @@ The primary goal is to reorganise the codebase (starting with the frontend) to *
 *   A. Verify, Don't Assume: ALWAYS verify assumptions about APIs (esp. LangGraph - e.g., `thread_id` handling), libraries, configs, state. Check docs/code or ask. (Mistake Tally: ~7)
 *   B. Iterate Carefully: Work step-by-step. Confirm understanding. Avoid large, unverified changes. (Mistake Tally: ~3)
 *   C. Use Svelte Reactivity: Leverage `$:` and derived stores. Avoid unnecessary local state. (Mistake Tally: ~2)
-*   D. Effective Commenting (Strictly Enforced): Comments must add value (clarify non-obvious logic/why, provide structure). Avoid obvious/narrative/TODOs. Quality over quantity. (Mistake Tally: ~43)
+*   D. Effective Commenting (Strictly Enforced): Comments must add value (clarify non-obvious logic/why, provide structure). Avoid obvious/narrative/TODOs/placeholders. Quality over quantity. **Strict adherence required.** (Mistake Tally: ~46)
 *   E. Clean Code: Prioritize clarity, conciseness. Use abstractions/utils. Refactor monolithic components. (Mistake Tally: ~2)
 *   F. Correct Tool Usage: Use tools precisely (syntax, escaping). Re-read files on `apply_diff` errors. (Mistake Tally: ~12)
 *   G. State Management: Keep state lean. Use `threadCacheStore` for thread view state. Use wrappers (`ThreadCacheData`) to combine backend/frontend state cleanly. (Mistake Tally: ~3)
-*   H. Follow Plans & Instructions: Adhere to agreed plans. Confirm understanding before acting. (Mistake Tally: ~3)
+*   H. Follow Plans & Instructions: Adhere to agreed plans. Confirm understanding before acting. **Stay focused on the core task objective.** (Mistake Tally: ~5)
 *   I. Other: Check global types (`global.d.ts`), component props/types, backend imports, Pydantic validation, mode restrictions, server caching effects. (Mistake Tally: ~12)
 *   J. Adapt to Feedback: Refine policies (like commenting) and approaches based on user feedback and evolving requirements. (Mistake Tally: ~1)
+*   **K. Recent Reflection (2025-04-11 ~1:17 PM):** During the recent refactoring planning and execution:
+    *   Repeatedly violated the strict commenting policy (Guideline D) by adding ephemeral/narrative comments despite explicit instructions and corrections. Requires increased vigilance.
+    *   Initially diverged from the core task objective (context isolation) by suggesting broader, lower-priority refactors instead of focusing on the highest-impact structural changes first (related to Guideline H). Required user intervention to refocus the plan.
 
 *(Mistake tallies are approximate aggregates from previous context)*
 
@@ -266,7 +252,8 @@ The primary goal is to reorganise the codebase (starting with the frontend) to *
 *   Backend History `nodeId` Fix.
 *   Various UI Fixes (Dark mode, scrolling, message cards, etc.).
 *   ChatView Spinner Logic Fix.
-
+*   Refactor: Separated SSE stream logic from `api.ts` into `sseService.ts`.
+*   Refactor: Extracted pagination logic from `ChatInterface.svelte` into `Paginator.svelte`.
 ## 2. Current Phase: Code Reorganisation (Context Minimisation)
 
 *   **Current Focus:** Applying **Method 1 (Code Structure & Patterns)** to the frontend codebase (`superego-frontend/src/`).
