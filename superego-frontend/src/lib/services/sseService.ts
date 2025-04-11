@@ -1,8 +1,7 @@
-import { get } from 'svelte/store';
+// import { get } from 'svelte/store'; // Removed
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { logExecution, deepClone } from '../utils';
-import { globalError, threadCacheStore } from '../stores';
-import { uiSessions, activeSessionId } from '../stores';
+import { globalError, setGlobalError, threadCacheStore, updateThreadCacheEntry, setThreadCacheEntry, persistedActiveSessionId, persistedUiSessions } from '../stores.svelte'; // Import state and setters
 import { addThreadToSession, addKnownThreadId } from '../sessionManager';
 import { handleChunk, handleToolChunk, handleToolResult } from '../streamProcessor';
 import { getLatestHistory } from '../api';
@@ -18,42 +17,36 @@ function handleRunStartEvent(
 ) {
     const targetThreadId = startData.thread_id; // This is the ID the backend *confirmed* or created
 
-    threadCacheStore.update(cache => {
-        const existingEntry = cache[targetThreadId];
-        let updatedMessages: MessageType[];
+    // Direct mutation for $state variable
+    // Determine initial messages based on existing cache if present
+    const existingEntry = threadCacheStore[targetThreadId];
+    let updatedMessages: MessageType[];
+    if (existingEntry?.history?.values?.messages) {
+        const existingMessages = existingEntry.history.values.messages;
+        const newMessages = startData.initialMessages.filter(
+            newMsg => !existingMessages.some(existingMsg =>
+                existingMsg.type === newMsg.type && existingMsg.content === newMsg.content
+            )
+        );
+        updatedMessages = [...existingMessages, ...newMessages];
+    } else {
+        updatedMessages = startData.initialMessages;
+    }
 
-        if (existingEntry?.history?.values?.messages) {
-            // Preserve existing messages and append initial messages from run_start
-            // Ensure no duplicates if initialMessages contains the user input already present
-            const existingMessages = existingEntry.history.values.messages;
-            const newMessages = startData.initialMessages.filter(
-                newMsg => !existingMessages.some(existingMsg =>
-                    existingMsg.type === newMsg.type && existingMsg.content === newMsg.content
-                )
-            );
-            updatedMessages = [...existingMessages, ...newMessages];
-        } else {
-            // No existing entry or messages, use initial messages directly
-            updatedMessages = startData.initialMessages;
-        }
+    // Create the new/updated cache entry data
+    const newCacheEntry: ThreadCacheData = {
+        history: {
+            checkpoint_id: existingEntry?.history?.checkpoint_id || '',
+            thread_id: targetThreadId,
+            values: { messages: updatedMessages },
+            runConfig: startData.runConfig
+        },
+        isStreaming: true,
+        error: null
+    };
 
-        const updatedCacheData: ThreadCacheData = {
-            // Use existing history structure if available, otherwise create new
-            history: {
-                checkpoint_id: existingEntry?.history?.checkpoint_id || '', // Preserve old checkpoint ID until 'end'
-                thread_id: targetThreadId,
-                values: { messages: updatedMessages },
-                runConfig: startData.runConfig // Update runConfig from the start event
-            },
-            isStreaming: true,
-            error: null // Clear any previous error
-        };
-
-        return {
-            ...cache,
-            [targetThreadId]: updatedCacheData
-        };
-    });
+    // Use the setter function to update the cache store
+    setThreadCacheEntry(targetThreadId, newCacheEntry);
 
     // If this run started a *new* thread (threadIdToSend was null), update session/known IDs
     if (threadIdToSend === null) {
@@ -71,7 +64,8 @@ function handleStreamUpdateEvent(
     eventData: SSEChunkData | SSEToolCallChunkData | SSEToolResultData,
     targetThreadId: string
 ) {
-    const currentCache = get(threadCacheStore);
+    // Direct access to $state variable is correct here for reading
+    const currentCache = threadCacheStore;
     const currentCacheEntry = currentCache[targetThreadId];
 
     if (!currentCacheEntry) {
@@ -94,16 +88,11 @@ function handleStreamUpdateEvent(
             handleToolResult(historyToMutate, eventData as SSEToolResultData);
         }
 
-        threadCacheStore.update(cache => ({
-            ...cache,
-            [targetThreadId]: {
-                ...currentCacheEntry,
-                history: historyToMutate
-            }
-        }));
+        // Use the update function for the specific entry
+        updateThreadCacheEntry(targetThreadId, { history: historyToMutate });
     } catch (processingError: unknown) {
          console.error(`Error processing '${eventType}' in streamProcessor:`, processingError);
-         globalError.set(`Error updating state for ${eventType}: ${processingError instanceof Error ? processingError.message : String(processingError)}`);
+         setGlobalError(`Error processing '${eventType}' in streamProcessor: ${processingError instanceof Error ? processingError.message : String(processingError)}`);
     }
 }
 
@@ -113,31 +102,12 @@ function handleErrorEvent(
 ) {
     const errorMessage = `Backend Error (${errorData.node}): ${errorData.error}`;
     console.error(`SSE Error Event Received (Thread: ${targetThreadId ?? 'N/A'}):`, errorMessage);
-    globalError.set(errorMessage);
+    setGlobalError(errorMessage); // Correctly uses setter
 
     // Update cache entry if threadId exists
     if (targetThreadId) {
-        threadCacheStore.update(cache => {
-            const entry = cache[targetThreadId];
-            if (entry) {
-                return {
-                    ...cache,
-                    [targetThreadId]: {
-                        ...entry,
-                        isStreaming: false,
-                        error: errorMessage
-                    }
-                };
-            }
-            return {
-                ...cache,
-                [targetThreadId]: {
-                    history: null,
-                    isStreaming: false,
-                    error: errorMessage
-                }
-            };
-        });
+        // Use update function for the specific entry
+        updateThreadCacheEntry(targetThreadId, { isStreaming: false, error: errorMessage });
     }
 }
 
@@ -150,24 +120,13 @@ async function handleEndEvent(
     try {
         const finalHistoryEntry = await getLatestHistory(targetThreadId, controller.signal);
 
-        threadCacheStore.update(cache => {
-             const currentEntry = cache[targetThreadId];
-             return {
-                ...cache,
-                [targetThreadId]: {
-                    // Preserve existing data if fetch somehow failed, but mark as not streaming
-                    ...(currentEntry ?? {}),
-                    history: finalHistoryEntry,
-                    isStreaming: false,
-                    error: null
-                }
-             };
-        });
+        // Use update function for the specific entry
+        updateThreadCacheEntry(targetThreadId, { history: finalHistoryEntry, isStreaming: false, error: null });
         console.log(`Cache updated with final state for thread ${targetThreadId}`);
     } catch (fetchError: unknown) {
          if (!(fetchError instanceof DOMException && fetchError.name === 'AbortError')) {
              console.error(`Failed to fetch final history for thread ${targetThreadId}:`, fetchError);
-             globalError.set(`Failed to fetch final state: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+             setGlobalError(`Failed to fetch final state: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`); // Correctly uses setter
          }
     }
 }
@@ -191,23 +150,25 @@ export const streamRun = async (
     runConfig: RunConfig,
     threadId: string | null
 ): Promise<AbortController> => {
-    globalError.set(null);
+    setGlobalError(null); // Correctly uses setter
     const controller = new AbortController();
-    const currentActiveSessionId = get(activeSessionId);
+    // Access .state for persisted store
+    const currentActiveSessionId = persistedActiveSessionId.state; // Correctly uses .state
 
     if (!currentActiveSessionId) {
         const errorMsg = "Cannot start run: No active session selected.";
         console.error(errorMsg);
-        globalError.set(errorMsg);
+        setGlobalError(errorMsg); // Correctly uses setter
         controller.abort();
         return controller;
     }
 
-    const sessionState = get(uiSessions)[currentActiveSessionId];
+    // Access .state for persisted store
+    const sessionState = persistedUiSessions.state[currentActiveSessionId]; // Correctly uses .state
     if (!sessionState) {
         const errorMsg = `Cannot start run: Active session state not found for ID ${currentActiveSessionId}.`;
         console.error(errorMsg);
-        globalError.set(errorMsg);
+        setGlobalError(errorMsg); // Correctly uses setter
         controller.abort();
         return controller;
     }
@@ -236,7 +197,7 @@ export const streamRun = async (
                     if (!response.ok) {
                         let errorMsg = `SSE connection failed! Status: ${response.status}`;
                         try { const errorBody = await response.json(); errorMsg += ` - ${errorBody.detail || JSON.stringify(errorBody)}`; } catch (e) { /* Ignore */ }
-                        globalError.set(`Connection Error: ${errorMsg}`);
+                        setGlobalError(`Connection Error: ${errorMsg}`); // Correctly uses setter
                         throw new Error(errorMsg);
                     }
                     console.log(`SSE stream opened for session ${currentActiveSessionId}`);
@@ -255,7 +216,7 @@ export const streamRun = async (
                         // Allow 'error' events even if targetThreadId is somehow null
                         if (!targetThreadId && eventType !== 'error') {
                             console.error(`SSE event type '${eventType}' received without a usable thread_id. Cannot process.`, parsedEvent);
-                            globalError.set(`System Error: Event '${eventType}' missing thread_id.`);
+                            setGlobalError(`System Error: Event '${eventType}' missing thread_id.`); // Correctly uses setter
                             return;
                         }
 
@@ -269,7 +230,7 @@ export const streamRun = async (
                                     handler(eventType, eventData as any, targetThreadId); // Pass eventType to combined handler
                                 } else {
                                      console.error(`Cannot process '${eventType}' without targetThreadId.`, parsedEvent);
-                                     globalError.set(`System Error: Cannot process '${eventType}' without thread ID.`);
+                                     setGlobalError(`System Error: Cannot process '${eventType}' without thread ID.`); // Correctly uses setter
                                 }
                             } else if (eventType === 'error') {
                                 handler(eventData as SSEErrorData, targetThreadId); // Pass potentially null targetThreadId
@@ -279,11 +240,11 @@ export const streamRun = async (
                                     Promise.resolve(handler(eventData as SSEEndData, targetThreadId, controller))
                                         .catch(err => {
                                             console.error("Error in async end handler:", err);
-                                            globalError.set("Error finalizing stream state.");
+                                            setGlobalError("Error finalizing stream state."); // Correctly uses setter
                                         });
                                 } else {
                                      console.error(`Cannot process 'end' without targetThreadId.`, parsedEvent);
-                                     globalError.set(`System Error: Cannot process 'end' without thread ID.`);
+                                     setGlobalError(`System Error: Cannot process 'end' without thread ID.`); // Correctly uses setter
                                 }
                             }
                         } else {
@@ -291,7 +252,7 @@ export const streamRun = async (
                         }
                     } catch (error: unknown) {
                         console.error('Failed to parse or handle SSE message data:', event.data, error);
-                        globalError.set(`Failed to process message: ${error instanceof Error ? error.message : String(error)}`);
+                        setGlobalError(`Failed to process message: ${error instanceof Error ? error.message : String(error)}`); // Correctly uses setter
                     }
                 },
 
@@ -303,7 +264,7 @@ export const streamRun = async (
                     if (controller.signal.aborted) { return; }
                     console.error(`SSE stream error for session ${currentActiveSessionId}:`, err);
                     const errorMsg = err instanceof Error ? err.message : String(err);
-                    globalError.set(`Stream Error: ${errorMsg}`);
+                    setGlobalError(`Stream Error: ${errorMsg}`); // Correctly uses setter
                     // Don't throw from onerror, allow graceful closure.
                 },
             });
@@ -312,7 +273,7 @@ export const streamRun = async (
             if (!(error instanceof DOMException && error.name === 'AbortError')) {
                 console.error(`Error setting up SSE stream for session ${currentActiveSessionId}:`, error);
                 // globalError is likely already set by onopen or apiFetch, but set again just in case
-                globalError.set(`Stream Setup Error: ${error instanceof Error ? error.message : String(error)}`);
+                setGlobalError(`Stream Setup Error: ${error instanceof Error ? error.message : String(error)}`); // Correctly uses setter
             }
         }
     });

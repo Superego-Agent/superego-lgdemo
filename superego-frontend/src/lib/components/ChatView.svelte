@@ -1,31 +1,31 @@
 <!-- @migration-task Error while migrating Svelte code: can't migrate `$: messages = history?.values?.messages ?? [];` to `$derived` because there's a variable named derived.
      Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
-	import { threadCacheStore } from '$lib/stores';
+	import { threadCacheStore } from '$lib/stores.svelte';
 	import { tick } from 'svelte';
-	import { derived } from 'svelte/store';
+	// import { derived } from 'svelte/store'; // Removed
 	import MessageCard from './MessageCard.svelte';
 
-	export let threadId: string;
-	const cacheEntry = derived(threadCacheStore, ($cache) => $cache[threadId]);
+	let { threadId } = $props<{ threadId: string }>(); // Use $props for runes mode
+	// Derive directly from the $state variable
+	const cacheEntry = $derived(threadCacheStore[threadId]);
 
-	let messageListContainer: HTMLDivElement; 
+	let messageListContainer: any = $state(); 
 
-	let history: HistoryEntry | null = null;
-	let isStreaming: boolean = false;
-	let error: string | null = null;
-    let showSpinner: boolean = false;
+	let historyState: HistoryEntry | null = $state(null);
+	let isStreaming: boolean = $state(false);
+	let error: string | null = $state(null);
+    let showSpinner: boolean = $state(false);
 
-	$: {
-		const entry = $cacheEntry;
-		history = entry?.history ?? null;
+	// Effect to update local state based on derived cacheEntry
+	$effect.pre(() => {
+		const entry = cacheEntry; // Use derived value
+		historyState = entry?.history ?? null;
 		isStreaming = entry?.isStreaming ?? false;
 		error = entry?.error ?? null;
-        showSpinner = isStreaming;
-	}
+		showSpinner = isStreaming;
+	});
 
-    let messages: MessageType[] = [];
-    $: messages = history?.values?.messages ?? [];
 
 </script>
 
@@ -36,7 +36,7 @@
 
 	{#if history}
 		<div class="message-list" bind:this={messageListContainer}>
-			{#each messages as message, i (message.nodeId + '-' + i)}
+			{#each historyState?.values?.messages ?? [] as message, i (message.nodeId + '-' + i)}
 				<MessageCard {message} />
 			{/each}
 		</div>

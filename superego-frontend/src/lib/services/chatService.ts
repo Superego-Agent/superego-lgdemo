@@ -1,6 +1,6 @@
-import { get } from 'svelte/store';
+// import { get } from 'svelte/store'; // Removed
 import { streamRun } from './sseService';
-import { globalError, uiSessions, activeSessionId } from '../stores';
+import { globalError, setGlobalError, persistedUiSessions, persistedActiveSessionId } from '../stores.svelte';
 
 // Removed updateChatConfig and currentRunConfigModules store,
 // as configuration is now managed directly within UISessionState.threads
@@ -12,19 +12,19 @@ import { globalError, uiSessions, activeSessionId } from '../stores';
  * @param userInput - The text entered by the user.
  */
 export async function sendUserMessage(userInput: string): Promise<void> {
-    globalError.set(null); // Clear global error before sending
+    setGlobalError(null); // Clear global error before sending
 
-    const currentSessionId = get(activeSessionId);
+    const currentSessionId = persistedActiveSessionId.state;
     if (!currentSessionId) {
         console.error("[chatService] Cannot send message: No active session ID.");
-        globalError.set("No active session selected.");
+        setGlobalError("No active session selected.");
         return;
     }
 
-    const sessionState = get(uiSessions)[currentSessionId];
+    const sessionState = persistedUiSessions.state[currentSessionId];
     if (!sessionState || !sessionState.threads) {
         console.error(`[chatService] Cannot send message: Session state or threads not found for ID ${currentSessionId}.`);
-        globalError.set("Session data not found.");
+        setGlobalError("Session data not found.");
         return;
     }
 
@@ -33,7 +33,7 @@ export async function sendUserMessage(userInput: string): Promise<void> {
 
     if (enabledConfigs.length === 0) {
         console.warn("[chatService] No enabled configurations to run.");
-        globalError.set("No configurations enabled to run.");
+        setGlobalError("No configurations enabled to run.");
         return;
     }
 

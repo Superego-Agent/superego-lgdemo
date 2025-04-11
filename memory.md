@@ -193,9 +193,11 @@ Current User Flow:
 *   Frontend State Refactor: COMPLETE. The architecture based on `threadCacheStore` is implemented.
 *   Backend History Fix: COMPLETE. `nodeId` is correctly handled.
 *   ChatView Spinner Fix: COMPLETE. Spinner now only shows during active streaming.
-*   Current Focus: Continuing the **Code Reorganisation (Context Minimisation)** task. The first two high-priority refactoring steps (SSE logic separation, Pagination component extraction) are complete. The next step is to continue analyzing the frontend codebase for further opportunities to improve context isolation and reduce cognitive load, as per the overall goal.
+*   **Svelte 5 Migration:** Automated migration tool run (2025-04-11). Components now use Svelte 5 syntax (`$props`, etc.). Note: The migration might require cleanup.
+*   **Immediate Focus:** **Svelte 5 Code Cleanup.** Address potential bugs/artifacts from automated migration (e.g., unnecessary `run()` calls), improve code quality post-migration before resuming other refactoring.
+*   **Future State Refactor:** Plan exists (`rune_refactor_plan.md`) to refactor state management using Runes (`$state`, `.svelte.ts` modules in `src/lib/state/`). **This is deferred until after cleanup.**
 
-## 2. Current Task: Code Reorganisation (Context Minimisation)
+## 2. Current Task: Svelte 5 Code Cleanup
 
 The primary goal is to reorganise the codebase (starting with the frontend) to **minimise the cognitive load (context size in tokens/concepts) required to understand or modify a specific piece of functionality.** This involves applying principles of good code design pragmatically, focusing on clarity and logical grouping rather than just superficial changes like line spacing.
 
@@ -223,19 +225,21 @@ The primary goal is to reorganise the codebase (starting with the frontend) to *
 
 ## 4. Key Guiding Principles & Learnings (Consolidated)
 
-*   A. Verify, Don't Assume: ALWAYS verify assumptions about APIs (esp. LangGraph - e.g., `thread_id` handling), libraries, configs, state. Check docs/code or ask. (Mistake Tally: ~7)
-*   B. Iterate Carefully: Work step-by-step. Confirm understanding. Avoid large, unverified changes. (Mistake Tally: ~3)
-*   C. Use Svelte Reactivity: Leverage `$:` and derived stores. Avoid unnecessary local state. (Mistake Tally: ~2)
-*   D. Effective Commenting (Strictly Enforced): Comments must add value (clarify non-obvious logic/why, provide structure). Avoid obvious/narrative/TODOs/placeholders. Quality over quantity. **Strict adherence required.** (Mistake Tally: ~46)
-*   E. Clean Code: Prioritize clarity, conciseness. Use abstractions/utils. Refactor monolithic components. (Mistake Tally: ~2)
-*   F. Correct Tool Usage: Use tools precisely (syntax, escaping). Re-read files on `apply_diff` errors. (Mistake Tally: ~12)
-*   G. State Management: Keep state lean. Use `threadCacheStore` for thread view state. Use wrappers (`ThreadCacheData`) to combine backend/frontend state cleanly. (Mistake Tally: ~3)
-*   H. Follow Plans & Instructions: Adhere to agreed plans. Confirm understanding before acting. **Stay focused on the core task objective.** (Mistake Tally: ~5)
-*   I. Other: Check global types (`global.d.ts`), component props/types, backend imports, Pydantic validation, mode restrictions, server caching effects. (Mistake Tally: ~12)
-*   J. Adapt to Feedback: Refine policies (like commenting) and approaches based on user feedback and evolving requirements. (Mistake Tally: ~1)
-*   **K. Recent Reflection (2025-04-11 ~1:17 PM):** During the recent refactoring planning and execution:
-    *   Repeatedly violated the strict commenting policy (Guideline D) by adding ephemeral/narrative comments despite explicit instructions and corrections. Requires increased vigilance.
-    *   Initially diverged from the core task objective (context isolation) by suggesting broader, lower-priority refactors instead of focusing on the highest-impact structural changes first (related to Guideline H). Required user intervention to refocus the plan.
+*   **A. Context Conservation (CRITICAL):** LLM performance degrades significantly with excessive context length. Every token included in prompts, code, memory, and chat history impacts focus, accuracy, and cost. Therefore:
+    *   **Be Concise:** Keep plans, summaries, and memory entries focused and concise, but ensure *necessary* detail and nuance are captured. Balance brevity with clarity.
+    *   **Avoid Redundancy in Chat:** Do NOT include code snippets, diffs, or lengthy file contents in chat responses if they can be accessed or applied via tools. Use tools directly. The user can review tool inputs/outputs separately. This is a major source of context waste.
+    *   **Targeted Tool Use:** When requesting information (e.g., `read_file`), request only the necessary portions (using line numbers) rather than entire files whenever feasible.
+    *   **Purpose:** This discipline saves tokens, improves model focus, reduces costs, and leads to better overall agent performance and more successful task completion.
+*   **B. Verify, Don't Assume:** ALWAYS verify assumptions about APIs (esp. LangGraph - e.g., `thread_id` handling), libraries, configs, state. Check docs/code or ask. Meticulously address *all* feedback/errors (TS errors, tool failures, user corrections). Don't fix comments instead of code. Verify imports and syntax. (Mistake Tally: ~7 + recent detail errors)
+*   **C. Iterate Carefully:** Work step-by-step. Confirm understanding. Avoid large, unverified changes. (Mistake Tally: ~3)
+*   **D. Svelte 5 Mastery:** Deep understanding of Runes (`$state`, `$derived`, `$effect`), their reactivity, and correct usage (esp. `$derived` access) is crucial. Consult migration guide (`SVELTE-V5-MIGRATION-GUIDE.md`) and docs. Avoid Svelte 4 patterns ($:, store syntax) unless interfacing with legacy stores (`get()`). (Mistake Tally: ~2 + recent Rune errors)
+*   **E. Effective Commenting (Strictly Enforced):** Comments must add value (clarify non-obvious logic/why, provide structure). Avoid obvious/narrative/TODOs/placeholders/commented-code. Quality over quantity. **Strict adherence required.** (Mistake Tally: ~46 + recent violations)
+*   **F. Clean Code & Abstraction:** Prioritize simple, direct, concise code. Aggressively refactor repeated logic into helpers (DRY). Remove verbose logging/checks. Use abstractions/utils. Refactor monolithic components. (Mistake Tally: ~2 + recent DRY issues)
+*   **G. Correct Tool Usage & Adherence:** Use tools precisely (syntax, escaping). Re-read files on `apply_diff` errors. Strict adherence to tool usage rules (e.g., `ask_followup_question` when needed) is mandatory. (Mistake Tally: ~12 + recent violations)
+*   **H. State Management:** Keep state lean. Use wrappers (`ThreadCacheData`) to combine backend/frontend state cleanly. (Mistake Tally: ~3)
+*   **I. Follow Plans & Instructions:** Define full task scope (incl. refactoring consumers) before implementation. Plan complex changes methodically (Architect mode). Adhere to agreed plans. Confirm understanding before acting. **Stay focused on the core task objective.** (Mistake Tally: ~5 + recent scope/focus issues)
+*   **J. Other:** Check global types (`global.d.ts`), component props/types, backend imports, Pydantic validation, mode restrictions, server caching effects. (Mistake Tally: ~12)
+*   **K. Adapt to Feedback:** Refine policies (like commenting) and approaches based on user feedback and evolving requirements. (Mistake Tally: ~1)
 
 *(Mistake tallies are approximate aggregates from previous context)*
 

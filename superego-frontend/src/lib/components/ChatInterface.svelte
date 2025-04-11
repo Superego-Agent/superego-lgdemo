@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { globalError, activeSessionId, uiSessions } from '../stores';
+    import { globalError, setGlobalError, persistedActiveSessionId, persistedUiSessions } from '../stores.svelte';
     import { sendUserMessage } from '../services/chatService';
     import ChatInput from './ChatInput.svelte';
     import RunConfigurationPanel from './RunConfigurationPanel.svelte';
@@ -14,8 +14,8 @@
     let containerWidth: number = $state(0);
 
     // --- Reactive State Derivations ---
-    let currentSessionId = $derived($activeSessionId);
-    let currentSessionState = $derived(currentSessionId ? $uiSessions[currentSessionId] : null);
+    let currentSessionId = $derived(persistedActiveSessionId.state);
+    let currentSessionState = $derived(currentSessionId ? persistedUiSessions.state[currentSessionId] : null);
     let activeThreadIds = $derived(currentSessionState?.threads ? Object.keys(currentSessionState.threads) : []);
 
 
@@ -27,11 +27,11 @@
             return;
         }
 
-        const sessionState = $uiSessions[currentSessionId];
+        const sessionState = persistedUiSessions.state[currentSessionId];
         if (!sessionState) {
              // Setting globalError here might be redundant if sendUserMessage handles it,
              // but it provides immediate feedback if the session is missing.
-             globalError.set("Cannot send message: Active session not found.");
+             setGlobalError("Cannot send message: Active session not found.");
              console.error('[ChatInterface] Send prevented: Session state not found for ID:', currentSessionId);
              return;
         }
@@ -45,10 +45,10 @@
 
 <div class="chat-interface">
     <!-- === Global Error Banner === -->
-    {#if $globalError}
+    {#if globalError}
         <div class="error-banner" >
              <div class="error-content">
-                 <span>Error: {$globalError}</span>
+                 <span>Error: {globalError}</span>
              </div>
          </div>
     {/if}

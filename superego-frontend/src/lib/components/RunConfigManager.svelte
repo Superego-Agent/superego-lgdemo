@@ -1,23 +1,21 @@
 <script lang="ts">
     // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
-    import { activeSessionId, uiSessions } from '../stores'; 
-    import { activeConfigEditorId } from "$lib/stores/uiState";
+    import { persistedActiveSessionId, persistedUiSessions } from '../stores.svelte'; 
+    import { activeConfigEditorId, setActiveConfigEditorId } from "$lib/stores/uiState.svelte";
     import ConfigCard from './ConfigCard.svelte';
-    import { createEventDispatcher } from 'svelte';
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
 
-    const dispatch = createEventDispatcher();
-
     // Reactive access to the current session's configurations
-    let currentSessionId = $derived($activeSessionId);
-    let currentSession = $derived(currentSessionId ? $uiSessions[currentSessionId] : null);
+    // Access .state for persisted stores in derived
+    let currentSessionId = $derived(persistedActiveSessionId.state);
+    let currentSession = $derived(currentSessionId ? persistedUiSessions.state[currentSessionId] : null);
     let threadConfigs = $derived(currentSession?.threads ?? {});
-    let configEntries = $derived(Object.entries(threadConfigs)); // [threadId, ThreadConfigState][]
+    let configEntries = $derived(Object.entries(threadConfigs));
 
     function handleCardSelect(event: CustomEvent<{ threadId: string }>) {
         const selectedThreadId = event.detail.threadId;
         if (currentSessionId) {
-            activeConfigEditorId.set(selectedThreadId);
+            setActiveConfigEditorId(selectedThreadId); 
         }
     }
 
@@ -33,17 +31,13 @@
             isEnabled: true // Default to enabled
         };
 
-        uiSessions.update(sessions => {
-            if (sessions[currentSessionId]) {
-                // Add the new configuration
-                sessions[currentSessionId].threads = {
-                    ...sessions[currentSessionId].threads,
-                    [newThreadId]: newConfig
-                };
-            }
-            activeConfigEditorId.set(newThreadId);
-            return sessions;
-        });
+        // Use .state for persisted store and direct mutation
+        if (currentSessionId && persistedUiSessions.state[currentSessionId]) {
+            persistedUiSessions.state[currentSessionId].threads[newThreadId] = newConfig;
+            setActiveConfigEditorId(newThreadId); 
+        } else {
+            console.warn("RunConfigManager: Cannot add configuration, no active session found in store.");
+        }
     }
 
 </script>
@@ -55,7 +49,7 @@
             <ConfigCard
                 {threadId}
                 {config}
-                isActive={$activeConfigEditorId === threadId}
+                isActive={activeConfigEditorId === threadId} 
                 on:select={handleCardSelect}
             />
         {/each}

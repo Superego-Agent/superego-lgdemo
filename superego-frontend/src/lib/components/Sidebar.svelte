@@ -2,7 +2,7 @@
   import { preventDefault } from 'svelte/legacy';
 
   import { tick } from "svelte";
-  import { uiSessions, activeSessionId } from "../stores";
+  import { persistedUiSessions, persistedActiveSessionId } from "../stores.svelte";
   import {
     createNewSession,
     renameSession,
@@ -21,7 +21,7 @@
 
   // --- Reactive Derivations ---
   // Reactive statement uses the uiSessions store directly
-  let sortedSessions = $derived(Object.values($uiSessions).sort(
+  let sortedSessions = $derived(Object.values(persistedUiSessions.state).sort(
     (a: UISessionState, b: UISessionState) =>
       new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
   ));
@@ -33,9 +33,9 @@
 
   function selectConversation(sessionId: string) {
     // Use $activeSessionId store directly
-    if (sessionId === $activeSessionId) return;
+    if (sessionId === persistedActiveSessionId.state) return;
     editingSessionId = null;
-    activeSessionId.set(sessionId);
+    persistedActiveSessionId.state = sessionId;
   }
 
   function startRename(event: MouseEvent, session: UISessionState) {
@@ -78,7 +78,7 @@
     event.stopPropagation();
 
     // Use $uiSessions store directly
-    const sessionToDelete = $uiSessions[sessionId];
+    const sessionToDelete = persistedUiSessions.state[sessionId];
     if (!sessionToDelete) return;
 
     if (
@@ -111,10 +111,10 @@
           <span>Add Session</span>
         </button>
       </li>
-      {#each sortedSessions as session: UISessionState (session.sessionId)}
+      {#each sortedSessions as session (session.sessionId)}
         <!-- Use $activeSessionId store directly -->
         <li
-          class:active={session.sessionId === $activeSessionId}
+          class:active={session.sessionId === persistedActiveSessionId.state}
           class:editing={editingSessionId === session.sessionId}
         >
           {#if editingSessionId === session.sessionId}

@@ -1,41 +1,8 @@
-import { get } from 'svelte/store';
+// import { get } from 'svelte/store'; // Removed
 import { v4 as uuidv4 } from 'uuid';
-import { uiSessions, activeSessionId, knownThreadIds } from './stores';
-import { logOperationStatus } from './utils';
-
-/** Helper to safely update a session if it exists - returns boolean for logging */
-function _updateSessionIfExists(
-    sessionId: string,
-    updateFn: (session: UISessionState) => UISessionState | void
-): boolean {
-    let updated = false;
-    uiSessions.update(sessions => {
-        const session = sessions[sessionId];
-        if (session) {
-            const result = updateFn(session);
-            sessions[sessionId] = result === undefined ? session : result;
-            updated = true;
-        } else {
-            console.warn(`Attempted operation on non-existent session: ${sessionId}`);
-        }
-        return sessions;
-    });
-    return updated;
-}
-
-/** Helper to update known threads - returns boolean for logging */
-function _addKnownThreadIdInternal(threadId: string): boolean {
-    let added = false;
-    knownThreadIds.update(ids => {
-        if (!ids.includes(threadId)) {
-            ids.push(threadId);
-            added = true;
-        }
-        return ids;
-    });
-    return added;
-}
-
+import { persistedUiSessions, persistedActiveSessionId, persistedKnownThreadIds } from './stores.svelte'; // Import renamed state instances
+import { activeConfigEditorId, setActiveConfigEditorId } from './stores/uiState.svelte'; 
+import { logOperationStatus } from './utils'; // Keep for now
 
 /**
  * Creates a new UI session, adds it to the store, and sets it as active.
@@ -46,19 +13,25 @@ export function createNewSession(name: string = "New Session"): UISessionState {
     // This operation always succeeds if it runs, keep specific log
     const newSessionId = uuidv4();
     const now = new Date().toISOString();
+    // Create default config first
+    const defaultThreadId = uuidv4();
+    const defaultThreadConfig: ThreadConfigState = {
+        name: "Default Config",
+        runConfig: { configuredModules: [] },
+        isEnabled: true
+    };
+
     const newSession: UISessionState = {
         sessionId: newSessionId,
         name: name,
         createdAt: now,
         lastUpdatedAt: now,
-        threads: {}
+        threads: { [defaultThreadId]: defaultThreadConfig } // Initialize with default
     };
 
-    uiSessions.update(sessions => {
-        sessions[newSessionId] = newSession;
-        return sessions;
-    });
-    activeSessionId.set(newSessionId);
+    persistedUiSessions.state[newSessionId] = newSession;
+    persistedActiveSessionId.state = newSessionId;
+    setActiveConfigEditorId(defaultThreadId); // Set default config as active editor
     console.log(`[OK] Created new session: ${newSessionId} (${name})`);
     return newSession;
 }
@@ -69,12 +42,15 @@ export function createNewSession(name: string = "New Session"): UISessionState {
  * @param newName The new name for the session.
  */
 export function renameSession(sessionId: string, newName: string): void {
-    logOperationStatus(`Rename session ${sessionId} to "${newName}"`, () =>
-        _updateSessionIfExists(sessionId, (session) => {
-            session.name = newName;
-            session.lastUpdatedAt = new Date().toISOString();
-        })
-    );
+    // Direct mutation
+    const sessionToRename = persistedUiSessions.state[sessionId];
+    if (sessionToRename) {
+        sessionToRename.name = newName;
+        sessionToRename.lastUpdatedAt = new Date().toISOString();
+        console.log(`[OK] Renamed session ${sessionId} to "${newName}"`);
+    } else {
+         console.warn(`Attempted rename on non-existent session: ${sessionId}`);
+    }
 }
 
 /**
@@ -83,20 +59,20 @@ export function renameSession(sessionId: string, newName: string): void {
  */
 export function deleteSession(sessionId: string): void {
     // Deletion is specific, keep direct logging
-    const sessions = get(uiSessions);
-    if (!sessions[sessionId]) {
+    // Direct check and mutation/assignment
+    if (!persistedUiSessions.state[sessionId]) {
         console.warn(`Attempted to delete non-existent session: ${sessionId}`);
         return;
     }
-    uiSessions.update(s => {
-        delete s[sessionId];
-        console.log(`[OK] Deleted session: ${sessionId}`);
-        if (get(activeSessionId) === sessionId) {
-            activeSessionId.set(null);
-            console.log(`[OK] Cleared active session ID as it was deleted.`);
-        }
-        return s;
-    });
+
+    delete persistedUiSessions.state[sessionId];
+    console.log(`[OK] Deleted session: ${sessionId}`);
+
+    if (persistedActiveSessionId.state === sessionId) {
+        const remainingIds = Object.keys(persistedUiSessions.state);
+        persistedActiveSessionId.state = remainingIds.length > 0 ? remainingIds[0] : null;
+        console.log(`[OK] Active session was deleted. New active session: ${persistedActiveSessionId.state}`);
+    }
 }
 
 /**
@@ -106,17 +82,24 @@ export function deleteSession(sessionId: string): void {
  * @param threadId The backend thread ID to add.
  */
 export function addThreadToSession(sessionId: string, threadId: string): void {
-    logOperationStatus(`Add thread ${threadId} to session ${sessionId}`, () =>
-        _updateSessionIfExists(sessionId, (session) => {
-            // The presence of threadId as a key in session.threads implies association.
-            // We just need to update the timestamp and ensure it's known globally.
-            session.lastUpdatedAt = new Date().toISOString();
-            // Log adding to known threads separately
-            logOperationStatus(`Add thread ${threadId} to knownThreadIds`, () =>
-                _addKnownThreadIdInternal(threadId)
-            );
-        })
-    );
+    // Direct mutation for knownThreadIds
+    if (!persistedKnownThreadIds.state.includes(threadId)) {
+        persistedKnownThreadIds.state.push(threadId);
+         console.log(`[OK] Added thread ${threadId} to knownThreadIds`);
+    }
+
+    // Direct mutation for session timestamp
+    const sessionToAddThread = persistedUiSessions.state[sessionId];
+    if (sessionToAddThread) {
+        // If thread doesn't exist yet in this session, add it (Phase 2 will refine this)
+        if (!sessionToAddThread.threads[threadId]) {
+             console.warn(`Thread ${threadId} not found in session ${sessionId} during addThreadToSession, only updating timestamp.`);
+        }
+        sessionToAddThread.lastUpdatedAt = new Date().toISOString();
+        console.log(`[OK] Associated thread ${threadId} with session ${sessionId} (updated timestamp)`);
+    } else {
+        console.warn(`Attempted addThreadToSession on non-existent session: ${sessionId}`);
+    }
 }
 
 /**
@@ -126,14 +109,20 @@ export function addThreadToSession(sessionId: string, threadId: string): void {
  * @param threadId The backend thread ID to remove.
  */
 export function removeThreadFromSession(sessionId: string, threadId: string): void {
-    logOperationStatus(`Remove thread ${threadId} from session ${sessionId}`, () =>
-        _updateSessionIfExists(sessionId, (session) => {
-            if (threadId in session.threads) {
-                delete session.threads[threadId];
-                session.lastUpdatedAt = new Date().toISOString();
-            }
-        })
-    );
+    const sessionToRemoveFrom = persistedUiSessions.state[sessionId];
+    if (sessionToRemoveFrom?.threads?.[threadId]) {
+        delete sessionToRemoveFrom.threads[threadId];
+        sessionToRemoveFrom.lastUpdatedAt = new Date().toISOString();
+        console.log(`[OK] Removed thread ${threadId} from session ${sessionId}`);
+        // Also check if the removed thread was the active editor
+        if (activeConfigEditorId === threadId) {
+            const remainingThreadIds = Object.keys(sessionToRemoveFrom.threads);
+            setActiveConfigEditorId(remainingThreadIds.length > 0 ? remainingThreadIds[0] : null);
+            console.log(`[OK] Active config editor was removed. New active editor: ${activeConfigEditorId}`);
+        }
+    } else {
+         console.warn(`Attempted removeThreadFromSession for non-existent session ${sessionId} or thread ${threadId}`);
+    }
 }
 
 /**
@@ -141,8 +130,10 @@ export function removeThreadFromSession(sessionId: string, threadId: string): vo
  * @param threadId The thread ID to add.
  */
 export function addKnownThreadId(threadId: string): void {
-     logOperationStatus(`Add thread ${threadId} to knownThreadIds`, () =>
-         _addKnownThreadIdInternal(threadId)
-     );
+   // Direct mutation
+   if (!persistedKnownThreadIds.state.includes(threadId)) {
+       persistedKnownThreadIds.state.push(threadId);
+       console.log(`[OK] Added thread ${threadId} to knownThreadIds`);
+   }
 }
 

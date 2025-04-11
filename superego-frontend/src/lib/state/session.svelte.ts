@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { localStore } from '../utils/localStore.svelte';
+import { persistedLocalState } from '../utils/persistedLocalState.svelte';
 
 // --- Constants ---
 const SESSIONS_STORAGE_KEY = 'superego_sessions';
@@ -19,16 +19,16 @@ function createDefaultSession(sessionId: string, name: string): UISessionState {
 
 // --- Core Reactive State (Persisted via LocalStore) ---
 
-let storedSessions = localStore<Record<string, UISessionState>>(SESSIONS_STORAGE_KEY, {});
-let storedActiveSessionId = localStore<string | null>(ACTIVE_SESSION_ID_STORAGE_KEY, null);
-let storedKnownThreadIds = localStore<string[]>(KNOWN_THREAD_IDS_STORAGE_KEY, []);
+let storedSessions = persistedLocalState<Record<string, UISessionState>>(SESSIONS_STORAGE_KEY, {});
+let storedActiveSessionId = persistedLocalState<string | null>(ACTIVE_SESSION_ID_STORAGE_KEY, null);
+let storedKnownThreadIds = persistedLocalState<string[]>(KNOWN_THREAD_IDS_STORAGE_KEY, []);
 
 
 // --- Internal Session Modification Helper ---
 
 /** Gets a session, calls the modifier function, and updates timestamp. */
 function _modifySession(sessionId: string, modifier: (session: UISessionState) => void): void {
-    const session = storedSessions.value[sessionId];
+    const session = storedSessions.state[sessionId];
     if (session) {
         modifier(session);
         session.lastUpdatedAt = new Date().toISOString();
@@ -40,8 +40,8 @@ function _modifySession(sessionId: string, modifier: (session: UISessionState) =
 
 export function createNewSession(name: string = "New Session"): string {
     const newSessionId = uuidv4();
-    storedSessions.value[newSessionId] = createDefaultSession(newSessionId, name);
-    storedActiveSessionId.value = newSessionId;
+    storedSessions.state[newSessionId] = createDefaultSession(newSessionId, name);
+    storedActiveSessionId.state = newSessionId;
     return newSessionId;
 }
 
@@ -52,24 +52,24 @@ export function renameSession(sessionId: string, newName: string): void {
 }
 
 export function deleteSession(sessionId: string): void {
-    if (storedSessions.value[sessionId]) {
-        delete storedSessions.value[sessionId];
-        if (storedActiveSessionId.value === sessionId) {
-            const remainingIds = Object.keys(storedSessions.value);
-            storedActiveSessionId.value = remainingIds.length > 0 ? remainingIds[0] : null;
+    if (storedSessions.state[sessionId]) {
+        delete storedSessions.state[sessionId];
+        if (storedActiveSessionId.state === sessionId) {
+            const remainingIds = Object.keys(storedSessions.state);
+            storedActiveSessionId.state = remainingIds.length > 0 ? remainingIds[0] : null;
         }
     }
 }
 
 export function setActiveSessionId(sessionId: string | null): void {
-    if (sessionId === null || storedSessions.value[sessionId]) {
-        storedActiveSessionId.value = sessionId;
+    if (sessionId === null || storedSessions.state[sessionId]) {
+        storedActiveSessionId.state = sessionId;
     }
 }
 
 export function addKnownThreadId(threadId: string): void {
-    if (!storedKnownThreadIds.value.includes(threadId)) {
-        storedKnownThreadIds.value.push(threadId);
+    if (!storedKnownThreadIds.state.includes(threadId)) {
+        storedKnownThreadIds.state.push(threadId);
     }
 }
 
@@ -119,9 +119,9 @@ export function setAdherenceLevel(sessionId: string, threadId: string, moduleId:
 
 // --- Derived State (Read-Only Exports) ---
 
-export const sessions = $derived(storedSessions.value);
-export const activeSessionId = $derived(storedActiveSessionId.value);
-export const knownThreadIds = $derived(storedKnownThreadIds.value);
+export const sessions = $derived(storedSessions.state);
+export const activeSessionId = $derived(storedActiveSessionId.state);
+export const knownThreadIds = $derived(storedKnownThreadIds.state);
 export const activeSession = $derived(activeSessionId ? sessions[activeSessionId] : null);
 export const activeSessionThreadConfigs = $derived(() => {
     const currentSession = activeSession;

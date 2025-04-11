@@ -9,7 +9,7 @@
 
   // --- Component State ---
   let userInput: string = $state("");
-  let inputElement: HTMLTextAreaElement = $state();
+  let inputElement: HTMLTextAreaElement | null = $state(null);
   let isExpanded = $state(false);
 
   // --- Props ---
