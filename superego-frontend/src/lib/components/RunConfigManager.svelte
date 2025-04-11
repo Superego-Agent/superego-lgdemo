@@ -57,11 +57,10 @@
                 on:select={handleCardSelect}
             />
         {/each}
-        <button class="add-button" on:click={addConfiguration} title="Add new configuration">
-            + Add Config
-        </button>
     </div>
-    
+    <button class="add-button" on:click={addConfiguration} title="Add new configuration">
+        + Add Config
+    </button>
 </div>
 
 <style lang="scss">
@@ -70,7 +69,7 @@
         flex-direction: column;
         gap: var(--space-sm);
         padding: var(--space-sm) 0; // Add some padding
-        border-bottom: 1px solid var(--bg); // Separator
+        border-bottom: 1px solid var(--border-color-light); // Separator
         margin-bottom: var(--space-sm); // Space below
     }
 
@@ -81,6 +80,7 @@
     }
 
     .add-button {
+        // Basic styling, can be improved
         align-self: flex-start;
         padding: var(--space-xs) var(--space-sm);
         background-color: var(--bg-secondary);
@@ -88,7 +88,6 @@
         border-radius: var(--radius-sm);
         cursor: pointer;
         color: var(--text-secondary);
-        border: 2px dashed var(--bg);
 
         &:hover {
             background-color: var(--bg-hover);

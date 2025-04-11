@@ -5,13 +5,10 @@
 	import MessageCard from './MessageCard.svelte'; // Use existing component
 
 	export let threadId: string;
-
-	// Derive the specific cache entry for this threadId
 	const cacheEntry = derived(threadCacheStore, ($cache) => $cache[threadId]);
 
-	let messageListContainer: HTMLDivElement; // Define container variable
+	let messageListContainer: HTMLDivElement; 
 
-	// Derive individual state pieces for easier use in the template
 	let history: HistoryEntry | null = null;
 	let isStreaming: boolean = false;
 	let error: string | null = null;
@@ -22,7 +19,6 @@
 		history = entry?.history ?? null;
 		isStreaming = entry?.isStreaming ?? false;
 		error = entry?.error ?? null;
-        // Show spinner only if actively streaming
         showSpinner = isStreaming;
 	}
 
@@ -31,6 +27,7 @@
     $: messages = history?.values?.messages ?? [];
 
     // // Reactive statement for conditional auto-scrolling
+    // Don't delete this comment, but the code doesn't work and crashes the app for some reason. 
     // $: if (messageListContainer && messages) {
     //     const scrollToBottomIfNear = async () => {
     //         const { scrollHeight, scrollTop, clientHeight } = messageListContainer;

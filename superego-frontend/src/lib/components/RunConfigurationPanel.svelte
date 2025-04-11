@@ -142,6 +142,7 @@
   }
 </script>
 
+  <RunConfigManager />
 
 <div class="selector-card">
   <!-- Header with integrated toggle -->
@@ -152,7 +153,7 @@
     tabindex="0"
     on:keydown={(e) => e.key === "Enter" && toggleExpand()}
   >
-    <span class="header-title">Configuration(s)</span>
+    <span class="header-title">Constitutions</span>
     {#if isExpanded}
       <IconChevronDown class="toggle-icon" />
     {:else}
@@ -162,8 +163,6 @@
 
   <!-- Collapsible content area -->
   {#if isExpanded}
-    <RunConfigManager />
-
     <div class="options-container">
       {#if $isLoadingGlobalConstitutions}
         <p class="loading-text">Loading global constitutions...</p>
@@ -189,6 +188,7 @@
           </div>
 
           {#each $localConstitutionsStore as item (item.id)}
+            <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
                 <input
@@ -197,7 +197,7 @@
                   on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
                  />
                 <span class="title-text"
-                  ><span class="local-indicator">Local</span
+                  ><span class="local-indicator">[Local]</span
                   >{item.title}</span
                 >
                 <button
@@ -226,6 +226,7 @@
           {/each}
 
           {#each $globalConstitutions as item (item.id)}
+            <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
                 <input
@@ -447,8 +448,5 @@
     color: var(--secondary); /* Or another distinct color */
     margin-right: var(--space-xs);
     font-size: 0.9em;
-    border: 1px solid var(--secondary);
-    border-radius: var(--radius-pill);
-    padding: 1px 4px;
   }
 </style>

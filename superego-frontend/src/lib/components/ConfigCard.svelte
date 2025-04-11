@@ -39,7 +39,7 @@
         display: flex;
         align-items: center;
         gap: var(--space-xs);
-        min-width: 100px; // Ensure it has some minimum width
+        min-width: 100px; 
 
         &:hover {
             border-color: var(--primary-light);
