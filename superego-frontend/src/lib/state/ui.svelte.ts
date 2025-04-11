@@ -3,4 +3,4 @@ class UIStateStore {
 	activeConfigEditorId = $state<string | null>(null);
 }
 
-export const uiState = new UIStateStore();
+export const UiStore = new UIStateStore();

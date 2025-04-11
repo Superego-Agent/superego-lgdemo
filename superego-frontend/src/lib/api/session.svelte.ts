@@ -1,12 +1,12 @@
 import { logExecution } from '../utils/logExecution.svelte'; // Adjusted path
-import { appState } from '../state/app.svelte'; // Adjusted path
+import { appStateStore } from '../state/app.svelte'; // Adjusted path
 
 // Base URL for the API - Consider moving to a shared config if used elsewhere
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Generic API fetch function - Consider moving to a shared utility if needed by other API modules
 async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-    appState.globalError = null; // Reset global error state
+    appStateStore.globalError = null; // Reset global error state
 
     try {
         const response = await fetch(url, {
@@ -43,7 +43,7 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
             console.error('API Fetch Error:', url, error);
             const errorMsg = error instanceof Error ? error.message : String(error);
-            appState.globalError = errorMsg || 'An unknown API error occurred.';
+            appStateStore.globalError = errorMsg || 'An unknown API error occurred.';
             throw error;
         } else {
             console.log('API Fetch aborted:', url);

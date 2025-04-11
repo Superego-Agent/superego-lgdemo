@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { appState } from '../state/app.svelte'; // Use new app state
-    import { sessionState } from '../state/session.svelte'; // Import new session state
+    import { appStateStore } from '../state/app.svelte'; // Use new app state
+    import { sessionStore } from '../state/session.svelte'; // Import new session state
     import { sendUserMessage } from '../services/chat.svelte';
     import ChatInput from './ChatInput.svelte';
     import RunConfigurationPanel from './RunConfigurationPanel.svelte';
@@ -15,8 +15,8 @@
     let containerWidth: number = $state(0);
 
     // --- Reactive State Derivations ---
-    let currentSessionId = $derived(sessionState.activeSessionId);
-    let currentSessionState = $derived(currentSessionId ? sessionState.uiSessions[currentSessionId] : null);
+    let currentSessionId = $derived(sessionStore.activeSessionId.state); // Derive from .state
+    let currentSessionState = $derived(currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null); // Use derived string ID
     let activeThreadIds = $derived(currentSessionState?.threads ? Object.keys(currentSessionState.threads) : []);
 
 
@@ -28,11 +28,12 @@
             return;
         }
 
-        const currentSessionData = sessionState.uiSessions[currentSessionId]; // Renamed to avoid conflict
+        // Use the derived value here too
+        const currentSessionData = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null; // Use correct variable name
         if (!currentSessionData) {
              // Setting globalError here might be redundant if sendUserMessage handles it,
              // but it provides immediate feedback if the session is missing.
-             appState.globalError = "Cannot send message: Active session not found.";
+             appStateStore.globalError = "Cannot send message: Active session not found.";
              console.error('[ChatInterface] Send prevented: Session state not found for ID:', currentSessionId);
              return;
         }
@@ -46,10 +47,10 @@
 
 <div class="chat-interface">
     <!-- === Global Error Banner === -->
-    {#if appState.globalError}
+    {#if appStateStore.globalError}
         <div class="error-banner" >
              <div class="error-content">
-                 <span>Error: {appState.globalError}</span>
+                 <span>Error: {appStateStore.globalError}</span>
              </div>
          </div>
     {/if}

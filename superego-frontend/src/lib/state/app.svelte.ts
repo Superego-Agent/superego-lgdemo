@@ -25,4 +25,4 @@ class AppStateStore {
 		}
 	}
 }
-export const appState = new AppStateStore();
+export const appStateStore = new AppStateStore();

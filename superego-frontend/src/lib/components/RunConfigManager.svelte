@@ -1,21 +1,21 @@
 <script lang="ts">
     // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
-    import { sessionState } from '../state/session.svelte'; // Import new session state
-    import { uiState } from "$lib/state/ui.svelte"; // Import new ui state
+    import { sessionStore } from '../state/session.svelte'; // Import new session state
+    import { UiStore } from "$lib/state/ui.svelte"; // Import new ui state
     import ConfigCard from './ConfigCard.svelte';
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
 
     // Reactive access to the current session's configurations
     // Access .state for persisted stores in derived
-    let currentSessionId = $derived(sessionState.activeSessionId);
-    let currentSession = $derived(currentSessionId ? sessionState.uiSessions[currentSessionId] : null);
+    let currentSessionId = $derived(sessionStore.activeSessionId.state); // Access .state
+    let currentSession = $derived(currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null); // Access .state (already correct, but depends on fixed currentSessionId)
     let threadConfigs = $derived(currentSession?.threads ?? {});
     let configEntries = $derived(Object.entries(threadConfigs));
 
     function handleCardSelect(event: CustomEvent<{ threadId: string }>) {
         const selectedThreadId = event.detail.threadId;
         if (currentSessionId) {
-            uiState.activeConfigEditorId = selectedThreadId;
+            UiStore.activeConfigEditorId = selectedThreadId;
         }
     }
 
@@ -32,11 +32,13 @@
         };
 
         // Use .state for persisted store and direct mutation
-        if (currentSessionId && sessionState.uiSessions[currentSessionId]) {
-          sessionState.uiSessions[currentSessionId].threads[newThreadId] = newConfig;
-          // Ensure lastUpdatedAt is updated for sorting in Sidebar
-          sessionState.uiSessions[currentSessionId].lastUpdatedAt = new Date().toISOString();
-            uiState.activeConfigEditorId = newThreadId;
+        // Use .state and immutable update pattern
+        if (currentSessionId && sessionStore.uiSessions.state[currentSessionId]) {
+            const sessionToUpdate = sessionStore.uiSessions.state[currentSessionId];
+            const updatedThreads = { ...sessionToUpdate.threads, [newThreadId]: newConfig };
+            const updatedSession = { ...sessionToUpdate, threads: updatedThreads, lastUpdatedAt: new Date().toISOString() };
+            sessionStore.uiSessions.state = { ...sessionStore.uiSessions.state, [currentSessionId]: updatedSession };
+            UiStore.activeConfigEditorId = newThreadId;
         } else {
             console.warn("RunConfigManager: Cannot add configuration, no active session found in store.");
         }
@@ -46,21 +48,75 @@
 
 <div class="run-config-manager">
     <div class="cards-container">
-        
         {#each configEntries as [threadId, config] (threadId)}
             <ConfigCard
                 {threadId}
                 config={config as ThreadConfigState}
-                isActive={uiState.activeConfigEditorId === threadId}
+                isActive={UiStore.activeConfigEditorId === threadId}
                 on:select={handleCardSelect}
+                on:delete={() => deleteConfiguration(threadId)}
+                on:rename={(e: CustomEvent<{ newName: string }>) => renameConfiguration(threadId, e.detail.newName)}
+                on:toggle={(e: CustomEvent<{ isEnabled: boolean }>) => toggleConfiguration(threadId, e.detail.isEnabled)}
             />
         {/each}
+        
         <button class="add-button" onclick={addConfiguration} title="Add new configuration">
-            + Add 
+            + Add
         </button>
     </div>
-
 </div>
+
+<!-- Functions below were missing from previous diff attempt and need .state updates -->
+<script context="module" lang="ts"> // Move functions outside main script if they don't need component instance state
+    function deleteConfiguration(threadId: string) {
+        const currentSessionId = sessionStore.activeSessionId.state;
+        if (currentSessionId && sessionStore.uiSessions.state[currentSessionId]?.threads?.[threadId]) {
+            const sessionToUpdate = sessionStore.uiSessions.state[currentSessionId];
+            const updatedThreads = { ...sessionToUpdate.threads };
+            delete updatedThreads[threadId];
+            const updatedSession = { ...sessionToUpdate, threads: updatedThreads, lastUpdatedAt: new Date().toISOString() };
+            sessionStore.uiSessions.state = { ...sessionStore.uiSessions.state, [currentSessionId]: updatedSession };
+
+            // If the deleted config was active, select another one if possible
+            if (UiStore.activeConfigEditorId === threadId) {
+                const remainingIds = Object.keys(updatedThreads);
+                UiStore.activeConfigEditorId = remainingIds.length > 0 ? remainingIds[0] : null;
+            }
+        } else {
+            console.warn(`RunConfigManager: Cannot delete configuration ${threadId}, session or thread not found.`);
+        }
+    }
+
+    function renameConfiguration(threadId: string, newName: string) {
+        const currentSessionId = sessionStore.activeSessionId.state;
+        if (currentSessionId && sessionStore.uiSessions.state[currentSessionId]?.threads?.[threadId]) {
+            const sessionToUpdate = sessionStore.uiSessions.state[currentSessionId];
+            const threadToUpdate = sessionToUpdate.threads[threadId];
+            if (threadToUpdate.name !== newName) {
+                const updatedThread = { ...threadToUpdate, name: newName };
+                const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [threadId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
+                sessionStore.uiSessions.state = { ...sessionStore.uiSessions.state, [currentSessionId]: updatedSession };
+            }
+        } else {
+             console.warn(`RunConfigManager: Cannot rename configuration ${threadId}, session or thread not found.`);
+        }
+    }
+
+     function toggleConfiguration(threadId: string, isEnabled: boolean) {
+        const currentSessionId = sessionStore.activeSessionId.state;
+        if (currentSessionId && sessionStore.uiSessions.state[currentSessionId]?.threads?.[threadId]) {
+             const sessionToUpdate = sessionStore.uiSessions.state[currentSessionId];
+            const threadToUpdate = sessionToUpdate.threads[threadId];
+            if (threadToUpdate.isEnabled !== isEnabled) {
+                const updatedThread = { ...threadToUpdate, isEnabled: isEnabled };
+                const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [threadId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
+                sessionStore.uiSessions.state = { ...sessionStore.uiSessions.state, [currentSessionId]: updatedSession };
+            }
+        } else {
+             console.warn(`RunConfigManager: Cannot toggle configuration ${threadId}, session or thread not found.`);
+        }
+    }
+</script>
 
 <style lang="scss">
     .run-config-manager {

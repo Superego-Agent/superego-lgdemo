@@ -1,6 +1,6 @@
 import { streamRun } from '../api/sse.svelte';
-import { appState } from '../state/app.svelte';
-import { sessionState } from '../state/session.svelte';
+import { appStateStore } from '../state/app.svelte';
+import { sessionStore } from '../state/session.svelte';
 
 /**
  * Sends the user's input to the backend via the streamRun API.
@@ -8,19 +8,19 @@ import { sessionState } from '../state/session.svelte';
  * @param userInput - The text entered by the user.
  */
 export async function sendUserMessage(userInput: string): Promise<void> {
-    appState.globalError = null;
+    appStateStore.globalError = null;
 
-    const currentSessionId = sessionState.activeSessionId;
+    const currentSessionId = sessionStore.activeSessionId.state; 
     if (!currentSessionId) {
         console.error("[chatService] Cannot send message: No active session ID.");
-        appState.globalError = "No active session selected.";
+        appStateStore.globalError = "No active session selected.";
         return;
     }
 
-    const currentSessionData = sessionState.uiSessions[currentSessionId]; // Renamed variable
+    const currentSessionData = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null; // Use the string ID value
     if (!currentSessionData || !currentSessionData.threads) {
         console.error(`[chatService] Cannot send message: Session state or threads not found for ID ${currentSessionId}.`);
-        appState.globalError = "Session data not found.";
+        appStateStore.globalError = "Session data not found.";
         return;
     }
 
@@ -29,7 +29,7 @@ export async function sendUserMessage(userInput: string): Promise<void> {
 
     if (enabledConfigs.length === 0) {
         console.warn("[chatService] No enabled configurations to run.");
-        appState.globalError = "No configurations enabled to run.";
+        appStateStore.globalError = "No configurations enabled to run.";
         return;
     }
 
@@ -46,7 +46,6 @@ export async function sendUserMessage(userInput: string): Promise<void> {
             // Log error for this specific run but continue trying others
             console.error(`[chatService] Error initiating run for thread ${threadId}:`, error);
             // Optionally set a specific error state for this thread in threadCacheStore later
-            // For now, just log it. Global error might be set by api.ts if it's a setup issue.
         }
     }
 }

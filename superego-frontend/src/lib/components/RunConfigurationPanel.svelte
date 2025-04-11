@@ -1,14 +1,9 @@
 <script lang="ts">
   import { stopPropagation } from 'svelte/legacy';
 
-  import { localConstitutionsStore } from "../localConstitutions";
-  import {
-    globalConstitutions,
-    isLoadingGlobalConstitutions,
-    globalConstitutionsError,
-  } from "../stores/globalConstitutionsStore";
-  import { sessionState } from '../state/session.svelte'; 
-  import { uiState } from "$lib/state/ui.svelte";
+  import { localConstitutionsStore } from "$lib/state/localConstitutions.svelte"; // Use new state file
+  import { sessionStore } from '$lib/state/session.svelte';
+  import { UiStore } from "$lib/state/ui.svelte";
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
@@ -16,7 +11,7 @@
   import ConstitutionInfoModal from "./ConstitutionInfoModal.svelte";
   import AddConstitutionModal from "./AddConstitutionModal.svelte";
   import RunConfigManager from './RunConfigManager.svelte';
-  import { fetchConstitutionContent } from "../api";
+  import { fetchConstitutionContent, fetchAvailableConstitutions } from "$lib/api/rest.svelte"; // Corrected API path
 
 
   let isExpanded = $state(true); 
@@ -27,6 +22,37 @@
   let modalDescription: string | undefined = $state(undefined);
   let modalContent: string | undefined = $state(undefined);
   let showAddModal = $state(false);
+
+  // --- State for Global Constitutions (fetched locally) ---
+  let globalConstitutionsList = $state<ConstitutionItem[]>([]);
+  let isLoadingGlobal = $state(true);
+  let globalErrorMsg = $state<string | null>(null);
+
+  // --- Effect to fetch global constitutions ---
+  $effect(() => {
+    const controller = new AbortController();
+    isLoadingGlobal = true;
+    globalErrorMsg = null;
+    globalConstitutionsList = []; // Clear previous list on fetch
+
+    fetchAvailableConstitutions(controller.signal)
+      .then(data => {
+        globalConstitutionsList = data;
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch global constitutions:", err);
+          globalErrorMsg = err.message || "Failed to load global constitutions.";
+        }
+      })
+      .finally(() => {
+        isLoadingGlobal = false;
+      });
+
+    return () => {
+      controller.abort();
+    };
+  });
 
   async function showInfo(item: ConstitutionItem | LocalConstitution) {
     modalTitle = item.title;
@@ -64,10 +90,10 @@
   // --- Helper Functions for Direct Store Interaction ---
 
   function getActiveConfig(): ThreadConfigState | null {
-      const currentSessionId = sessionState.activeSessionId;
+      const currentSessionId = sessionStore.activeSessionId.state; 
       if (!currentSessionId) return null;
-      const currentSession = sessionState.uiSessions[currentSessionId];
-      const activeId = uiState.activeConfigEditorId;
+      const currentSession = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null;
+      const activeId = UiStore.activeConfigEditorId;
       if (!activeId || !currentSession?.threads) return null;
       return currentSession.threads[activeId] ?? null;
   }
@@ -79,28 +105,32 @@
 
   // Generic helper to update the configuredModules array in the store
   function updateModules(modulesUpdater: (currentModules: ConfiguredConstitutionModule[]) => ConfiguredConstitutionModule[]) {
-      const currentSessionId = sessionState.activeSessionId;
+      const currentSessionId = sessionStore.activeSessionId.state; 
       if (!currentSessionId) {
           console.warn("RunConfigurationPanel: No active session ID found, cannot update modules.");
           return;
       }
-      const currentSession = sessionState.uiSessions[currentSessionId];
-      const activeThreadConfigId = uiState.activeConfigEditorId;
+      const currentSession = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null;
+      const activeThreadConfigId = UiStore.activeConfigEditorId;
       if (!activeThreadConfigId) {
           console.warn("RunConfigurationPanel: No active thread config ID found, cannot update modules.");
           return;
       }
 
-      const session = sessionState.uiSessions[currentSessionId];
-      if (session?.threads?.[activeThreadConfigId]) {
-          if (!session.threads[activeThreadConfigId].runConfig) {
-              session.threads[activeThreadConfigId].runConfig = { configuredModules: [] };
+      if (currentSessionId && sessionStore.uiSessions.state[currentSessionId]?.threads?.[activeThreadConfigId]) {
+          const sessionToUpdate = sessionStore.uiSessions.state[currentSessionId];
+          const threadToUpdate = sessionToUpdate.threads[activeThreadConfigId];
+
+          if (!threadToUpdate.runConfig) {
+              threadToUpdate.runConfig = { configuredModules: [] };
           }
-          const currentModules = session.threads[activeThreadConfigId].runConfig.configuredModules ?? [];
+          const currentModules = threadToUpdate.runConfig.configuredModules ?? [];
           const newModules = modulesUpdater(currentModules);
+
           if (JSON.stringify(currentModules) !== JSON.stringify(newModules)) {
-              session.threads[activeThreadConfigId].runConfig.configuredModules = newModules;
-              session.lastUpdatedAt = new Date().toISOString();
+              const updatedThread = { ...threadToUpdate, runConfig: { ...threadToUpdate.runConfig, configuredModules: newModules } };
+              const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [activeThreadConfigId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
+              sessionStore.uiSessions.state = { ...sessionStore.uiSessions.state, [currentSessionId]: updatedSession }; // Update state immutably
               console.log(`RunConfigurationPanel: Updated modules for session ${currentSessionId}, thread ${activeThreadConfigId}`);
           }
       } else {
@@ -114,8 +144,8 @@
           if (isChecked) {
               // Add if not present
               if (!currentModules.some(m => m.id === itemId)) {
-                   const globalItem = $globalConstitutions.find(c => c.id === itemId);
-                   const localItem = $localConstitutionsStore.find(c => c.id === itemId);
+                   const globalItem = globalConstitutionsList.find(c => c.id === itemId);
+                   const localItem = localConstitutionsStore.localConstitutions.state.find(c => c.id === itemId); // Use new state
                    const title = globalItem?.title ?? localItem?.title ?? 'Unknown Constitution'; // Provide a default title
                    return [...currentModules, { id: itemId, title: title, adherence_level: 3 }]; // Add with default level 3
               }
@@ -160,11 +190,11 @@
     <RunConfigManager />
 
     <div class="options-container">
-      {#if $isLoadingGlobalConstitutions}
+      {#if isLoadingGlobal}
         <p class="loading-text">Loading global constitutions...</p>
-      {:else if $globalConstitutionsError}
+      {:else if globalErrorMsg}
         <p class="loading-text error-text">
-          Error loading: {$globalConstitutionsError}
+          Error loading: {globalErrorMsg}
         </p>
       {:else}
         <div class="options-wrapper">
@@ -185,7 +215,7 @@
           </div>
 
           <!-- === Local Constitutions List === -->
-          {#each $localConstitutionsStore as item (item.id)}
+          {#each localConstitutionsStore.localConstitutions.state as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
@@ -224,7 +254,7 @@
           {/each}
 
           <!-- === Global Constitutions List === -->
-          {#each $globalConstitutions as item (item.id)}
+          {#each globalConstitutionsList as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
@@ -262,7 +292,7 @@
           {/each}
 
           <!-- === Empty State === -->
-          {#if $globalConstitutions.length === 0 && $localConstitutionsStore.length === 0}
+          {#if globalConstitutionsList.length === 0 && localConstitutionsStore.localConstitutions.state.length === 0}
             <p class="loading-text">No constitutions available.</p>
           {/if}
         </div>
@@ -284,7 +314,7 @@
 {/if}
 
 {#if showAddModal}
-  <AddConstitutionModal on:close={() => (showAddModal = false)} />
+  <AddConstitutionModal on:close={() => (showAddModal = false)} on:add={(e) => localConstitutionsStore.addLocalConstitution(e.detail.title, e.detail.text)} />
 {/if}
 
 <style lang="scss">

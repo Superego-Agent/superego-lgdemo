@@ -4,11 +4,11 @@ import { loadGlobalConstitutions } from './lib/stores/globalConstitutionsStore';
 import Sidebar from './lib/components/Sidebar.svelte';
 import ChatInterface from './lib/components/ChatInterface.svelte';
 import ThemeToggle from './lib/components/ThemeToggle.svelte';
-import { loadLocalConstitutions } from './lib/localConstitutions'; 
+import { localConstitutionsStore } from './lib/state/localConstitutions.svelte'; 
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
-import { sessionState } from '$lib/state/session.svelte'; // Import new session state
+import { sessionStore } from '$lib/state/session.svelte'; // Import new session state
 onMount( async () => {
     try {
         await Promise.all([
@@ -21,19 +21,19 @@ onMount( async () => {
     }
 
         // --- START: Add Session Initialization Logic ---
-        const currentActiveId = sessionState.activeSessionId;
+        const currentActiveId = sessionStore.activeSessionId;
         if (currentActiveId === null) {
             // Access .state directly
-            const currentSessions = sessionState.uiSessions;
+            const currentSessions = sessionStore.uiSessions;
             const sessionIds = Object.keys(currentSessions);
             if (sessionIds.length > 0) {
                 // Activate the first existing session found
-                sessionState.activeSessionId = sessionIds[0];
+                sessionStore.activeSessionId.state = sessionIds[0];
                 console.log(`[App.svelte] Activated existing session: ${sessionIds[0]}`);
             } else {
                 // No sessions exist, create a new one
                 console.log('[App.svelte] No existing sessions found, creating a new one.');
-                sessionState.createNewSession(); // This function already sets it as active
+                sessionStore.createNewSession(); // This function already sets it as active
             }
         }
         // --- END: Add Session Initialization Logic ---
