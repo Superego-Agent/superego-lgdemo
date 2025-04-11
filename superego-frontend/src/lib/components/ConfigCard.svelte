@@ -1,10 +1,15 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    // Types from global.d.ts are globally available
+    
 
-    export let threadId: string;
-    export let config: ThreadConfigState;
-    export let isActive: boolean = false;
+    interface Props {
+        // Types from global.d.ts are globally available
+        threadId: string;
+        config: ThreadConfigState;
+        isActive?: boolean;
+    }
+
+    let { threadId, config, isActive = false }: Props = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -17,7 +22,7 @@
 <button
     class="config-card"
     class:active={isActive}
-    on:click={handleClick}
+    onclick={handleClick}
     title={`Select configuration: ${config.name}`}
 >
     <span class="config-name">{config.name}</span>

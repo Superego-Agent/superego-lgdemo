@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { stopPropagation } from 'svelte/legacy';
+
   import { localConstitutionsStore } from "../localConstitutions";
   import {
     globalConstitutions,
@@ -17,16 +19,16 @@
   import { fetchConstitutionContent } from "../api";
 
 
-  let isExpanded = true; // Start expanded
+  let isExpanded = $state(true); // Start expanded
   // Removed internal selectedLevels state and sync block
 
-  let showModal = false;
-  let modalIsLoading = false;
-  let modalError: string | null = null;
-  let modalTitle: string = "";
-  let modalDescription: string | undefined = undefined;
-  let modalContent: string | undefined = undefined;
-  let showAddModal = false;
+  let showModal = $state(false);
+  let modalIsLoading = $state(false);
+  let modalError: string | null = $state(null);
+  let modalTitle: string = $state("");
+  let modalDescription: string | undefined = $state(undefined);
+  let modalContent: string | undefined = $state(undefined);
+  let showAddModal = $state(false);
 
   async function showInfo(item: ConstitutionItem | LocalConstitution) {
     modalTitle = item.title;
@@ -148,10 +150,10 @@
   <!-- Header with integrated toggle -->
   <div
     class="selector-header"
-    on:click={toggleExpand}
+    onclick={toggleExpand}
     role="button"
     tabindex="0"
-    on:keydown={(e) => e.key === "Enter" && toggleExpand()}
+    onkeydown={(e) => e.key === "Enter" && toggleExpand()}
   >
     <span class="header-title">Flow Configurations</span>
     {#if isExpanded}
@@ -177,10 +179,10 @@
           <!-- === Add New Constitution Item === -->
           <div
             class="option-item add-item"
-            on:click={() => (showAddModal = true)}
+            onclick={() => (showAddModal = true)}
             role="button"
             tabindex="0"
-            on:keydown={(e) => {
+            onkeydown={(e) => {
               if (e.key === "Enter" || e.key === " ") showAddModal = true;
             }}
           >
@@ -198,7 +200,7 @@
                 <input
                   type="checkbox"
                   checked={!!getModule(item.id)}
-                  on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
+                  onchange={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
                  />
                 <span class="title-text"
                   ><span class="local-indicator">Local</span
@@ -207,7 +209,7 @@
                 <button
                   class="info-button"
                   title="Show constitution info"
-                  on:click|stopPropagation={() => showInfo(item)}
+                  onclick={stopPropagation(() => showInfo(item))}
                   ><IconInfo /></button
                 >
               </label>
@@ -219,7 +221,7 @@
                     max="5"
                     step="1"
                     value={getModule(item.id)?.adherence_level ?? 0}
-                    on:input={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
+                    oninput={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
                     class="adherence-slider"
                     aria-label="{item.title} Adherence Level"
                    />
@@ -237,7 +239,7 @@
                 <input
                   type="checkbox"
                   checked={!!getModule(item.id)}
-                  on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
+                  onchange={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
                  />
                 <span class="title-text" title={item.description}
                   >{item.title}</span
@@ -245,7 +247,7 @@
                 <button
                   class="info-button"
                   title="Show constitution info"
-                  on:click|stopPropagation={() => showInfo(item)}
+                  onclick={stopPropagation(() => showInfo(item))}
                   ><IconInfo /></button
                 >
               </label>
@@ -257,7 +259,7 @@
                     max="5"
                     step="1"
                     value={getModule(item.id)?.adherence_level ?? 0}
-                    on:input={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
+                    oninput={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
                     class="adherence-slider"
                     aria-label="{item.title} Adherence Level"
                    />

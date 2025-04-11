@@ -3,13 +3,13 @@
   import { fade } from 'svelte/transition';
 
   // Reactive icon based on current theme
-  $: icon = $theme === 'light' ? '🌙' : '☀️';
-  $: label = $theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+  let icon = $derived($theme === 'light' ? '🌙' : '☀️');
+  let label = $derived($theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
 </script>
 
 <button 
   class="theme-toggle" 
-  on:click={toggleTheme} 
+  onclick={toggleTheme} 
   title={label} 
   aria-label={label}
 >

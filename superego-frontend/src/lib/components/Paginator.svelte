@@ -1,24 +1,39 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { onDestroy } from 'svelte';
 	import ChevronLeftIcon from '~icons/fluent/chevron-left-24-regular';
 	import ChevronRightIcon from '~icons/fluent/chevron-right-24-regular';
 
 	// --- Props ---
-	/** The full list of items to paginate */
-	export let items: any[] = [];
-	/** The width of the container where items are displayed */
-	export let containerWidth: number = 0;
-	/** The minimum desired width for each item */
-	export let minItemWidth: number = 400;
+	
+	
+	
+	interface Props {
+		/** The full list of items to paginate */
+		items?: any[];
+		/** The width of the container where items are displayed */
+		containerWidth?: number;
+		/** The minimum desired width for each item */
+		minItemWidth?: number;
+		children?: import('svelte').Snippet<[any]>;
+	}
+
+	let {
+		items = [],
+		containerWidth = 0,
+		minItemWidth = 400,
+		children
+	}: Props = $props();
 
 	// --- Internal State ---
-	let currentPage = 0;
-	let itemsPerPage = 1;
-	let totalPages = 1;
-	let paginatedItems: any[] = [];
+	let currentPage = $state(0);
+	let itemsPerPage = $state(1);
+	let totalPages = $state(1);
+	let paginatedItems: any[] = $state([]);
 
 	// --- Reactive Calculations ---
-	$: {
+	run(() => {
 		itemsPerPage = Math.max(1, Math.floor(containerWidth / minItemWidth));
 		totalPages = Math.ceil(items.length / itemsPerPage);
 		// Clamp currentPage to valid range if totalPages or items change
@@ -28,7 +43,7 @@
 		const endIndex = startIndex + itemsPerPage;
 		paginatedItems = items.slice(startIndex, endIndex);
 		// console.log(`Paginator: w=${containerWidth}, minW=${minItemWidth}, ipp=${itemsPerPage}, totalP=${totalPages}, currentP=${currentPage}, items=${items.length}, paginated=${paginatedItems.length}`);
-	}
+	});
 
 	// --- Functions ---
 	function goToPage(pageIndex: number) {
@@ -47,27 +62,27 @@
 
 	// Reset to page 0 if the underlying items array changes identity
 	// This prevents staying on a potentially invalid page index
-	let prevItems = items;
-	$: {
+	let prevItems = $state(items);
+	run(() => {
 		if (items !== prevItems) {
 			// console.log("Paginator: Items array changed, resetting to page 0");
 			currentPage = 0;
 			prevItems = items;
 		}
-	}
+	});
 
 </script>
 
 {#if items.length > 0}
 	<div class="paginator-wrapper">
 		<!-- Default Slot: Exposes paginatedItems -->
-		<slot {paginatedItems} />
+		{@render children?.({ paginatedItems, })}
 
 		{#if totalPages > 1}
 			<div class="pagination-controls">
 				<button
 					class="pagination-button"
-					on:click={prevPage}
+					onclick={prevPage}
 					disabled={currentPage === 0}
 					aria-label="Previous Page"
 				>
@@ -78,7 +93,7 @@
 						<button
 							class="dot"
 							class:active={i === currentPage}
-							on:click={() => goToPage(i)}
+							onclick={() => goToPage(i)}
 							aria-label="Go to page {i + 1}"
 							aria-current={i === currentPage ? 'page' : undefined}
 						></button>
@@ -86,7 +101,7 @@
 				</div>
 				<button
 					class="pagination-button"
-					on:click={nextPage}
+					onclick={nextPage}
 					disabled={currentPage === totalPages - 1}
 					aria-label="Next Page"
 				>

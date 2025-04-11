@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from 'svelte/legacy';
+
     import { submitConstitution, fetchConstitutionContent } from '../api';
     import { addLocalConstitution, localConstitutionsStore } from '../localConstitutions';
     import { globalConstitutions } from '../stores/globalConstitutionsStore';
@@ -8,15 +10,15 @@
     const dispatch = createEventDispatcher();
 
     // --- Component State ---
-    let constitutionTitle = '';
-    let constitutionText = '';
-    let submitForReview = false; // Replaces isPrivate, default false
-    let selectedTemplateId: string | null = null;
+    let constitutionTitle = $state('');
+    let constitutionText = $state('');
+    let submitForReview = $state(false); // Replaces isPrivate, default false
+    let selectedTemplateId: string | null = $state(null);
 
     // Submission & Loading State
-    let isSubmitting = false;
-    let submitStatus: { success?: boolean; message?: string } | null = null;
-    let templateLoading = false;
+    let isSubmitting = $state(false);
+    let submitStatus: { success?: boolean; message?: string } | null = $state(null);
+    let templateLoading = $state(false);
 
     // --- Template Handling ---
     // Combine global and local for template dropdown
@@ -24,18 +26,7 @@
         | { type: 'global'; id: string; title: string }
         | { type: 'local'; id: string; title: string; text: string }; // Include text for local
 
-    $: allConstitutionsForTemplate = [
-        ...$globalConstitutions
-            .filter((c: ConstitutionItem) => c.id !== 'none')
-            .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })),
-        ...$localConstitutionsStore.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text }))
-    ].sort((a, b) => a.title.localeCompare(b.title));
 
-    // --- Reactive Logic ---
-    // Reactive statement to load template when selectedTemplateId changes
-    $: if (selectedTemplateId) {
-        loadTemplateContent(selectedTemplateId);
-    }
 
     // --- Functions ---
     async function loadTemplateContent(templateId: string) {
@@ -115,6 +106,19 @@
             isSubmitting = false;
         }
     }
+    let allConstitutionsForTemplate = $derived([
+        ...$globalConstitutions
+            .filter((c: ConstitutionItem) => c.id !== 'none')
+            .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })),
+        ...$localConstitutionsStore.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text }))
+    ].sort((a, b) => a.title.localeCompare(b.title)));
+    // --- Reactive Logic ---
+    // Reactive statement to load template when selectedTemplateId changes
+    run(() => {
+        if (selectedTemplateId) {
+            loadTemplateContent(selectedTemplateId);
+        }
+    });
 </script>
 
 <div class="add-constitution">
@@ -183,7 +187,7 @@
         <!-- === Submit Button === -->
         <button
             class="submit-button"
-            on:click={handleSubmit}
+            onclick={handleSubmit}
             disabled={!constitutionTitle.trim() || !constitutionText.trim() || isSubmitting || templateLoading}
         >
             {#if isSubmitting}

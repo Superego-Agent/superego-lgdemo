@@ -9,10 +9,10 @@
     const dispatch = createEventDispatcher();
 
     // Reactive access to the current session's configurations
-    $: currentSessionId = $activeSessionId;
-    $: currentSession = currentSessionId ? $uiSessions[currentSessionId] : null;
-    $: threadConfigs = currentSession?.threads ?? {};
-    $: configEntries = Object.entries(threadConfigs); // [threadId, ThreadConfigState][]
+    let currentSessionId = $derived($activeSessionId);
+    let currentSession = $derived(currentSessionId ? $uiSessions[currentSessionId] : null);
+    let threadConfigs = $derived(currentSession?.threads ?? {});
+    let configEntries = $derived(Object.entries(threadConfigs)); // [threadId, ThreadConfigState][]
 
     function handleCardSelect(event: CustomEvent<{ threadId: string }>) {
         const selectedThreadId = event.detail.threadId;
@@ -59,7 +59,7 @@
                 on:select={handleCardSelect}
             />
         {/each}
-        <button class="add-button" on:click={addConfiguration} title="Add new configuration">
+        <button class="add-button" onclick={addConfiguration} title="Add new configuration">
             + Add 
         </button>
     </div>

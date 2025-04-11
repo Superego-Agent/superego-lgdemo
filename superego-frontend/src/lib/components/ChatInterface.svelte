@@ -11,12 +11,12 @@
     const MIN_CHAT_VIEW_WIDTH = 400;
 
     // --- Component State ---
-    let containerWidth: number = 0;
+    let containerWidth: number = $state(0);
 
     // --- Reactive State Derivations ---
-    $: currentSessionId = $activeSessionId;
-    $: currentSessionState = currentSessionId ? $uiSessions[currentSessionId] : null;
-    $: activeThreadIds = currentSessionState?.threads ? Object.keys(currentSessionState.threads) : [];
+    let currentSessionId = $derived($activeSessionId);
+    let currentSessionState = $derived(currentSessionId ? $uiSessions[currentSessionId] : null);
+    let activeThreadIds = $derived(currentSessionState?.threads ? Object.keys(currentSessionState.threads) : []);
 
 
     // --- Event Handlers ---
@@ -56,15 +56,17 @@
     <!-- === Main Chat Display Area === -->
     <div class="messages-container" bind:clientWidth={containerWidth}>
         {#if activeThreadIds.length > 0}
-             <Paginator items={activeThreadIds} {containerWidth} minItemWidth={MIN_CHAT_VIEW_WIDTH} let:paginatedItems>
-                 <div class="page-content">
-                     {#each paginatedItems as threadId (threadId)}
-                         <div class="thread-wrapper">
-                             <ChatView {threadId} />
-                         </div>
-                     {/each}
-                 </div>
-             </Paginator>
+             <Paginator items={activeThreadIds} {containerWidth} minItemWidth={MIN_CHAT_VIEW_WIDTH} >
+                 {#snippet children({ paginatedItems })}
+                                <div class="page-content">
+                         {#each paginatedItems as threadId (threadId)}
+                             <div class="thread-wrapper">
+                                 <ChatView {threadId} />
+                             </div>
+                         {/each}
+                     </div>
+                                             {/snippet}
+                        </Paginator>
         {:else if currentSessionId}
             <div class="empty-chat">
                 <IconChat />

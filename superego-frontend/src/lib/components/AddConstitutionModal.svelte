@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+    const bubble = createBubbler();
     import { createEventDispatcher } from 'svelte';
     import AddConstitution from './AddConstitution.svelte';
 
@@ -16,11 +19,11 @@
     }
 </script>
 
-<svelte:window on:keydown={handleKeydown}/>
+<svelte:window onkeydown={handleKeydown}/>
 
-<div class="modal-overlay" on:click={closeModal} role="dialog" aria-modal="true">
-    <div class="modal-content" on:click|stopPropagation>
-        <button class="close-button" on:click={closeModal}>&times;</button>
+<div class="modal-overlay" onclick={closeModal} role="dialog" aria-modal="true">
+    <div class="modal-content" onclick={stopPropagation(bubble('click'))}>
+        <button class="close-button" onclick={closeModal}>&times;</button>
         <AddConstitution on:constitutionAdded={closeModal} />
     </div>
 </div>

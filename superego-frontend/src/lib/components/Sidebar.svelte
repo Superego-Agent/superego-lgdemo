@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { tick } from "svelte";
   import { uiSessions, activeSessionId } from "../stores";
   import {
@@ -12,17 +14,17 @@
   import IconAdd from "~icons/fluent/add-24-regular";
 
   // --- Component State ---
-  let editingSessionId: string | null = null;
-  let editingName: string = "";
+  let editingSessionId: string | null = $state(null);
+  let editingName: string = $state("");
   let originalEditingName: string = "";
-  let renameInput: HTMLInputElement | null = null;
+  let renameInput: HTMLInputElement | null = $state(null);
 
   // --- Reactive Derivations ---
   // Reactive statement uses the uiSessions store directly
-  $: sortedSessions = Object.values($uiSessions).sort(
+  let sortedSessions = $derived(Object.values($uiSessions).sort(
     (a: UISessionState, b: UISessionState) =>
       new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
-  );
+  ));
 
   // --- Functions ---
   function handleNewChat() {
@@ -102,7 +104,7 @@
       <li class="new-session-list-item">
         <button
           class="new-session-button session-item-base"
-          on:click={handleNewChat}
+          onclick={handleNewChat}
           title="New Session"
         >
           <IconAdd />
@@ -116,13 +118,13 @@
           class:editing={editingSessionId === session.sessionId}
         >
           {#if editingSessionId === session.sessionId}
-            <form class="rename-form" on:submit|preventDefault={handleRename}>
+            <form class="rename-form" onsubmit={preventDefault(handleRename)}>
               <input
                 type="text"
                 bind:this={renameInput}
                 bind:value={editingName}
-                on:blur={handleRename}
-                on:keydown={handleRenameKeyDown}
+                onblur={handleRename}
+                onkeydown={handleRenameKeyDown}
                 disabled={false}
                 class="rename-input"
               />
@@ -130,10 +132,10 @@
           {:else}
             <div
               class="thread-item-container session-item-base"
-              on:click={() => selectConversation(session.sessionId)}
+              onclick={() => selectConversation(session.sessionId)}
               role="button"
               tabindex="0"
-              on:keydown={(e) => {
+              onkeydown={(e) => {
                 if (e.key === "Enter" || e.key === " ")
                   selectConversation(session.sessionId);
               }}
@@ -143,7 +145,7 @@
                 <button
                   class="icon-button"
                   title="Rename Session"
-                  on:click={(e) => startRename(e, session)}
+                  onclick={(e) => startRename(e, session)}
                   disabled={false}
                 >
                   <IconEdit />
@@ -151,7 +153,7 @@
                 <button
                   class="icon-button delete-button"
                   title="Delete Session"
-                  on:click={(e) => handleDelete(e, session.sessionId)}
+                  onclick={(e) => handleDelete(e, session.sessionId)}
                   disabled={false}
                 >
                   <IconDelete />
