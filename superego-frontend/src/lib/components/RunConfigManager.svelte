@@ -122,16 +122,17 @@
         display: flex;
         flex-direction: column;
         gap: var(--space-sm);
-        padding: var(--space-sm) 0; // Add some padding
+        padding: var(--space-sm); // Add horizontal padding
         border-bottom: 1px solid var(--border-color-light); // Separator
         margin-bottom: var(--space-sm); // Space below
     }
 
     .cards-container {
-        display: flex;
-        flex-wrap: wrap; // Allow cards to wrap
+        display: grid;
+        // grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); // More responsive alternative
+        grid-template-columns: repeat(4, minmax(100px, 1fr)); // 4 columns, min 100px each
         gap: var(--space-sm);
-        align-items: stretch;
+        // align-items: stretch; // Grid items stretch by default
     }
 
     .add-button {
@@ -143,6 +144,7 @@
         border-radius: var(--radius-sm);
         cursor: pointer;
         color: var(--text-secondary);
+        font-size: 1.2em; // Increase font size for the button text/icon
 
         &:hover {
             background-color: var(--bg-hover);
