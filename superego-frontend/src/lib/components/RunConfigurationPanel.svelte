@@ -1,11 +1,8 @@
 <script lang="ts">
-  import { localConstitutionsStore } from "../localConstitutions";
-  import {
-    globalConstitutions,
-    isLoadingGlobalConstitutions,
-    globalConstitutionsError,
-  } from "../stores/globalConstitutionsStore";
-  import { uiSessions, activeSessionId, activeConfigEditorId } from '../stores'; 
+  import { stopPropagation } from 'svelte/legacy';
+  import { localConstitutionsStore } from "$lib/state/localConstitutions.svelte";
+  import { sessionStore } from '$lib/state/session.svelte';
+  import { activeStore } from "$lib/state/active.svelte"; // Import new active store
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
@@ -13,19 +10,48 @@
   import ConstitutionInfoModal from "./ConstitutionInfoModal.svelte";
   import AddConstitutionModal from "./AddConstitutionModal.svelte";
   import RunConfigManager from './RunConfigManager.svelte';
-  import { fetchConstitutionContent } from "../api";
+  import { fetchConstitutionContent, fetchAvailableConstitutions } from "$lib/api/rest.svelte"; // Corrected API path
 
 
-  let isExpanded = true; // Start expanded
-  // Removed internal selectedLevels state and sync block
+  let isExpanded = $state(true); 
+  let showModal = $state(false);
+  let modalIsLoading = $state(false);
+  let modalError: string | null = $state(null);
+  let modalTitle: string = $state("");
+  let modalDescription: string | undefined = $state(undefined);
+  let modalContent: string | undefined = $state(undefined);
+  let showAddModal = $state(false);
 
-  let showModal = false;
-  let modalIsLoading = false;
-  let modalError: string | null = null;
-  let modalTitle: string = "";
-  let modalDescription: string | undefined = undefined;
-  let modalContent: string | undefined = undefined;
-  let showAddModal = false;
+  // --- State for Global Constitutions (fetched locally) ---
+  let globalConstitutionsList = $state<ConstitutionItem[]>([]);
+  let isLoadingGlobal = $state(true);
+  let globalErrorMsg = $state<string | null>(null);
+
+  // --- Effect to fetch global constitutions ---
+  $effect(() => {
+    const controller = new AbortController();
+    isLoadingGlobal = true;
+    globalErrorMsg = null;
+    globalConstitutionsList = []; // Clear previous list on fetch
+
+    fetchAvailableConstitutions(controller.signal)
+      .then(data => {
+        globalConstitutionsList = data;
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch global constitutions:", err);
+          globalErrorMsg = err.message || "Failed to load global constitutions.";
+        }
+      })
+      .finally(() => {
+        isLoadingGlobal = false;
+      });
+
+    return () => {
+      controller.abort();
+    };
+  });
 
   async function showInfo(item: ConstitutionItem | LocalConstitution) {
     modalTitle = item.title;
@@ -63,10 +89,10 @@
   // --- Helper Functions for Direct Store Interaction ---
 
   function getActiveConfig(): ThreadConfigState | null {
-      const currentSessionId = $activeSessionId;
+      const currentSessionId = sessionStore.activeSessionId;
       if (!currentSessionId) return null;
-      const currentSession = $uiSessions[currentSessionId];
-      const activeId = $activeConfigEditorId; 
+      const currentSession = sessionStore.uiSessions[currentSessionId];
+      const activeId = activeStore.activeConfigEditorId; // Use activeStore
       if (!activeId || !currentSession?.threads) return null;
       return currentSession.threads[activeId] ?? null;
   }
@@ -78,39 +104,38 @@
 
   // Generic helper to update the configuredModules array in the store
   function updateModules(modulesUpdater: (currentModules: ConfiguredConstitutionModule[]) => ConfiguredConstitutionModule[]) {
-      const currentSessionId = $activeSessionId;
+      const currentSessionId = sessionStore.activeSessionId; // Use direct access
       if (!currentSessionId) {
           console.warn("RunConfigurationPanel: No active session ID found, cannot update modules.");
           return;
       }
-      const currentSession = $uiSessions[currentSessionId];
-      const activeThreadConfigId = $activeConfigEditorId;
+      const currentSession = currentSessionId ? sessionStore.uiSessions[currentSessionId] : null;
+      const activeThreadConfigId = activeStore.activeConfigEditorId; // Use activeStore
       if (!activeThreadConfigId) {
           console.warn("RunConfigurationPanel: No active thread config ID found, cannot update modules.");
           return;
       }
 
-      uiSessions.update(sessions => {
-          const session = sessions[currentSessionId];
-          // Ensure the path exists before trying to update
-          if (session?.threads?.[activeThreadConfigId]) {
-              // Ensure runConfig exists
-              if (!session.threads[activeThreadConfigId].runConfig) {
-                  session.threads[activeThreadConfigId].runConfig = { configuredModules: [] };
-              }
-              const currentModules = session.threads[activeThreadConfigId].runConfig.configuredModules ?? [];
-              const newModules = modulesUpdater(currentModules);
-              // Only update if the array content actually changed (simple JSON check)
-              if (JSON.stringify(currentModules) !== JSON.stringify(newModules)) {
-                  session.threads[activeThreadConfigId].runConfig.configuredModules = newModules;
-                  session.lastUpdatedAt = new Date().toISOString();
-                  console.log(`RunConfigurationPanel: Updated modules for session ${currentSessionId}, thread ${activeThreadConfigId}`);
-              }
-          } else {
-               console.warn(`RunConfigurationPanel: Could not find session ${currentSessionId} or thread ${activeThreadConfigId} in store to update modules.`);
+      // Use direct access
+      if (currentSessionId && sessionStore.uiSessions[currentSessionId]?.threads?.[activeThreadConfigId]) {
+          const sessionToUpdate = sessionStore.uiSessions[currentSessionId];
+          const threadToUpdate = sessionToUpdate.threads[activeThreadConfigId];
+
+          if (!threadToUpdate.runConfig) {
+              threadToUpdate.runConfig = { configuredModules: [] };
           }
-          return sessions;
-      });
+          const currentModules = threadToUpdate.runConfig.configuredModules ?? [];
+          const newModules = modulesUpdater(currentModules);
+
+          if (JSON.stringify(currentModules) !== JSON.stringify(newModules)) {
+              const updatedThread = { ...threadToUpdate, runConfig: { ...threadToUpdate.runConfig, configuredModules: newModules } };
+              const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [activeThreadConfigId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
+              sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession }; // Use direct access (setter)
+              console.log(`RunConfigurationPanel: Updated modules for session ${currentSessionId}, thread ${activeThreadConfigId}`);
+          }
+      } else {
+           console.warn(`RunConfigurationPanel: Could not find session ${currentSessionId} or thread ${activeThreadConfigId} in store to update modules.`);
+      }
   }
 
   // Specific handler for checkbox changes
@@ -119,8 +144,8 @@
           if (isChecked) {
               // Add if not present
               if (!currentModules.some(m => m.id === itemId)) {
-                   const globalItem = $globalConstitutions.find(c => c.id === itemId);
-                   const localItem = $localConstitutionsStore.find(c => c.id === itemId);
+                   const globalItem = globalConstitutionsList.find(c => c.id === itemId);
+                   const localItem = localConstitutionsStore.localConstitutions.find(c => c.id === itemId); // Use direct access
                    const title = globalItem?.title ?? localItem?.title ?? 'Unknown Constitution'; // Provide a default title
                    return [...currentModules, { id: itemId, title: title, adherence_level: 3 }]; // Add with default level 3
               }
@@ -140,20 +165,50 @@
            )
        );
   }
+
+  // Effect to ensure a default config is selected if the active one becomes invalid
+  $effect(() => {
+      // Derive dependencies directly inside the effect
+      const activeSessionId = sessionStore.activeSessionId;
+      const activeSession = activeSessionId ? sessionStore.uiSessions[activeSessionId] : null;
+      const currentEditorId = activeStore.activeConfigEditorId;
+      const sessionThreads = activeSession?.threads;
+
+      if (sessionThreads) {
+          const threadIds = Object.keys(sessionThreads);
+          if (threadIds.length > 0) {
+              const isValidEditorId = currentEditorId !== null && sessionThreads[currentEditorId] !== undefined;
+              if (!isValidEditorId) {
+                  // If current editor ID is null or invalid for the current session, select the first one
+                  activeStore.setActiveConfigEditor(threadIds[0]);
+                  console.log(`[RunConfigPanel] Defaulting activeConfigEditorId to first thread: ${threadIds[0]}`);
+              }
+          } else {
+               // No threads in the active session, ensure editor ID is null
+               if (currentEditorId !== null) {
+                  activeStore.setActiveConfigEditor(null);
+               }
+          }
+      } else {
+           // No active session, ensure editor ID is null
+           if (currentEditorId !== null) {
+               activeStore.setActiveConfigEditor(null);
+           }
+      }
+  });
 </script>
 
-  <RunConfigManager />
 
 <div class="selector-card">
   <!-- Header with integrated toggle -->
   <div
     class="selector-header"
-    on:click={toggleExpand}
+    onclick={toggleExpand}
     role="button"
     tabindex="0"
-    on:keydown={(e) => e.key === "Enter" && toggleExpand()}
+    onkeydown={(e) => e.key === "Enter" && toggleExpand()}
   >
-    <span class="header-title">Constitutions</span>
+    <span class="header-title">Flow Configurations</span>
     {#if isExpanded}
       <IconChevronDown class="toggle-icon" />
     {:else}
@@ -163,21 +218,24 @@
 
   <!-- Collapsible content area -->
   {#if isExpanded}
+    <RunConfigManager />
+
     <div class="options-container">
-      {#if $isLoadingGlobalConstitutions}
+      {#if isLoadingGlobal}
         <p class="loading-text">Loading global constitutions...</p>
-      {:else if $globalConstitutionsError}
+      {:else if globalErrorMsg}
         <p class="loading-text error-text">
-          Error loading: {$globalConstitutionsError}
+          Error loading: {globalErrorMsg}
         </p>
       {:else}
         <div class="options-wrapper">
+          <!-- === Add New Constitution Item === -->
           <div
             class="option-item add-item"
-            on:click={() => (showAddModal = true)}
+            onclick={() => (showAddModal = true)}
             role="button"
             tabindex="0"
-            on:keydown={(e) => {
+            onkeydown={(e) => {
               if (e.key === "Enter" || e.key === " ") showAddModal = true;
             }}
           >
@@ -187,23 +245,24 @@
             </div>
           </div>
 
-          {#each $localConstitutionsStore as item (item.id)}
+          <!-- === Local Constitutions List === -->
+          {#each localConstitutionsStore.localConstitutions as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
                 <input
                   type="checkbox"
                   checked={!!getModule(item.id)}
-                  on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
+                  onchange={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
                  />
                 <span class="title-text"
-                  ><span class="local-indicator">[Local]</span
+                  ><span class="local-indicator">Local</span
                   >{item.title}</span
                 >
                 <button
                   class="info-button"
                   title="Show constitution info"
-                  on:click|stopPropagation={() => showInfo(item)}
+                  onclick={stopPropagation(() => showInfo(item))}
                   ><IconInfo /></button
                 >
               </label>
@@ -215,7 +274,7 @@
                     max="5"
                     step="1"
                     value={getModule(item.id)?.adherence_level ?? 0}
-                    on:input={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
+                    oninput={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
                     class="adherence-slider"
                     aria-label="{item.title} Adherence Level"
                    />
@@ -225,14 +284,15 @@
             </div>
           {/each}
 
-          {#each $globalConstitutions as item (item.id)}
+          <!-- === Global Constitutions List === -->
+          {#each globalConstitutionsList as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
                 <input
                   type="checkbox"
                   checked={!!getModule(item.id)}
-                  on:change={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
+                  onchange={(e) => handleCheckboxChange(item.id, e.currentTarget.checked)}
                  />
                 <span class="title-text" title={item.description}
                   >{item.title}</span
@@ -240,7 +300,7 @@
                 <button
                   class="info-button"
                   title="Show constitution info"
-                  on:click|stopPropagation={() => showInfo(item)}
+                  onclick={stopPropagation(() => showInfo(item))}
                   ><IconInfo /></button
                 >
               </label>
@@ -252,7 +312,7 @@
                     max="5"
                     step="1"
                     value={getModule(item.id)?.adherence_level ?? 0}
-                    on:input={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
+                    oninput={(e) => handleSliderInput(item.id, e.currentTarget.valueAsNumber)}
                     class="adherence-slider"
                     aria-label="{item.title} Adherence Level"
                    />
@@ -262,7 +322,8 @@
             </div>
           {/each}
 
-          {#if $globalConstitutions.length === 0 && $localConstitutionsStore.length === 0}
+          <!-- === Empty State === -->
+          {#if globalConstitutionsList.length === 0 && localConstitutionsStore.localConstitutions.length === 0}
             <p class="loading-text">No constitutions available.</p>
           {/if}
         </div>
@@ -271,6 +332,7 @@
   {/if}
 </div>
 
+<!-- === Modals === -->
 {#if showModal}
   <ConstitutionInfoModal
     title={modalTitle}
@@ -283,7 +345,7 @@
 {/if}
 
 {#if showAddModal}
-  <AddConstitutionModal on:close={() => (showAddModal = false)} />
+  <AddConstitutionModal on:close={() => (showAddModal = false)} on:add={(e) => localConstitutionsStore.addLocalConstitution(e.detail.title, e.detail.text)} />
 {/if}
 
 <style lang="scss">
@@ -419,7 +481,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    /* min-width: 100px; */
   }
 
   .adherence-slider {
@@ -447,6 +508,10 @@
     font-weight: 600;
     color: var(--secondary); /* Or another distinct color */
     margin-right: var(--space-xs);
+    border: 1px solid var(--secondary);
+    border-radius: var(--radius-sm);
+    margin: 0 var(--space-xs);
+    padding: 0 var(--space-xs);
     font-size: 0.9em;
   }
 </style>

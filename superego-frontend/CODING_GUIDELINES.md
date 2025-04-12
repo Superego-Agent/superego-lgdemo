@@ -13,10 +13,66 @@ This document outlines the best practices and principles to follow during the fr
 ## 2. Modularity & File Structure
 
 *   **Single Responsibility:** Keep components and modules focused on a single, clear concern.
+*   **Standard Directories:**
+    *   State management logic resides in `src/lib/state/`, organized by domain (e.g., `threads.svelte.ts`, `active.svelte.ts`, `session.svelte.ts`).
+    *   API interaction logic resides in `src/lib/api/`, organized by domain or type (e.g., `sse.svelte.ts`, `rest.svelte.ts`, `session.svelte.ts`).
+    *   General utilities reside in `src/lib/utils/`.
 *   **Minimize File Size:** Split large components or utility sets into smaller, more manageable files.
 *   **Meaningful Naming:** Use clear, descriptive names for files, functions, and variables so their purpose is self-evident.
-*   **Constants/Helpers:** Extract large blocks of text, constants, or sets of helper functions into separate files if their purpose is clear from the filename (e.g., `src/lib/constants.ts`, `src/lib/utils/formatting.ts`).
+*   **Constants:** Extract constants into separate files if appropriate (e.g., `src/lib/constants.ts`).
+## 3. State Management (Svelte 5 Runes - Class Pattern)
 
+*   **Pattern:** Utilize Svelte 5 Runes (`$state`, `$derived`, `$effect`) within **classes** defined in `.svelte.ts` files for managing reactive application state. Export instances of these classes.
+*   **Location:** State store classes reside in `src/lib/state/`, organized by domain (e.g., `threads.svelte.ts`, `active.svelte.ts`, `session.svelte.ts`).
+*   **Implementation:**
+    *   Define state properties within the class using `$state`.
+    *   Define computed values using `$derived` properties or getters as needed.
+    *   Define methods within the class to encapsulate state mutation logic.
+    *   Use `$effect` within the class constructor or methods for side effects (e.g., persistence, DOM manipulation), ensuring browser checks (`import { browser }`) guard client-side-only effects.
+    *   For simple persistence, the `persistedLocalState` utility (`src/lib/utils/persistedLocalState.svelte`) can wrap the exported instance (see `session.svelte.ts`).
+*   **Consumption:** Components and services should import the exported state instance (e.g., `import { activeStore } from '$lib/state/active.svelte';`) and access state properties or call methods directly on the instance (e.g., `activeStore.theme`, `activeStore.toggleTheme()`).
+*   **Example (`src/lib/state/active.svelte.ts` - Simplified):**
+    ```typescript
+    import { browser } from '$app/environment';
+
+    type Theme = 'light' | 'dark';
+
+    // Helper function (could be inside or outside class)
+    function getInitialTheme(): Theme {
+        // ... logic to get theme from localStorage or system preference ...
+        return 'light'; // Placeholder
+    }
+
+    class ActiveStateStore {
+        theme = $state<Theme>(getInitialTheme());
+        globalError = $state<string | null>(null);
+        // ... other state properties
+
+        constructor() {
+            // Effect to sync theme changes to localStorage and DOM
+            $effect(() => {
+                if (browser) {
+                    console.log('Theme effect running:', this.theme); // Use this.theme
+                    document.documentElement.setAttribute('data-theme', this.theme);
+                    localStorage.setItem('theme', this.theme);
+                }
+            });
+        }
+
+        toggleTheme() {
+            this.theme = this.theme === 'light' ? 'dark' : 'light';
+        }
+
+        setError(message: string | null) {
+            this.globalError = message;
+        }
+
+        // ... other methods
+    }
+
+    // Export a single instance of the store
+    export const activeStore = new ActiveStateStore();
+    ```
 ## 3. TypeScript & Type Safety
 
 *   **Centralized Types:** Define **ALL** shared types within `src/global.d.ts`. Avoid declaring shared types within individual component files.

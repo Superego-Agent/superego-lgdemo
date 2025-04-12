@@ -1,57 +1,32 @@
+<!-- @migration-task Error while migrating Svelte code: can't migrate `$: messages = history?.values?.messages ?? [];` to `$derived` because there's a variable named derived.
+     Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
-	import { threadCacheStore } from '$lib/stores';
-	import { tick } from 'svelte'; // Add tick import
-	import { derived } from 'svelte/store';
-	import MessageCard from './MessageCard.svelte'; // Use existing component
+	import { threadStore } from '$lib/state/threads.svelte'; // Import the new thread store
+	import { tick } from 'svelte';
+	import MessageCard from './MessageCard.svelte';
 
-	export let threadId: string;
+	let { threadId } = $props<{ threadId: string }>(); // Use $props for runes mode
+	// Derive directly from the $state variable
+	const cacheEntry = $derived(threadStore.threadCacheStore[threadId]); // Use threadStore
 
-	// Derive the specific cache entry for this threadId
-	const cacheEntry = derived(threadCacheStore, ($cache) => $cache[threadId]);
+	let messageListContainer: any = $state(); 
 
-	let messageListContainer: HTMLDivElement; // Define container variable
+	let historyState: HistoryEntry | null = $state(null);
+	let isStreaming: boolean = $state(false);
+	let error: string | null = $state(null);
+    let showSpinner: boolean = $state(false);
 
-	// Derive individual state pieces for easier use in the template
-	let history: HistoryEntry | null = null;
-	let isStreaming: boolean = false;
-	let error: string | null = null;
-    let showSpinner: boolean = false;
-
-	$: {
-		const entry = $cacheEntry;
-		history = entry?.history ?? null;
+	// Effect to update local state based on derived cacheEntry
+	$effect.pre(() => {
+		const entry = cacheEntry; // Use derived value
+		historyState = entry?.history ?? null;
 		isStreaming = entry?.isStreaming ?? false;
 		error = entry?.error ?? null;
-        // Show spinner if actively streaming OR if it's the initial load state (no history, no error, not yet streaming)
-        showSpinner = isStreaming || (!history && !error);
-	}
+		showSpinner = isStreaming;
+	});
 
-    // Reactive statement to derive messages array
-    let messages: MessageType[] = [];
-    $: messages = history?.values?.messages ?? [];
-
-    // // Reactive statement for conditional auto-scrolling
-    // $: if (messageListContainer && messages) {
-    //     const scrollToBottomIfNear = async () => {
-    //         const { scrollHeight, scrollTop, clientHeight } = messageListContainer;
-    //         // Threshold in pixels - adjust as needed
-    //         const scrollThreshold = 50;
-    //         // Check if user is near the bottom *before* the DOM updates
-    //         const isNearBottom = scrollHeight - scrollTop - clientHeight < scrollThreshold;
-
-    //         // Wait for DOM update after messages change
-    //         await tick();
-
-    //         // Only scroll if the user was already near the bottom
-    //         if (isNearBottom) {
-    //             messageListContainer.scrollTop = messageListContainer.scrollHeight;
-    //         }
-    //     };
-    //     scrollToBottomIfNear();
-    // }
 
 </script>
-
 <div class="chat-view">
 	{#if error}
 		<div class="error-message">Error loading/streaming thread: {error}</div>
@@ -59,10 +34,9 @@
 
 	{#if history}
 		<div class="message-list" bind:this={messageListContainer}>
-			{#each messages as message, i (message.nodeId + '-' + i)} <!-- Basic key, might need improvement -->
+			{#each historyState?.values?.messages ?? [] as message, i (message.nodeId + '-' + i)}
 				<MessageCard {message} />
 			{/each}
-            <!-- No explicit empty state message -->
 		</div>
 	{/if}
 
@@ -85,11 +59,11 @@
 
 	.message-list {
 		flex-grow: 1;
-		overflow-y: auto; // Allow scrolling through messages
+		overflow-y: auto;
 		padding: 1rem;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem; // Space between messages
+        gap: 0.75rem;
 	}
 
 	.error-message {
@@ -105,7 +79,7 @@
         position: absolute;
         bottom: 1rem;
         right: 1rem;
-        width: 24px; /* Adjust size as needed */
+        width: 24px;
         height: 24px;
         pointer-events: none; /* Prevent interaction */
     }

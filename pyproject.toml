@@ -20,6 +20,13 @@ dependencies = [
     "langgraph-cli>=0.1.55,<1.0.0",
     "langgraph-checkpoint-sqlite>=2.0.0",
     "mcp>=1.6.0"
+    "python-frontmatter>=1.0",
+    "PyYAML>=6.0",
+    "pydantic>=2.0.0", # Explicitly target v2+
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+    "sse-starlette>=1.0.0,<2.2.0", # Constraint added due to langgraph-api dependency
+
 ]
 
 [project.optional-dependencies]

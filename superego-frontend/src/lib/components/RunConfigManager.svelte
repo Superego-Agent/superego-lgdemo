@@ -1,22 +1,22 @@
 <script lang="ts">
     // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
-    import { activeSessionId, uiSessions, activeConfigEditorId } from '../stores'; // Import new store
+    import { sessionStore } from '../state/session.svelte'; // Import new session state
+    import { activeStore } from "$lib/state/active.svelte"; // Import new active store
     import ConfigCard from './ConfigCard.svelte';
-    import { createEventDispatcher } from 'svelte';
+    import IconAdd from '~icons/fluent/add-24-regular'; // Import the icon
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
 
-    const dispatch = createEventDispatcher();
-
     // Reactive access to the current session's configurations
-    $: currentSessionId = $activeSessionId;
-    $: currentSession = currentSessionId ? $uiSessions[currentSessionId] : null;
-    $: threadConfigs = currentSession?.threads ?? {};
-    $: configEntries = Object.entries(threadConfigs); // [threadId, ThreadConfigState][]
+    // Access .state for persisted stores in derived
+    let currentSessionId = $derived(sessionStore.activeSessionId); // Access directly
+    let currentSession = $derived(currentSessionId ? sessionStore.uiSessions[currentSessionId] : null); // Access directly
+    let threadConfigs = $derived(currentSession?.threads ?? {});
+    let configEntries = $derived(Object.entries(threadConfigs));
 
     function handleCardSelect(event: CustomEvent<{ threadId: string }>) {
         const selectedThreadId = event.detail.threadId;
         if (currentSessionId) {
-            activeConfigEditorId.set(selectedThreadId);
+            activeStore.setActiveConfigEditor(selectedThreadId); // Use method on activeStore
         }
     }
 
@@ -32,19 +32,68 @@
             isEnabled: true // Default to enabled
         };
 
-        uiSessions.update(sessions => {
-            if (sessions[currentSessionId]) {
-                // Add the new configuration
-                sessions[currentSessionId].threads = {
-                    ...sessions[currentSessionId].threads,
-                    [newThreadId]: newConfig
-                };
-            }
-            activeConfigEditorId.set(newThreadId);
-            return sessions;
-        });
+        // Use .state for persisted store and direct mutation
+        // Use .state and immutable update pattern
+        if (currentSessionId && sessionStore.uiSessions[currentSessionId]) { // Access directly
+            const sessionToUpdate = sessionStore.uiSessions[currentSessionId]; // Access directly
+            const updatedThreads = { ...sessionToUpdate.threads, [newThreadId]: newConfig };
+            const updatedSession = { ...sessionToUpdate, threads: updatedThreads, lastUpdatedAt: new Date().toISOString() };
+            sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession }; // Access directly (setter)
+            activeStore.setActiveConfigEditor(newThreadId); // Use method on activeStore
+        } else {
+            console.warn("RunConfigManager: Cannot add configuration, no active session found in store.");
+        }
     }
 
+    // --- Functions for managing configurations ---
+    function deleteConfiguration(threadId: string) {
+        // Use the derived currentSessionId from the top scope
+        if (currentSessionId && sessionStore.uiSessions[currentSessionId]?.threads?.[threadId]) {
+            const sessionToUpdate = sessionStore.uiSessions[currentSessionId];
+            const updatedThreads = { ...sessionToUpdate.threads };
+            delete updatedThreads[threadId];
+            const updatedSession = { ...sessionToUpdate, threads: updatedThreads, lastUpdatedAt: new Date().toISOString() };
+            sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession };
+
+            // If the deleted config was active, select another one if possible
+            if (activeStore.activeConfigEditorId === threadId) { // Use activeStore
+                const remainingIds = Object.keys(updatedThreads);
+                activeStore.setActiveConfigEditor(remainingIds.length > 0 ? remainingIds[0] : null); // Use method on activeStore
+            }
+        } else {
+            console.warn(`RunConfigManager: Cannot delete configuration ${threadId}, session or thread not found.`);
+        }
+    }
+
+    function renameConfiguration(threadId: string, newName: string) {
+        // Use the derived currentSessionId from the top scope
+        if (currentSessionId && sessionStore.uiSessions[currentSessionId]?.threads?.[threadId]) {
+            const sessionToUpdate = sessionStore.uiSessions[currentSessionId];
+            const threadToUpdate = sessionToUpdate.threads[threadId];
+            if (threadToUpdate.name !== newName) {
+                const updatedThread = { ...threadToUpdate, name: newName };
+                const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [threadId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
+                sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession };
+            }
+        } else {
+             console.warn(`RunConfigManager: Cannot rename configuration ${threadId}, session or thread not found.`);
+        }
+    }
+
+     function toggleConfiguration(threadId: string, isEnabled: boolean) {
+        // Use the derived currentSessionId from the top scope
+        if (currentSessionId && sessionStore.uiSessions[currentSessionId]?.threads?.[threadId]) {
+             const sessionToUpdate = sessionStore.uiSessions[currentSessionId];
+            const threadToUpdate = sessionToUpdate.threads[threadId];
+            if (threadToUpdate.isEnabled !== isEnabled) {
+                const updatedThread = { ...threadToUpdate, isEnabled: isEnabled };
+                const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [threadId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
+                sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession };
+            }
+        } else {
+             console.warn(`RunConfigManager: Cannot toggle configuration ${threadId}, session or thread not found.`);
+        }
+    }
 </script>
 
 <div class="run-config-manager">
@@ -52,39 +101,47 @@
         {#each configEntries as [threadId, config] (threadId)}
             <ConfigCard
                 {threadId}
-                {config}
-                isActive={$activeConfigEditorId === threadId}
+                config={config as ThreadConfigState}
+                isActive={activeStore.activeConfigEditorId === threadId}
                 on:select={handleCardSelect}
+                on:delete={() => deleteConfiguration(threadId)}
+                on:rename={(e) => renameConfiguration(threadId, e.detail.newName)}
+                on:toggle={(e) => toggleConfiguration(threadId, e.detail.isEnabled)}
             />
         {/each}
+        
+        <button class="add-button" onclick={addConfiguration} title="Add new configuration">
+            <IconAdd /> Add
+        </button>
     </div>
-    <button class="add-button" on:click={addConfiguration} title="Add new configuration">
-        + Add Config
-    </button>
 </div>
+
+<!-- Removed duplicated functions -->
 
 <style lang="scss">
     .run-config-manager {
         display: flex;
         flex-direction: column;
         gap: var(--space-sm);
-        padding: var(--space-sm) 0; // Add some padding
+        padding: var(--space-sm); // Add horizontal padding
         border-bottom: 1px solid var(--border-color-light); // Separator
         margin-bottom: var(--space-sm); // Space below
     }
 
     .cards-container {
-        display: flex;
-        flex-wrap: wrap; // Allow cards to wrap
+        display: grid;
+        // grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); // More responsive alternative
+        grid-template-columns: repeat(4, minmax(100px, 1fr)); // 4 columns, min 100px each
         gap: var(--space-sm);
+        // align-items: stretch; // Grid items stretch by default
     }
 
     .add-button {
-        // Basic styling, can be improved
-        align-self: flex-start;
+        margin: 0px;
+        height: 100%;
         padding: var(--space-xs) var(--space-sm);
         background-color: var(--bg-secondary);
-        border: 1px solid var(--border-color);
+        border: 2px dashed var(--secondary);
         border-radius: var(--radius-sm);
         cursor: pointer;
         color: var(--text-secondary);
@@ -92,6 +149,19 @@
         &:hover {
             background-color: var(--bg-hover);
             color: var(--text-primary);
+        }
+    }
+
+    .add-button {
+        // Ensure icon and text align nicely
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xxs);
+
+        svg {
+            // Style the icon specifically
+            font-size: 1.4em; // Make icon larger
+            // vertical-align: middle; // Alternative alignment
         }
     }
 </style>

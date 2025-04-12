@@ -1,36 +1,34 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { tick } from "svelte";
-  import { uiSessions, activeSessionId } from "../stores";
-  import {
-    createNewSession,
-    renameSession,
-    deleteSession,
-  } from "../sessionManager";
+  import { sessionStore } from "../state/session.svelte";
 
   import IconEdit from "~icons/fluent/edit-24-regular";
   import IconDelete from "~icons/fluent/delete-24-regular";
   import IconAdd from "~icons/fluent/add-24-regular";
 
-  let editingSessionId: string | null = null;
-  let editingName: string = "";
+  // --- Component State ---
+  let editingSessionId: string | null = $state(null);
+  let editingName: string = $state("");
   let originalEditingName: string = "";
-  let renameInput: HTMLInputElement | null = null;
+  let renameInput: HTMLInputElement | null = $state(null);
 
-  // Reactive statement uses the uiSessions store directly
-  $: sortedSessions = Object.values($uiSessions).sort(
+  // --- Reactive Derivations ---
+  let sortedSessions = $derived(Object.values(sessionStore.uiSessions).sort(
     (a: UISessionState, b: UISessionState) =>
       new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
-  );
+  ));
 
+  // --- Functions ---
   function handleNewChat() {
-    createNewSession(); // Call imported function
+    sessionStore.createNewSession();
   }
 
   function selectConversation(sessionId: string) {
-    // Use $activeSessionId store directly
-    if (sessionId === $activeSessionId) return;
+    if (sessionId === sessionStore.activeSessionId) return; // Access directly
     editingSessionId = null;
-    activeSessionId.set(sessionId); // Set store value
+    sessionStore.setActiveSessionId(sessionId); // Use setter method
   }
 
   function startRename(event: MouseEvent, session: UISessionState) {
@@ -57,8 +55,7 @@
       return;
     }
 
-    // Call imported function
-    renameSession(sessionIdToRename, newName);
+    sessionStore.renameSession(sessionIdToRename, newName);
   }
 
   function handleRenameKeyDown(event: KeyboardEvent) {
@@ -74,7 +71,7 @@
     event.stopPropagation();
 
     // Use $uiSessions store directly
-    const sessionToDelete = $uiSessions[sessionId];
+    const sessionToDelete = sessionStore.uiSessions[sessionId]; // Access directly
     if (!sessionToDelete) return;
 
     if (
@@ -86,45 +83,43 @@
     }
 
     // Call imported function to delete frontend session state
-    // Deleting backend threads is currently out of scope for this refactor
-    // and the corresponding API function was removed.
-    deleteSession(sessionId); // Manager function handles updating activeSessionId if needed
-
-    // Removed the try/catch block that attempted to call deleteThread
+    // Direct mutation for now, assuming SessionStateStore handles persistence via $effect
+    // and sessionManager.deleteSession will be updated/removed later.
+    sessionStore.deleteSession(sessionId);
   }
 </script>
 
 <div class="sidebar">
-  <!-- Button moved inside the list below -->
 
   <div class="sidebar-section threads-section">
+    <!-- === Session List === -->
     <ul class="thread-list">
       <!-- Iterate over sortedSessions derived from $uiSessions -->
       <!-- New Session Button as first list item -->
       <li class="new-session-list-item">
         <button
           class="new-session-button session-item-base"
-          on:click={handleNewChat}
+          onclick={handleNewChat}
           title="New Session"
         >
           <IconAdd />
           <span>Add Session</span>
         </button>
       </li>
-      {#each sortedSessions as session: UISessionState (session.sessionId)}
+      {#each sortedSessions as session (session.sessionId)}
         <!-- Use $activeSessionId store directly -->
         <li
-          class:active={session.sessionId === $activeSessionId}
+          class:active={session.sessionId === sessionStore.activeSessionId}
           class:editing={editingSessionId === session.sessionId}
         >
           {#if editingSessionId === session.sessionId}
-            <form class="rename-form" on:submit|preventDefault={handleRename}>
+            <form class="rename-form" onsubmit={preventDefault(handleRename)}>
               <input
                 type="text"
                 bind:this={renameInput}
                 bind:value={editingName}
-                on:blur={handleRename}
-                on:keydown={handleRenameKeyDown}
+                onblur={handleRename}
+                onkeydown={handleRenameKeyDown}
                 disabled={false}
                 class="rename-input"
               />
@@ -132,10 +127,10 @@
           {:else}
             <div
               class="thread-item-container session-item-base"
-              on:click={() => selectConversation(session.sessionId)}
+              onclick={() => selectConversation(session.sessionId)}
               role="button"
               tabindex="0"
-              on:keydown={(e) => {
+              onkeydown={(e) => {
                 if (e.key === "Enter" || e.key === " ")
                   selectConversation(session.sessionId);
               }}
@@ -145,7 +140,7 @@
                 <button
                   class="icon-button"
                   title="Rename Session"
-                  on:click={(e) => startRename(e, session)}
+                  onclick={(e) => startRename(e, session)}
                   disabled={false}
                 >
                   <IconEdit />
@@ -153,7 +148,7 @@
                 <button
                   class="icon-button delete-button"
                   title="Delete Session"
-                  on:click={(e) => handleDelete(e, session.sessionId)}
+                  onclick={(e) => handleDelete(e, session.sessionId)}
                   disabled={false}
                 >
                   <IconDelete />
@@ -164,6 +159,7 @@
         </li>
       {:else}
         <li class="empty-list">No conversations yet.</li>
+        <!-- === Empty List Message === -->
       {/each}
     </ul>
   </div>
@@ -386,7 +382,5 @@
     border-bottom: none;
   }
 
-  @media (max-width: 768px) {
-    /* Mobile styles can be added here if needed */
-  }
+  @media (max-width: 768px) { }
 </style>

@@ -8,3 +8,5 @@
 data/sessions/*.db
 data/sessions/*.bin
 uv.lock
+.clinerules
+.clinerules/*

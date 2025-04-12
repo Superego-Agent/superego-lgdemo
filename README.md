@@ -1,4 +1,4 @@
-# LG Demo
+# Superego Langgraph Demo
 
 ### Instruction to running this locally
 1. Backend
@@ -18,7 +18,6 @@ In superego-lgdemo/superego-frontend:
 
 ```
 npm install
-npm install svelte-persisted-store
 npm run dev
 From your browser, http://localhost:5173/ gives you access to the frontend
 ```

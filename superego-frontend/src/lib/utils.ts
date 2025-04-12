@@ -1,4 +1,3 @@
-// src/lib/utils.ts
 
 /**
  * Formats the constitution adherence levels into a string for the API.

@@ -1,19 +1,30 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { scale } from "svelte/transition";
   import { createEventDispatcher } from "svelte";
 
   import IconSend from '~icons/fluent/send-24-regular';
   import IconLoading from '~icons/fluent/arrow-sync-circle-24-regular';
 
-  let userInput: string = "";
-  let inputElement: HTMLTextAreaElement;
-  let isExpanded = false;
+  // --- Component State ---
+  let userInput: string = $state("");
+  let inputElement: HTMLTextAreaElement | null = $state(null);
+  let isExpanded = $state(false);
 
-  /** Controls whether the input and button are disabled. Passed from parent. */
-  export let disabled: boolean = false;
+  // --- Props ---
+  
+  interface Props {
+    /** Controls whether the input and button are disabled. Passed from parent. */
+    disabled?: boolean;
+  }
 
+  let { disabled = false }: Props = $props();
+
+  // --- Dispatcher ---
   const dispatch = createEventDispatcher();
 
+  // --- Event Handlers & Logic ---
   function handleSubmit() {
     const trimmedInput = userInput.trim();
     if (!trimmedInput || disabled) {
@@ -55,8 +66,9 @@
 <form
   class="chat-input-form"
   class:expanded={isExpanded}
-  on:submit|preventDefault={handleSubmit}
+  onsubmit={preventDefault(handleSubmit)}
 >
+  <!-- Text Input Area -->
   <div class="textarea-container">
     <textarea
       bind:this={inputElement}
@@ -64,10 +76,10 @@
       placeholder="Type your message here..."
       rows={isExpanded ? 3 : 1}
       disabled={disabled}
-      on:focus={handleFocus}
-      on:blur={handleBlur}
-      on:input={handleInput}
-      on:keydown={(e) => {
+      onfocus={handleFocus}
+      onblur={handleBlur}
+      oninput={handleInput}
+      onkeydown={(e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
           handleSubmit();
@@ -76,6 +88,7 @@
     ></textarea>
   </div>
 
+  <!-- Submit Button (Shows Loading/Send Icon) -->
   <button
     type="submit"
     disabled={!userInput.trim() || disabled}
@@ -105,7 +118,6 @@
     justify-content: center;
   }
   .chat-input-form.expanded {
-  //padding: var(--space-lg) 0px 0px 0px;
 
     padding: 0px;
   }
@@ -139,7 +151,8 @@
     @include custom-scrollbar($track-bg: transparent, $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
   }
 
-  .textarea-container:has(textarea:focus) {
+  // Style the container when the textarea inside it is focused
+  .textarea-container:has(:global(textarea:focus)) {
     border-color: var(--input-focus);
     outline: none;
     box-shadow:
@@ -184,7 +197,4 @@
       border-color: transparent; /* Remove border when active */
    }
 
-  //  .loading-icon-animate {
-  //      animation: spin 1s linear infinite;
-  //  }
 </style>

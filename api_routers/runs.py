@@ -1,5 +1,3 @@
-# src/api_routers/runs.py
-
 import uuid
 import json
 import traceback
@@ -92,7 +90,7 @@ async def stream_events(
         initial_messages_adapted = []
         for msg in input_messages:
              if isinstance(msg, HumanMessage):
-                 msg_dict = msg.dict()
+                 msg_dict = msg.model_dump()
                  msg_dict['nodeId'] = 'user' # Add the required nodeId
                  initial_messages_adapted.append(HumanApiMessageModel(**msg_dict))
              # Add handling for other potential initial message types if necessary
