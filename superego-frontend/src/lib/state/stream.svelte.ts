@@ -4,5 +4,4 @@ let streamStore = $state({
 });
 
 // Export the state object directly for components to read
-// Mutation functions and derived state will be added later
 export { streamStore };

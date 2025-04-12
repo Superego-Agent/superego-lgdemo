@@ -1,14 +1,9 @@
 <script lang="ts">
-	import { run } from 'svelte/legacy';
-
-	import { onDestroy } from 'svelte';
 	import ChevronLeftIcon from '~icons/fluent/chevron-left-24-regular';
 	import ChevronRightIcon from '~icons/fluent/chevron-right-24-regular';
 
 	// --- Props ---
-	
-	
-	
+
 	interface Props {
 		/** The full list of items to paginate */
 		items?: any[];
@@ -33,7 +28,7 @@
 	let paginatedItems: any[] = $state([]);
 
 	// --- Reactive Calculations ---
-	run(() => {
+	$effect(() => {
 		itemsPerPage = Math.max(1, Math.floor(containerWidth / minItemWidth));
 		totalPages = Math.ceil(items.length / itemsPerPage);
 		// Clamp currentPage to valid range if totalPages or items change
@@ -63,7 +58,7 @@
 	// Reset to page 0 if the underlying items array changes identity
 	// This prevents staying on a potentially invalid page index
 	let prevItems = $state(items);
-	run(() => {
+	$effect(() => {
 		if (items !== prevItems) {
 			// console.log("Paginator: Items array changed, resetting to page 0");
 			currentPage = 0;

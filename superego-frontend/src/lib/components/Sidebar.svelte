@@ -309,11 +309,6 @@
       margin-left: 8px;
     }
 
-    /* Ensure text size matches session names */
-    .new-session-button span {
-      font-size: 0.9em; /* Explicitly set font size for text */
-      line-height: normal; /* Reset line-height if needed */
-    }
   }
 
   .rename-form {

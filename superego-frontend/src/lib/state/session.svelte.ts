@@ -1,15 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
-import { nanoid } from 'nanoid'; // Re-add nanoid for thread IDs
-import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; // Import type too
+import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; 
 
 // --- Constants for LocalStorage Keys ---
 const KNOWN_THREADS_KEY = 'superego_knownThreads';
 const UI_SESSIONS_KEY = 'superego_uiSessions';
 const ACTIVE_SESSION_ID_KEY = 'superego_activeSessionId';
-// Removed LOCAL_CONSTITUTIONS_KEY
-
-// Removed manual localStorage helper functions
-
 
 export class SessionStateStore {
     // --- Core State Properties ---

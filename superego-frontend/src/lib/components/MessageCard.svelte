@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { fade, fly, scale } from 'svelte/transition';
-	import { elasticOut } from 'svelte/easing';
-	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	import ToolIcon from '~icons/fluent/wrench-24-regular'; // Use Fluent wrench icon
+	import { marked } from 'marked';
+	import { elasticOut } from 'svelte/easing';
+	import { fade, fly, scale } from 'svelte/transition';
+	import ToolIcon from '~icons/fluent/wrench-24-regular';
 
 	interface Props {
 		message: MessageType;
@@ -11,24 +11,14 @@
 
 	let { message }: Props = $props();
 
-	// Removed sender variable, use message.type directly
-	// Use message.nodeId directly where needed
-
-	// Correctly determine if the message represents an error
 	let isError = $derived(message.type === 'tool' && message.is_error === true);
-	// Note: SystemApiMessage doesn't have an is_error flag in global.d.ts
-
-	// Get tool name safely
 	let toolName = $derived(message.type === 'tool' ? message.name : null);
-
-	// Get AI message safely
 	let aiMessage = $derived(message.type === 'ai' ? message : null);
 
 
 	const titleMap: Record<string, string | undefined> = {
 		human: 'You',
 		system: 'System',
-		// AI and Tool titles are handled dynamically based on nodeId or tool name
 	};
 
 	// Map node IDs and message types to accent colors
@@ -356,8 +346,6 @@
 		padding: 0;
 		background: none;
 	}
-
-	/* Style for the <pre> tag generated for tool results content - REMOVED as <pre> is no longer used */
 
 	/* Style for the <pre> tag generated for error content */
 	.error-content {

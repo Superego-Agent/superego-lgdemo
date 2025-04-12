@@ -1,4 +1,4 @@
-import { logExecution } from '../utils'; 
+import { logExecution } from '../utils/utils'; 
 import { activeStore } from '$lib/state/active.svelte'; // Use new active store
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';

@@ -1,6 +1,6 @@
-import { streamRun } from '../api/sse.svelte';
-import { activeStore } from '$lib/state/active.svelte'; // Use new active store
-import { sessionStore } from '../state/session.svelte';
+import { streamRun } from '$lib/api/sse.svelte';
+import { activeStore } from '$lib/state/active.svelte';
+import { sessionStore } from '$lib/state/session.svelte';
 
 /**
  * Sends the user's input to the backend via the streamRun API.
@@ -25,7 +25,7 @@ export async function sendUserMessage(userInput: string): Promise<void> {
     }
 
     const enabledConfigs = Object.entries(currentSessionData.threads)
-        .filter(([_, config]) => (config as ThreadConfigState).isEnabled);
+        .filter(([_, config]) => (config as ThreadConfigState).isEnabled) as [string, ThreadConfigState][];
 
     if (enabledConfigs.length === 0) {
         console.warn("[chatService] No enabled configurations to run.");
@@ -38,10 +38,10 @@ export async function sendUserMessage(userInput: string): Promise<void> {
     // Sequentially initiate runs for each enabled config
     // Backend handles concurrency
     for (const [threadId, config] of enabledConfigs) {
-        console.log(`[chatService] Initiating run for thread ${threadId} with config:`, (config as ThreadConfigState).runConfig);
+        console.log(`[chatService] Initiating run for thread ${threadId} with config:`, config.runConfig);
         try {
             // Call the updated streamRun, passing the specific threadId and runConfig
-            await streamRun(userInput, (config as ThreadConfigState).runConfig, threadId);
+            await streamRun(userInput, config.runConfig, threadId);
         } catch (error: unknown) {
             // Log error for this specific run but continue trying others
             console.error(`[chatService] Error initiating run for thread ${threadId}:`, error);

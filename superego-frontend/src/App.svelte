@@ -1,10 +1,9 @@
  <script lang="ts">
 import { onMount } from 'svelte';
-import { loadGlobalConstitutions } from './lib/stores/globalConstitutionsStore';
+import { globalConstitutionsStore } from '$lib/state/constitutions.svelte'; // Use new store instance
 import Sidebar from './lib/components/Sidebar.svelte';
-import ChatInterface from './lib/components/ChatInterface.svelte';
+import ChatInterface from '$lib/components/ChatInterface.svelte';
 import ThemeToggle from './lib/components/ThemeToggle.svelte';
-import { localConstitutionsStore } from './lib/state/localConstitutions.svelte'; 
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
@@ -12,22 +11,20 @@ import { sessionStore } from '$lib/state/session.svelte'; // Import new session 
 onMount( async () => {
     try {
         await Promise.all([
-            loadGlobalConstitutions(), 
-            // loadLocalConstitutions()
+            globalConstitutionsStore.load(), 
         ]);
-        console.log('Fetched initial global constitutions and loaded local ones.');
     } catch (error) {
         console.error("App onMount Error: Failed to initialize constitutions:", error);
     }
 
         // --- START: Add Session Initialization Logic ---
-        const currentActiveId = sessionStore.activeSessionId; // Read directly
+        const currentActiveId = sessionStore.activeSessionId; 
         if (currentActiveId === null) {
-            const currentSessions = sessionStore.uiSessions; // Read directly
+            const currentSessions = sessionStore.uiSessions;
             const sessionIds = Object.keys(currentSessions);
             if (sessionIds.length > 0) {
                 // Activate the first existing session found
-                sessionStore.setActiveSessionId(sessionIds[0]); // Use setter method
+                sessionStore.setActiveSessionId(sessionIds[0]); 
                 console.log(`[App.svelte] Activated existing session: ${sessionIds[0]}`);
             } else {
                 // No sessions exist, create a new one

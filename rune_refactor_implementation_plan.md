@@ -13,24 +13,24 @@
 2.  Create `superego-frontend/src/lib/api/`.
 
 **Phase 1: Refactor Stream State & SSE API Logic**
-1.  **Move & Refine State:** Move `AppStateStore` class from `stores.svelte.ts` to `src/lib/state/app.svelte.ts`. Export `appState` instance. Update imports.
-2.  **Move & Refine SSE Logic:** Move SSE handling logic from `sseService.ts` to `src/lib/api/sse.svelte.ts`. Ensure it uses `appState` from `state/app.svelte.ts`. Update imports.
-3.  **Deprecate:** Deprecate/delete `sseService.ts` and `streamProcessor.ts`. Remove `AppStateStore` definition from `stores.svelte.ts`.
+1.  **Move & Refine State:** Move `AppStateStore` class from `stores.svelte` to `src/lib/state/app.svelte`. Export `appState` instance. Update imports.
+2.  **Move & Refine SSE Logic:** Move SSE handling logic from `sseService.ts` to `src/lib/api/sse.svelte`. Ensure it uses `appState` from `state/app.svelte`. Update imports.
+3.  **Deprecate:** Deprecate/delete `sseService.ts` and `streamProcessor.ts`. Remove `AppStateStore` definition from `stores.svelte`.
 
     *   **Note:** Imports within `chatService.ts` were updated to point to new locations, but the file itself (`chatService.ts`) was not renamed or refactored to use Runes in this phase. This can be addressed in a subsequent refactoring phase if desired.
 **Phase 2: Refactor Session State & Related API Logic**
-1.  **Create State Class:** Create `src/lib/state/session.svelte.ts` with `SessionStateStore` class.
+1.  **Create State Class:** Create `src/lib/state/session.svelte` with `SessionStateStore` class.
 2.  **Handle Persistence:** Use `persistedLocalState` when exporting the `sessionState` instance.
-3.  **Move & Refine Session API Logic:** Move relevant REST calls to `src/lib/api/rest.svelte.ts` (or `api/session.svelte.ts`). Ensure `SessionStateStore` methods call these. Update imports.
-4.  **Refactor Consumers:** Update components/services to use `sessionState` from `state/session.svelte.ts` and API functions from `src/lib/api/`.
-5.  **Deprecate:** Remove old persisted exports (`persistedUiSessions`, etc.) from `stores.svelte.ts`. Deprecate/delete `sessionManager.ts`.
+3.  **Move & Refine Session API Logic:** Move relevant REST calls to `src/lib/api/rest.svelte` (or `api/session.svelte`). Ensure `SessionStateStore` methods call these. Update imports.
+4.  **Refactor Consumers:** Update components/services to use `sessionState` from `state/session.svelte` and API functions from `src/lib/api/`.
+5.  **Deprecate:** Remove old persisted exports (`persistedUiSessions`, etc.) from `stores.svelte`. Deprecate/delete `sessionManager.ts`.
 
 **Phase 3: Refactor UI State**
-1.  **Move State Class:** Move `UIStateStore` class from `stores/uiState.svelte.ts` to `src/lib/state/ui.svelte.ts`. Export `uiState` instance. Update imports.
-2.  **Deprecate:** Delete `stores/uiState.svelte.ts`.
+1.  **Move State Class:** Move `UIStateStore` class from `stores/uiState.svelte` to `src/lib/state/ui.svelte`. Export `uiState` instance. Update imports.
+2.  **Deprecate:** Delete `stores/uiState.svelte`.
 
 **Phase 4: Refactor General API Logic** (Optional but recommended)
-1.  **Consolidate REST:** Move remaining general REST API calls from `api.ts` to `src/lib/api/rest.svelte.ts`.
+1.  **Consolidate REST:** Move remaining general REST API calls from `api.ts` to `src/lib/api/rest.svelte`.
 2.  **Deprecate:** Deprecate/delete `api.ts` if empty.
 
 **Phase 5: Refactor Component Consumers**
@@ -42,8 +42,8 @@
 **Phase 7: Documentation**
 1.  Update `superego-frontend/CODING_GUIDELINES.md` with the standardized structure and class-based Rune pattern.
 
-**Phase 8: Cleanup `stores.svelte.ts`**
-1.  Ensure `stores.svelte.ts` is empty or only contains necessary re-exports (ideally empty). Remove the file if possible.
+**Phase 8: Cleanup `stores.svelte`**
+1.  Ensure `stores.svelte` is empty or only contains necessary re-exports (ideally empty). Remove the file if possible.
 
 ---
 
@@ -60,21 +60,21 @@ graph TD
 
     subgraph State Modules (src/lib/state/)
         direction LR
-        SessionState[session.svelte.ts <br> (SessionStateStore)]
-        AppState[app.svelte.ts <br> (AppStateStore)]
-        UiState[ui.svelte.ts <br> (UIStateStore)]
-        %% Potentially others like theme.svelte.ts if refactored
+        SessionState[session.svelte <br> (SessionStateStore)]
+        AppState[app.svelte <br> (AppStateStore)]
+        UiState[ui.svelte <br> (UIStateStore)]
+        %% Potentially others like theme.svelte if refactored
     end
 
     subgraph API Modules (src/lib/api/)
         direction LR
-        SseApi[sse.svelte.ts]
-        RestApi[rest.svelte.ts]
-        %% Potentially others like session.svelte.ts
+        SseApi[sse.svelte]
+        RestApi[rest.svelte]
+        %% Potentially others like session.svelte
     end
 
     subgraph Utils / Persistence
-        PersistedUtil[persistedLocalState.svelte.ts]
+        PersistedUtil[persistedLocalState.svelte]
         LocalStorage[(LocalStorage)]
     end
 

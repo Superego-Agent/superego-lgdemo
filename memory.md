@@ -92,9 +92,9 @@ Current User Flow:
 *   Pattern: Thin client interacting with the backend API.
 *   State Management (Evolving Pattern - Refactoring in Progress):
     *   Relies on backend checkpoints as the source of truth for conversation history.
-    *   **Target Pattern (Rune-based):** Utilize Svelte 5 Runes (`$state`, `$derived`, `$effect`) within **classes** defined in `.svelte.ts` files, typically located in `src/lib/state/`. Export instances of these classes (e.g., `appState` from `state/app.svelte.ts`, `uiState` from `state/ui.svelte.ts`). State properties and mutation methods are accessed via these instances.
-    *   **Persistence:** Use the `persistedLocalState` utility (`src/lib/utils/persistedLocalState.svelte.ts`) to wrap exported state class instances requiring `localStorage` persistence (e.g., `sessionState`).
-    *   **API Logic:** Encapsulate API interactions (REST, SSE) in dedicated modules within `src/lib/api/` (e.g., `api/sse.svelte.ts`, `api/rest.svelte.ts`). State classes may call functions from these API modules.
+    *   **Target Pattern (Rune-based):** Utilize Svelte 5 Runes (`$state`, `$derived`, `$effect`) within **classes** defined in `.svelte` files, typically located in `src/lib/state/`. Export instances of these classes (e.g., `appState` from `state/app.svelte`, `uiState` from `state/ui.svelte`). State properties and mutation methods are accessed via these instances.
+    *   **Persistence:** Use the `persistedLocalState` utility (`src/lib/utils/persistedLocalState.svelte`) to wrap exported state class instances requiring `localStorage` persistence (e.g., `sessionState`).
+    *   **API Logic:** Encapsulate API interactions (REST, SSE) in dedicated modules within `src/lib/api/` (e.g., `api/sse.svelte`, `api/rest.svelte`). State classes may call functions from these API modules.
     *   **(Legacy Pattern):** Older parts of the codebase might still use `svelte/store` (`writable`) or `svelte-persisted-store`. These are being phased out. `threadCacheStore` (now part of `appState`) holds thread view state.
 
 ## 3. Communication

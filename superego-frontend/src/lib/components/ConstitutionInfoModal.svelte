@@ -1,10 +1,6 @@
 <script lang="ts">
-    import { createBubbler, stopPropagation } from 'svelte/legacy';
-
-    const bubble = createBubbler();
-        import { createEventDispatcher } from 'svelte';
-        import { fade } from 'svelte/transition';
-        import IconClose from '~icons/fluent/dismiss-24-regular';
+    import { fade } from 'svelte/transition';
+    import IconClose from '~icons/fluent/dismiss-24-regular';
 
     interface Props {
         title?: string;
@@ -12,6 +8,7 @@
         content?: string | undefined;
         isLoading?: boolean;
         error?: string | null;
+        onClose?: () => void;
     }
 
     let {
@@ -19,13 +16,12 @@
         description = undefined,
         content = undefined,
         isLoading = false,
-        error = null
+        error = null,
+        onClose = () => {}
     }: Props = $props();
 
-        const dispatch = createEventDispatcher();
-
         function closeModal() {
-            dispatch('close');
+            onClose();
         }
 
         // Close modal on escape key press
@@ -38,8 +34,8 @@
 
     <svelte:window onkeydown={handleKeydown}/>
 
-    <div class="modal-overlay" onclick={closeModal} transition:fade={{ duration: 150 }} role="dialog" aria-modal="true">
-        <div class="modal-content" onclick={stopPropagation(bubble('click'))} transition:fade={{ duration: 150, delay: 50 }}>
+    <div class="modal-overlay" onclick={closeModal} transition:fade={{ duration: 150 }} role="dialog" aria-modal="true" tabindex="-1">
+        <div class="modal-content" onclick={(e) => e.stopPropagation()} transition:fade={{ duration: 150, delay: 50 }}>
             <button class="close-button" onclick={closeModal} aria-label="Close modal">
                 <IconClose />
             </button>

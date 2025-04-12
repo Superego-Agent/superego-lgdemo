@@ -1,4 +1,4 @@
-import { logExecution } from '$lib/utils'; // Correct path for utils barrel file
+import { logExecution } from '../utils/utils'; // Correct path for utils barrel file
 import { activeStore } from '$lib/state/active.svelte'; // Use new active store
 
 // Base URL for the API - Consider moving to a shared config if used elsewhere

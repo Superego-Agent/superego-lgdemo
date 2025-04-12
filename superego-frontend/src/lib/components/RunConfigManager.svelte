@@ -1,20 +1,19 @@
-<script lang="ts">
-    // Component to display and manage multiple Run Configuration cards (e.g., Superego A, B)
-    import { sessionStore } from '../state/session.svelte'; // Import new session state
-    import { activeStore } from "$lib/state/active.svelte"; // Import new active store
-    import ConfigCard from './ConfigCard.svelte';
-    import IconAdd from '~icons/fluent/add-24-regular'; // Import the icon
-    import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
+<!-- Component to display and manage multiple Run Configuration cards (Config 1, Config 2) -->
 
-    // Reactive access to the current session's configurations
-    // Access .state for persisted stores in derived
-    let currentSessionId = $derived(sessionStore.activeSessionId); // Access directly
-    let currentSession = $derived(currentSessionId ? sessionStore.uiSessions[currentSessionId] : null); // Access directly
+<script lang="ts">
+    import { sessionStore } from '../state/session.svelte'; 
+    import { activeStore } from "$lib/state/active.svelte"; 
+    import ConfigCard from './ConfigCard.svelte';
+    import IconAdd from '~icons/fluent/add-24-regular'; 
+    import { v4 as uuidv4 } from 'uuid'; 
+
+    let currentSessionId = $derived(sessionStore.activeSessionId);
+    let currentSession = $derived(currentSessionId ? sessionStore.uiSessions[currentSessionId] : null);
     let threadConfigs = $derived(currentSession?.threads ?? {});
     let configEntries = $derived(Object.entries(threadConfigs));
 
-    function handleCardSelect(event: CustomEvent<{ threadId: string }>) {
-        const selectedThreadId = event.detail.threadId;
+    function handleCardSelect(detail: { threadId: string }) {
+        const selectedThreadId = detail.threadId;
         if (currentSessionId) {
             activeStore.setActiveConfigEditor(selectedThreadId); // Use method on activeStore
         }
@@ -28,18 +27,16 @@
             name: `Config ${Object.keys(threadConfigs).length + 1}`, // Simple default name
             runConfig: { // Default empty runConfig - might need refinement
                 configuredModules: []
-            },
+            }, 
             isEnabled: true // Default to enabled
         };
 
-        // Use .state for persisted store and direct mutation
-        // Use .state and immutable update pattern
-        if (currentSessionId && sessionStore.uiSessions[currentSessionId]) { // Access directly
-            const sessionToUpdate = sessionStore.uiSessions[currentSessionId]; // Access directly
+        if (currentSessionId && sessionStore.uiSessions[currentSessionId]) { 
+            const sessionToUpdate = sessionStore.uiSessions[currentSessionId]; 
             const updatedThreads = { ...sessionToUpdate.threads, [newThreadId]: newConfig };
             const updatedSession = { ...sessionToUpdate, threads: updatedThreads, lastUpdatedAt: new Date().toISOString() };
-            sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession }; // Access directly (setter)
-            activeStore.setActiveConfigEditor(newThreadId); // Use method on activeStore
+            sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession }; 
+            activeStore.setActiveConfigEditor(newThreadId);
         } else {
             console.warn("RunConfigManager: Cannot add configuration, no active session found in store.");
         }
@@ -56,9 +53,9 @@
             sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession };
 
             // If the deleted config was active, select another one if possible
-            if (activeStore.activeConfigEditorId === threadId) { // Use activeStore
+            if (activeStore.activeConfigEditorId === threadId) { 
                 const remainingIds = Object.keys(updatedThreads);
-                activeStore.setActiveConfigEditor(remainingIds.length > 0 ? remainingIds[0] : null); // Use method on activeStore
+                activeStore.setActiveConfigEditor(remainingIds.length > 0 ? remainingIds[0] : null); 
             }
         } else {
             console.warn(`RunConfigManager: Cannot delete configuration ${threadId}, session or thread not found.`);
@@ -103,10 +100,8 @@
                 {threadId}
                 config={config as ThreadConfigState}
                 isActive={activeStore.activeConfigEditorId === threadId}
-                on:select={handleCardSelect}
-                on:delete={() => deleteConfiguration(threadId)}
-                on:rename={(e) => renameConfiguration(threadId, e.detail.newName)}
-                on:toggle={(e) => toggleConfiguration(threadId, e.detail.isEnabled)}
+                onSelect={handleCardSelect}
+                onToggle={(e) => toggleConfiguration(threadId, e.isEnabled)}
             />
         {/each}
         
@@ -115,8 +110,6 @@
         </button>
     </div>
 </div>
-
-<!-- Removed duplicated functions -->
 
 <style lang="scss">
     .run-config-manager {
@@ -153,15 +146,9 @@
     }
 
     .add-button {
-        // Ensure icon and text align nicely
         display: inline-flex;
         align-items: center;
         gap: var(--space-xxs);
 
-        svg {
-            // Style the icon specifically
-            font-size: 1.4em; // Make icon larger
-            // vertical-align: middle; // Alternative alignment
-        }
     }
 </style>

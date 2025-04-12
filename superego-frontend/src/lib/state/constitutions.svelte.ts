@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; // Import type
+import { fetchAvailableConstitutions } from '$lib/api/rest.svelte';
 
 // --- Constants for LocalStorage Keys ---
 const LOCAL_CONSTITUTIONS_KEY = 'superego_local_constitutions';
@@ -27,7 +28,7 @@ export class LocalConstitutionsStateStore {
     // --- Methods for State Mutation ---
 
     /** Adds a new local constitution to the store. */
-    addLocalConstitution(title: string, text: string): LocalConstitution {
+    addItem(title: string, text: string): LocalConstitution {
         const newConstitution: LocalConstitution = {
             id: nanoid(), // Generate unique local ID
             title: title.trim(),
@@ -40,7 +41,7 @@ export class LocalConstitutionsStateStore {
     }
 
     /** Updates an existing local constitution by its ID. */
-    updateLocalConstitution(id: string, title: string, text: string): boolean {
+    updateItem(id: string, title: string, text: string): boolean {
         // Use direct access (getter)
         const index = this.localConstitutions.findIndex(c => c.id === id);
         if (index !== -1) {
@@ -61,7 +62,7 @@ export class LocalConstitutionsStateStore {
     }
 
     /** Deletes a local constitution by its ID. */
-    deleteLocalConstitution(id: string): boolean {
+    deleteItem(id: string): boolean {
         // Use direct access (getter) and filter for immutable update
         const initialLength = this.localConstitutions.length;
         const filtered = this.localConstitutions.filter(c => c.id !== id);
@@ -75,5 +76,48 @@ export class LocalConstitutionsStateStore {
     }
 }
 
-// --- Export Singleton Instance ---
+export class GlobalConstitutionsStore {
+    // --- State Properties ---
+    constitutions = $state<ConstitutionItem[]>([]);
+    isLoading = $state<boolean>(false);
+    error = $state<string | null>(null);
+    #hasLoaded = $state<boolean>(false); // Private state to prevent multiple fetches
+
+    // --- Methods ---
+
+    /**
+     * Fetches the global constitutions from the API and updates the store state.
+     * Should typically be called once, e.g., on application load.
+     */
+    async load(): Promise<void> {
+        if (this.#hasLoaded || this.isLoading) {
+            // Already loaded or currently loading, do nothing
+            return;
+        }
+
+        this.isLoading = true;
+        this.error = null;
+        this.#hasLoaded = true; // Set flag immediately
+
+        try {
+            const fetchedConstitutions = await fetchAvailableConstitutions();
+            // Filter out 'none' if present in the fetched data
+            this.constitutions = fetchedConstitutions.filter((c: ConstitutionItem) => c.id !== 'none');
+        } catch (err: any) {
+            console.error("Failed to load global constitutions:", err);
+            this.error = err.message || "Unknown error fetching global constitutions.";
+            this.#hasLoaded = false; // Reset flag on error to allow retry
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    // --- Derived State (Example, if needed) ---
+    // get constitutionNames(): string[] {
+    //     return this.constitutions.map(c => c.name);
+    // }
+}
+
+// --- Export Singleton Instances ---
 export const localConstitutionsStore = new LocalConstitutionsStateStore();
+export const globalConstitutionsStore = new GlobalConstitutionsStore();

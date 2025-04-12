@@ -1,13 +1,18 @@
 <script lang="ts">
-    import { run } from 'svelte/legacy';
 
-    import { submitConstitution, fetchConstitutionContent } from '$lib/api/rest.svelte'; // Use $lib alias
-    import { localConstitutionsStore } from '$lib/state/localConstitutions.svelte'; // Use $lib alias
-    import { globalConstitutions } from '$lib/stores/globalConstitutionsStore'; // Use $lib alias
-    import { createEventDispatcher } from 'svelte';
+    import { fetchConstitutionContent, submitConstitution } from '$lib/api/rest.svelte';
+    import { localConstitutionsStore } from '$lib/state/constitutions.svelte';
+    import { globalConstitutionsStore } from '$lib/state/constitutions.svelte';
     import { tick } from 'svelte';
 
-    const dispatch = createEventDispatcher();
+    let { onConstitutionAdded = (detail?: { success: boolean }) => {}, onClose = () => {} } = $props<{
+        onConstitutionAdded?: (detail?: { success: boolean }) => void;
+        onClose?: () => void;
+    }>();
+
+    let availableConstitutions = $derived(globalConstitutionsStore.constitutions);
+    let isLoading = $derived(globalConstitutionsStore.isLoading);
+    let error = $derived(globalConstitutionsStore.error); 
 
     // --- Component State ---
     let constitutionTitle = $state('');
@@ -65,7 +70,7 @@
         let submitApiMessage = '';
 
         try {
-            localConstitutionsStore.addLocalConstitution(constitutionTitle, constitutionText); // Call method on store instance
+            localConstitutionsStore.addItem(constitutionTitle, constitutionText); // Call method on store instance
             localAddSuccess = true;
 
             if (submitForReview) {
@@ -86,10 +91,10 @@
                 constitutionText = '';
                 selectedTemplateId = null;
 
-                dispatch('constitutionAdded', { success: true });
+                onConstitutionAdded({ success: true });
 
                 setTimeout(() => {
-                    dispatch('close');
+                    onClose();
                 }, 2500); // Slightly longer delay
             } else {
                  // This case should ideally not happen if addLocalConstitution doesn't throw
@@ -107,14 +112,17 @@
         }
     }
     let allConstitutionsForTemplate = $derived([
-        ...$globalConstitutions
+        ...globalConstitutionsStore.constitutions // Access directly
             .filter((c: ConstitutionItem) => c.id !== 'none')
             .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })),
         ...localConstitutionsStore.localConstitutions.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text })) // Access .localConstitutions property
     ].sort((a, b) => a.title.localeCompare(b.title)));
-    // --- Reactive Logic ---
+    // --- Reactive Logic & Effects ---
+    // Fetch constitutions on component mount using the store's load method
+    globalConstitutionsStore.load();
+
     // Reactive statement to load template when selectedTemplateId changes
-    run(() => {
+    $effect(() => {
         if (selectedTemplateId) {
             loadTemplateContent(selectedTemplateId);
         }

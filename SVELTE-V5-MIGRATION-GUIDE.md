@@ -545,7 +545,7 @@ app.$on('event', callback);---
 
 > [!NOTE] Note that using `events` is discouraged — instead, [use callbacks](#Event-changes)
 
-For `$set`, use `$state` instead to create a reactive property object and manipulate it. If you're doing this inside a `.js` or `.ts` file, adjust the ending to include `.svelte`, i.e. `.svelte.js` or `.svelte.ts`.
+For `$set`, use `$state` instead to create a reactive property object and manipulate it. If you're doing this inside a `.js` or `.ts` file, adjust the ending to include `.svelte`, i.e. `.svelte.js` or `.svelte`.
 
 ```js
 +++import { mount } from 'svelte';+++
@@ -746,7 +746,7 @@ In runes mode, properties are never accessible on the component instance. You ca
 </script>
 ```
 
-Alternatively, if the place where they are instantiated is under your control, you can also make use of runes inside `.js/.ts` files by adjusting their ending to include `.svelte`, i.e. `.svelte.js` or `.svelte.ts`, and then use `$state`:
+Alternatively, if the place where they are instantiated is under your control, you can also make use of runes inside `.js/.ts` files by adjusting their ending to include `.svelte`, i.e. `.svelte.js` or `.svelte`, and then use `$state`:
 
 ```js
 +++import { mount } from 'svelte';+++

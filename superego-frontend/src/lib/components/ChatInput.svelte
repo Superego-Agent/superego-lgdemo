@@ -1,11 +1,8 @@
 <script lang="ts">
-  import { preventDefault } from 'svelte/legacy';
-
   import { scale } from "svelte/transition";
-  import { createEventDispatcher } from "svelte";
 
-  import IconSend from '~icons/fluent/send-24-regular';
   import IconLoading from '~icons/fluent/arrow-sync-circle-24-regular';
+  import IconSend from '~icons/fluent/send-24-regular';
 
   // --- Component State ---
   let userInput: string = $state("");
@@ -17,12 +14,12 @@
   interface Props {
     /** Controls whether the input and button are disabled. Passed from parent. */
     disabled?: boolean;
+    onSend?: (detail: { text: string }) => void;
   }
 
-  let { disabled = false }: Props = $props();
+  let { disabled = false, onSend = () => {} }: Props = $props();
 
   // --- Dispatcher ---
-  const dispatch = createEventDispatcher();
 
   // --- Event Handlers & Logic ---
   function handleSubmit() {
@@ -31,7 +28,7 @@
       return;
     }
 
-    dispatch("send", { text: trimmedInput });
+    onSend({ text: trimmedInput });
 
     userInput = "";
     isExpanded = false;
@@ -66,7 +63,7 @@
 <form
   class="chat-input-form"
   class:expanded={isExpanded}
-  onsubmit={preventDefault(handleSubmit)}
+  onsubmit={(e) => {e.preventDefault(); handleSubmit()}}
 >
   <!-- Text Input Area -->
   <div class="textarea-container">

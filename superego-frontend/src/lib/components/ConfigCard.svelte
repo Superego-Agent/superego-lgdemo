@@ -1,20 +1,19 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
-    import { stopPropagation } from 'svelte/legacy'; // Needed for nested clicks
+    import { fetchConstitutionContent } from '$lib/api/rest.svelte';
+    import { localConstitutionsStore } from '$lib/state/constitutions.svelte';
     import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
-    import { localConstitutionsStore } from '$lib/state/localConstitutions.svelte';
-    import { fetchConstitutionContent } from '$lib/api/rest.svelte'; // Assuming global constitutions only need content fetched
 
     // --- Component Props ---
     interface Props {
         threadId: string;
-        config: ThreadConfigState; // Assumes ThreadConfigState includes runConfig.configuredModules
+        config: ThreadConfigState; 
         isActive?: boolean;
+        onSelect?: (detail: { threadId: string }) => void;
+        onToggle?: (detail: { isEnabled: boolean }) => void;
     }
-    let { threadId, config, isActive = false }: Props = $props();
+    let { threadId, config, isActive = false, onSelect = () => {}, onToggle = () => {} }: Props = $props();
 
     // --- Event Dispatcher ---
-    const dispatch = createEventDispatcher();
 
     // --- Modal State ---
     let showModal = $state(false);
@@ -33,14 +32,13 @@
     // --- Event Handlers ---
     function handleCardClick() {
         // Select the entire configuration when the card background is clicked
-        dispatch('select', { threadId });
+        onSelect({ threadId });
     }
 
     function handleToggleClick() {
         // Only handle the toggle action, prevent card selection
-        // stopPropagation will be handled inline in the template
         const newIsEnabled = !config.isEnabled;
-        dispatch('toggle', { isEnabled: newIsEnabled });
+        onToggle({ isEnabled: newIsEnabled });
     }
 
     async function showConstitutionInfo(moduleId: string, moduleTitle: string) {
@@ -64,7 +62,7 @@
             // Assume it's a global constitution if not found locally
             // We might need a more robust way to get the description if needed,
             // but for now, we'll fetch content.
-            modalDescription = "Global Constitution"; // Placeholder description
+            modalDescription = "Global Constitution"; 
             try {
                 modalContent = await fetchConstitutionContent(moduleId);
             } catch (err: any) {
@@ -97,7 +95,7 @@
             <input
                 type="checkbox"
                 checked={config.isEnabled}
-                onchange={stopPropagation(handleToggleClick)}
+                onchange={e=>{e.stopPropagation();handleToggleClick()}}
             />
             <span class="slider"></span>
         </label>
@@ -109,7 +107,7 @@
             {#each visibleChips as module (module.id)}
                  <button
                     class="chip"
-                    onclick={stopPropagation(() => showConstitutionInfo(module.id, module.title))}
+                    onclick={e=>{e.stopPropagation(); showConstitutionInfo(module.id, module.title)}}
                     title={`View details for: ${module.title}`}
                 >
                     {module.title}
@@ -132,7 +130,7 @@
     content={modalContent}
     isLoading={modalIsLoading}
     error={modalError}
-    on:close={() => (showModal = false)}
+    onClose={() => (showModal = false)}
   />
 {/if}
 

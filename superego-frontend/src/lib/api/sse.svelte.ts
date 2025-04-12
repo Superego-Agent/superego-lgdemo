@@ -1,5 +1,5 @@
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
-import { logExecution, deepClone } from '../utils';
+import { logExecution, deepClone } from '../utils/utils';
 import { threadStore } from '$lib/state/threads.svelte'; // Use new thread store
 import { activeStore } from '$lib/state/active.svelte'; // Use new active store
 // Removed legacy store imports

@@ -14,24 +14,24 @@ This document outlines the best practices and principles to follow during the fr
 
 *   **Single Responsibility:** Keep components and modules focused on a single, clear concern.
 *   **Standard Directories:**
-    *   State management logic resides in `src/lib/state/`, organized by domain (e.g., `threads.svelte.ts`, `active.svelte.ts`, `session.svelte.ts`).
-    *   API interaction logic resides in `src/lib/api/`, organized by domain or type (e.g., `sse.svelte.ts`, `rest.svelte.ts`, `session.svelte.ts`).
+    *   State management logic resides in `src/lib/state/`, organized by domain (e.g., `threads.svelte`, `active.svelte`, `session.svelte`).
+    *   API interaction logic resides in `src/lib/api/`, organized by domain or type (e.g., `sse.svelte`, `rest.svelte`, `session.svelte`).
     *   General utilities reside in `src/lib/utils/`.
 *   **Minimize File Size:** Split large components or utility sets into smaller, more manageable files.
 *   **Meaningful Naming:** Use clear, descriptive names for files, functions, and variables so their purpose is self-evident.
 *   **Constants:** Extract constants into separate files if appropriate (e.g., `src/lib/constants.ts`).
 ## 3. State Management (Svelte 5 Runes - Class Pattern)
 
-*   **Pattern:** Utilize Svelte 5 Runes (`$state`, `$derived`, `$effect`) within **classes** defined in `.svelte.ts` files for managing reactive application state. Export instances of these classes.
-*   **Location:** State store classes reside in `src/lib/state/`, organized by domain (e.g., `threads.svelte.ts`, `active.svelte.ts`, `session.svelte.ts`).
+*   **Pattern:** Utilize Svelte 5 Runes (`$state`, `$derived`, `$effect`) within **classes** defined in `.svelte` files for managing reactive application state. Export instances of these classes.
+*   **Location:** State store classes reside in `src/lib/state/`, organized by domain (e.g., `threads.svelte`, `active.svelte`, `session.svelte`).
 *   **Implementation:**
     *   Define state properties within the class using `$state`.
     *   Define computed values using `$derived` properties or getters as needed.
     *   Define methods within the class to encapsulate state mutation logic.
     *   Use `$effect` within the class constructor or methods for side effects (e.g., persistence, DOM manipulation), ensuring browser checks (`import { browser }`) guard client-side-only effects.
-    *   For simple persistence, the `persistedLocalState` utility (`src/lib/utils/persistedLocalState.svelte`) can wrap the exported instance (see `session.svelte.ts`).
+    *   For simple persistence, the `persistedLocalState` utility (`src/lib/utils/persistedLocalState.svelte`) can wrap the exported instance (see `session.svelte`).
 *   **Consumption:** Components and services should import the exported state instance (e.g., `import { activeStore } from '$lib/state/active.svelte';`) and access state properties or call methods directly on the instance (e.g., `activeStore.theme`, `activeStore.toggleTheme()`).
-*   **Example (`src/lib/state/active.svelte.ts` - Simplified):**
+*   **Example (`src/lib/state/active.svelte` - Simplified):**
     ```typescript
     import { browser } from '$app/environment';
 
