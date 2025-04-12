@@ -1,4 +1,4 @@
-<script lang="ts">
+ <script lang="ts">
 import { onMount } from 'svelte';
 import { loadGlobalConstitutions } from './lib/stores/globalConstitutionsStore';
 import Sidebar from './lib/components/Sidebar.svelte';
@@ -13,7 +13,7 @@ onMount( async () => {
     try {
         await Promise.all([
             loadGlobalConstitutions(), 
-            loadLocalConstitutions() 
+            // loadLocalConstitutions()
         ]);
         console.log('Fetched initial global constitutions and loaded local ones.');
     } catch (error) {
@@ -21,14 +21,13 @@ onMount( async () => {
     }
 
         // --- START: Add Session Initialization Logic ---
-        const currentActiveId = sessionStore.activeSessionId;
+        const currentActiveId = sessionStore.activeSessionId; // Read directly
         if (currentActiveId === null) {
-            // Access .state directly
-            const currentSessions = sessionStore.uiSessions;
+            const currentSessions = sessionStore.uiSessions; // Read directly
             const sessionIds = Object.keys(currentSessions);
             if (sessionIds.length > 0) {
                 // Activate the first existing session found
-                sessionStore.activeSessionId.state = sessionIds[0];
+                sessionStore.setActiveSessionId(sessionIds[0]); // Use setter method
                 console.log(`[App.svelte] Activated existing session: ${sessionIds[0]}`);
             } else {
                 // No sessions exist, create a new one

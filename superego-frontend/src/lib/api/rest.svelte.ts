@@ -1,5 +1,5 @@
 import { logExecution } from '../utils'; 
-import { appStateStore } from '../state/app.svelte'; 
+import { activeStore } from '$lib/state/active.svelte'; // Use new active store
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -10,7 +10,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
  * Sets global error state via appState.
  */
 async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-	appStateStore.globalError = null;
+	activeStore.clearGlobalError(); // Use method
 
 	try {
 		const response = await fetch(url, {
@@ -50,7 +50,7 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
 		if (!(error instanceof DOMException && error.name === 'AbortError')) {
 			console.error('API Fetch Error:', url, error);
 			const errorMsg = error instanceof Error ? error.message : String(error);
-			appStateStore.globalError = errorMsg || 'An unknown API error occurred.';
+			activeStore.setGlobalError(errorMsg || 'An unknown API error occurred.'); // Use method
 			throw error; // Re-throw after setting global state
 		} else {
 			console.log('API Fetch aborted:', url);
@@ -77,7 +77,7 @@ export const fetchAvailableConstitutions = (signal?: AbortSignal): Promise<Const
  */
 export const fetchConstitutionContent = (constitutionId: string, signal?: AbortSignal): Promise<string> => {
 	return logExecution(`Fetch content for constitution ${constitutionId}`, async () => {
-		appStateStore.globalError = null;
+		activeStore.clearGlobalError(); // Use method
 		try {
 			const response = await fetch(`${BASE_URL}/constitutions/${constitutionId}/content`, {
 				signal,
@@ -98,7 +98,7 @@ export const fetchConstitutionContent = (constitutionId: string, signal?: AbortS
 			if (!(error instanceof DOMException && error.name === 'AbortError')) {
 				console.error(`API Fetch Error (Text): ${BASE_URL}/constitutions/${constitutionId}/content`, error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
-				appStateStore.globalError = errorMsg || 'An unknown API error occurred fetching constitution content.';
+				activeStore.setGlobalError(errorMsg || 'An unknown API error occurred fetching constitution content.'); // Use method
 				throw error;
 			} else {
 				console.log(`API Fetch aborted: ${BASE_URL}/constitutions/${constitutionId}/content`);

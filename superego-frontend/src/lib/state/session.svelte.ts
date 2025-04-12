@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-// Removed nanoid import
-import { persistedLocalState } from '$lib/utils/persistedLocalState.svelte';
+import { nanoid } from 'nanoid'; // Re-add nanoid for thread IDs
+import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; // Import type too
 
 // --- Constants for LocalStorage Keys ---
 const KNOWN_THREADS_KEY = 'superego_knownThreads';
@@ -14,19 +14,31 @@ const ACTIVE_SESSION_ID_KEY = 'superego_activeSessionId';
 export class SessionStateStore {
     // --- Core State Properties ---
 
-    /** List of all LangGraph thread IDs known to this client. Acts as an index. Persisted. */
-    knownThreadIds = persistedLocalState<string[]>(KNOWN_THREADS_KEY, []);
+    // --- Helper to define persisted properties ---
+    #definePersisted<T>(propName: keyof this, storageKey: string, defaultValue: T): PersistedLocalState<T> {
+        const persisted = persistedLocalState<T>(storageKey, defaultValue);
+        Object.defineProperty(this, propName, {
+            get: () => persisted.state,
+            set: (value: T) => { persisted.state = value; },
+            enumerable: true,
+            configurable: true
+        });
+        return persisted;
+    }
 
-    /** Holds state for ALL UI sessions/tabs, keyed by sessionId. Maps UI tabs to backend thread IDs. Persisted. */
-    uiSessions = persistedLocalState<Record<string, UISessionState>>(UI_SESSIONS_KEY, {});
-
-    /** Tracks the sessionId of the currently viewed session/tab. Persisted. */
-    activeSessionId = persistedLocalState<string | null>(ACTIVE_SESSION_ID_KEY, null);
-
-    // Removed localConstitutions property
+    // --- Public Property Declarations (Types) ---
+    // Definite assignment assertion '!' used as they are initialized in constructor via helper
+    knownThreadIds!: string[];
+    uiSessions!: Record<string, UISessionState>;
+    activeSessionId!: string | null;
 
     // Constructor no longer needs manual persistence effects
-    constructor() {}
+    constructor() {
+        // Initialize persisted properties using the helper
+        this.#definePersisted('knownThreadIds', KNOWN_THREADS_KEY, []);
+        this.#definePersisted('uiSessions', UI_SESSIONS_KEY, {});
+        this.#definePersisted('activeSessionId', ACTIVE_SESSION_ID_KEY, null);
+    }
 
     // --- Methods for State Mutation ---
     /**
@@ -53,9 +65,9 @@ export class SessionStateStore {
             threads: { [defaultThreadId]: defaultThreadConfig } // Initialize with default
         };
 
-        // Use .state to access/mutate the wrapped state
-        this.uiSessions.state = { ...this.uiSessions.state, [newSessionId]: newSession };
-        this.activeSessionId.state = newSessionId;
+        // Use direct property access (triggers setter)
+        this.uiSessions = { ...this.uiSessions, [newSessionId]: newSession };
+        this.activeSessionId = newSessionId;
         // Assuming uiState is accessible or passed in if needed for activeConfigEditorId
         // uiState.activeConfigEditorId = defaultThreadId; // This needs uiState access
         console.log(`[OK] Created new session: ${newSessionId} (${name})`);
@@ -68,10 +80,11 @@ export class SessionStateStore {
      * @param newName The new name for the session.
      */
     renameSession(sessionId: string, newName: string): void {
-        const sessionToRename = this.uiSessions.state[sessionId];
+        // Use direct property access (triggers getter/setter)
+        const sessionToRename = this.uiSessions[sessionId];
         if (sessionToRename) {
             const updatedSession = { ...sessionToRename, name: newName, lastUpdatedAt: new Date().toISOString() };
-            this.uiSessions.state = { ...this.uiSessions.state, [sessionId]: updatedSession };
+            this.uiSessions = { ...this.uiSessions, [sessionId]: updatedSession };
             console.log(`[OK] Renamed session ${sessionId} to "${newName}"`);
         } else {
              console.warn(`Attempted rename on non-existent session: ${sessionId}`);
@@ -83,20 +96,22 @@ export class SessionStateStore {
      * @param sessionId The ID of the session to delete.
      */
     deleteSession(sessionId: string): void {
-        if (!this.uiSessions.state[sessionId]) {
+        if (!this.uiSessions[sessionId]) { // Use direct access
             console.warn(`Attempted to delete non-existent session: ${sessionId}`);
             return;
         }
 
-        const currentSessions = { ...this.uiSessions.state };
+        // Use direct access and immutable update
+        const currentSessions = { ...this.uiSessions };
         delete currentSessions[sessionId];
-        this.uiSessions.state = currentSessions;
+        this.uiSessions = currentSessions;
         console.log(`[OK] Deleted session: ${sessionId}`);
 
-        if (this.activeSessionId.state === sessionId) {
-            const remainingIds = Object.keys(this.uiSessions.state);
-            this.activeSessionId.state = remainingIds.length > 0 ? remainingIds[0] : null;
-            console.log(`[OK] Active session was deleted. New active session: ${this.activeSessionId.state}`);
+        // Use direct access
+        if (this.activeSessionId === sessionId) {
+            const remainingIds = Object.keys(this.uiSessions);
+            this.activeSessionId = remainingIds.length > 0 ? remainingIds[0] : null;
+            console.log(`[OK] Active session was deleted. New active session: ${this.activeSessionId}`);
         }
     }
 
@@ -110,11 +125,11 @@ export class SessionStateStore {
     addThreadToSession(sessionId: string, threadId: string): void {
         this.addKnownThreadId(threadId); // Ensure it's known globally
 
-        const sessionToAddThread = this.uiSessions.state[sessionId];
+        // Use direct access and immutable update
+        const sessionToAddThread = this.uiSessions[sessionId];
         if (sessionToAddThread) {
-            // Just update timestamp
             const updatedSession = { ...sessionToAddThread, lastUpdatedAt: new Date().toISOString() };
-            this.uiSessions.state = { ...this.uiSessions.state, [sessionId]: updatedSession };
+            this.uiSessions = { ...this.uiSessions, [sessionId]: updatedSession };
             console.log(`[OK] Associated thread ${threadId} with session ${sessionId} (updated timestamp)`);
         } else {
             console.warn(`Attempted addThreadToSession on non-existent session: ${sessionId}`);
@@ -128,12 +143,13 @@ export class SessionStateStore {
      * @param threadId The backend thread ID to remove.
      */
     removeThreadFromSession(sessionId: string, threadId: string): void {
-        const sessionToRemoveFrom = this.uiSessions.state[sessionId];
+        // Use direct access and immutable update
+        const sessionToRemoveFrom = this.uiSessions[sessionId];
         if (sessionToRemoveFrom?.threads?.[threadId]) {
             const updatedThreads = { ...sessionToRemoveFrom.threads };
             delete updatedThreads[threadId];
             const updatedSession = { ...sessionToRemoveFrom, threads: updatedThreads, lastUpdatedAt: new Date().toISOString() };
-            this.uiSessions.state = { ...this.uiSessions.state, [sessionId]: updatedSession };
+            this.uiSessions = { ...this.uiSessions, [sessionId]: updatedSession };
             console.log(`[OK] Removed thread ${threadId} from session ${sessionId}`);
             // Also check if the removed thread was the active editor - requires uiState access
             // if (uiState.activeConfigEditorId === threadId) {
@@ -151,9 +167,10 @@ export class SessionStateStore {
      * @param threadId The thread ID to add.
      */
     addKnownThreadId(threadId: string): void {
-       if (!this.knownThreadIds.state.includes(threadId)) {
-           this.knownThreadIds.state = [...this.knownThreadIds.state, threadId];
-           console.log(`[OK] Added thread ${threadId} to knownThreadIds.state`);
+       // Use direct access (getter/setter)
+       if (!this.knownThreadIds.includes(threadId)) {
+           this.knownThreadIds = [...this.knownThreadIds, threadId]; // Setter handles persistence
+           console.log(`[OK] Added thread ${threadId} to knownThreadIds`);
        }
     }
 
@@ -162,7 +179,8 @@ export class SessionStateStore {
      * @param sessionId The ID of the session to set as active, or null.
      */
     setActiveSessionId(sessionId: string | null): void {
-        this.activeSessionId.state = sessionId;
+        // Use direct access (setter)
+        this.activeSessionId = sessionId;
         console.log(`[OK] Set active session ID to: ${sessionId}`);
     }
 
@@ -171,8 +189,8 @@ export class SessionStateStore {
     // --- Derived State ---
 
     get activeUiSession(): UISessionState | undefined {
-        // Access persisted state via .state
-        return this.activeSessionId.state ? this.uiSessions.state[this.activeSessionId.state] : undefined;
+        // Use direct property access (triggers getters)
+        return this.activeSessionId ? this.uiSessions[this.activeSessionId] : undefined;
     }
 
     // Add other derived state or methods as required

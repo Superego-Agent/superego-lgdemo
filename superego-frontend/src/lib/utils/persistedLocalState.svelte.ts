@@ -1,4 +1,5 @@
-export class PersistedLocalState<T> { 
+// Export the class type as well as the factory function
+export class PersistedLocalState<T> {
   _state = $state<T>() as T; // Internal state variable
   key = '';
 

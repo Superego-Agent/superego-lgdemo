@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { theme, toggleTheme } from '../stores/theme';
+  import { activeStore } from '$lib/state/active.svelte'; // Use $lib alias, remove .ts extension
   import { fade } from 'svelte/transition';
 
   // Reactive icon based on current theme
-  let icon = $derived($theme === 'light' ? '🌙' : '☀️');
-  let label = $derived($theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+  let icon = $derived(activeStore.theme === 'light' ? '🌙' : '☀️');
+  let label = $derived(activeStore.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
 </script>
 
 <button 
   class="theme-toggle" 
-  onclick={toggleTheme} 
+  onclick={() => activeStore.toggleTheme()}
   title={label} 
   aria-label={label}
 >

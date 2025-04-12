@@ -1,14 +1,28 @@
 import { nanoid } from 'nanoid';
-import { persistedLocalState } from '$lib/utils/persistedLocalState.svelte';
+import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; // Import type
 
 // --- Constants for LocalStorage Keys ---
 const LOCAL_CONSTITUTIONS_KEY = 'superego_local_constitutions';
 
 export class LocalConstitutionsStateStore {
-    /** User-defined local constitutions. Persisted. */
-    localConstitutions = persistedLocalState<LocalConstitution[]>(LOCAL_CONSTITUTIONS_KEY, []);
+    // --- Helper to define persisted properties ---
+    #definePersisted<T>(propName: keyof this, storageKey: string, defaultValue: T): PersistedLocalState<T> {
+        const persisted = persistedLocalState<T>(storageKey, defaultValue);
+        Object.defineProperty(this, propName, {
+            get: () => persisted.state,
+            set: (value: T) => { persisted.state = value; },
+            enumerable: true,
+            configurable: true
+        });
+        return persisted;
+    }
 
-    constructor() {} // No constructor logic needed due to persistedLocalState
+    // --- Public Property Declarations (Types) ---
+    localConstitutions!: LocalConstitution[];
+
+    constructor() {
+        this.#definePersisted('localConstitutions', LOCAL_CONSTITUTIONS_KEY, []);
+    }
 
     // --- Methods for State Mutation ---
 
@@ -20,22 +34,25 @@ export class LocalConstitutionsStateStore {
             text: text, // Keep original text formatting
             createdAt: new Date().toISOString(),
         };
-        this.localConstitutions.state.push(newConstitution);
+        this.localConstitutions.push(newConstitution); // Use direct access (setter triggers mutation)
         console.log(`[OK] Added local constitution: ${newConstitution.id} (${newConstitution.title})`);
         return newConstitution;
     }
 
     /** Updates an existing local constitution by its ID. */
     updateLocalConstitution(id: string, title: string, text: string): boolean {
-        const currentConstitutions = this.localConstitutions.state;
-        const index = currentConstitutions.findIndex(c => c.id === id);
+        // Use direct access (getter)
+        const index = this.localConstitutions.findIndex(c => c.id === id);
         if (index !== -1) {
             const updatedConstitution = {
-                ...currentConstitutions[index],
+                ...this.localConstitutions[index], // Use this.localConstitutions
                 title: title.trim(),
                 text: text,
             };
-            this.localConstitutions.state[index] = updatedConstitution;
+            // Create new array for update as direct mutation of item in array might not trigger setter
+            const newList = [...this.localConstitutions];
+            newList[index] = updatedConstitution;
+            this.localConstitutions = newList; // Trigger setter
             console.log(`[OK] Updated local constitution: ${id}`);
             return true;
         }
@@ -45,12 +62,11 @@ export class LocalConstitutionsStateStore {
 
     /** Deletes a local constitution by its ID. */
     deleteLocalConstitution(id: string): boolean {
-        const currentConstitutions = this.localConstitutions.state;
-        const initialLength = currentConstitutions.length;
-        // Find index and use splice for direct mutation
-        const indexToDelete = currentConstitutions.findIndex(c => c.id === id);
-        if (indexToDelete !== -1) {
-            this.localConstitutions.state.splice(indexToDelete, 1);
+        // Use direct access (getter) and filter for immutable update
+        const initialLength = this.localConstitutions.length;
+        const filtered = this.localConstitutions.filter(c => c.id !== id);
+        if (filtered.length < initialLength) {
+            this.localConstitutions = filtered; // Trigger setter
             console.log(`[OK] Deleted local constitution: ${id}`);
             return true;
         }

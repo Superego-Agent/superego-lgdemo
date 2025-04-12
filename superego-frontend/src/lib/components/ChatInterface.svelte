@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { appStateStore } from '../state/app.svelte'; // Use new app state
+    import { activeStore } from '$lib/state/active.svelte'; // Use new active state store
     import { sessionStore } from '../state/session.svelte'; // Import new session state
     import { sendUserMessage } from '../services/chat.svelte';
     import ChatInput from './ChatInput.svelte';
@@ -15,8 +15,9 @@
     let containerWidth: number = $state(0);
 
     // --- Reactive State Derivations ---
-    let currentSessionId = $derived(sessionStore.activeSessionId.state); // Derive from .state
-    let currentSessionState = $derived(currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null); // Use derived string ID
+    // Access persisted state directly via the store instance properties
+    let currentSessionId = $derived(sessionStore.activeSessionId);
+    let currentSessionState = $derived(currentSessionId ? sessionStore.uiSessions[currentSessionId] : null);
     let activeThreadIds = $derived(currentSessionState?.threads ? Object.keys(currentSessionState.threads) : []);
 
 
@@ -29,11 +30,12 @@
         }
 
         // Use the derived value here too
-        const currentSessionData = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null; // Use correct variable name
+        // Access persisted state directly
+        const currentSessionData = currentSessionId ? sessionStore.uiSessions[currentSessionId] : null;
         if (!currentSessionData) {
              // Setting globalError here might be redundant if sendUserMessage handles it,
              // but it provides immediate feedback if the session is missing.
-             appStateStore.globalError = "Cannot send message: Active session not found.";
+             activeStore.setGlobalError("Cannot send message: Active session not found.");
              console.error('[ChatInterface] Send prevented: Session state not found for ID:', currentSessionId);
              return;
         }
@@ -47,10 +49,10 @@
 
 <div class="chat-interface">
     <!-- === Global Error Banner === -->
-    {#if appStateStore.globalError}
+    {#if activeStore.globalError}
         <div class="error-banner" >
              <div class="error-content">
-                 <span>Error: {appStateStore.globalError}</span>
+                 <span>Error: {activeStore.globalError}</span>
              </div>
          </div>
     {/if}

@@ -1,9 +1,10 @@
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { logExecution, deepClone } from '../utils';
-import { appStateStore } from '../state/app.svelte'; // Corrected import path (no .ts)
+import { threadStore } from '$lib/state/threads.svelte'; // Use new thread store
+import { activeStore } from '$lib/state/active.svelte'; // Use new active store
 // Removed legacy store imports
 import { sessionStore } from '../state/session.svelte'; // Import new session state
-import { addThreadToSession, addKnownThreadId } from '../sessionManager';
+// Removed incorrect import for addThreadToSession, addKnownThreadId from sessionManager
 // Removed import for streamProcessor functions
 import { getLatestHistory } from './session.svelte'; // Corrected import path
 
@@ -136,7 +137,7 @@ function handleRunStartEvent(
 
     // Direct mutation for $state variable
     // Determine initial messages based on existing cache if present
-    const existingEntry = appStateStore.threadCacheStore[targetThreadId];
+    const existingEntry = threadStore.threadCacheStore[targetThreadId]; // Use threadStore
     let updatedMessages: MessageType[];
     if (existingEntry?.history?.values?.messages) {
         const existingMessages = existingEntry.history.values.messages;
@@ -163,13 +164,13 @@ function handleRunStartEvent(
     };
 
     // Use the setter function to update the cache store
-    appStateStore.setThreadCacheEntry(targetThreadId, newCacheEntry);
+    threadStore.setEntry(targetThreadId, newCacheEntry); // Use threadStore.setEntry
 
     // If this run started a *new* thread (threadIdToSend was null), update session/known IDs
     if (threadIdToSend === null) {
         console.log(`Received run_start for new thread ID: ${targetThreadId} for session ${currentActiveSessionId}`);
-        addKnownThreadId(targetThreadId);
-        addThreadToSession(currentActiveSessionId, targetThreadId);
+        sessionStore.addKnownThreadId(targetThreadId); // Call method on sessionStore instance
+        sessionStore.addThreadToSession(currentActiveSessionId, targetThreadId); // Call method on sessionStore instance
     } else if (threadIdToSend !== targetThreadId) {
         // This case shouldn't happen with current backend logic but good to log
         console.warn(`run_start thread ID ${targetThreadId} differs from requested thread ID ${threadIdToSend}`);
@@ -182,7 +183,7 @@ function handleStreamUpdateEvent(
     targetThreadId: string
 ) {
     // Direct access to $state variable is correct here for reading
-    const currentCache = appStateStore.threadCacheStore;
+    const currentCache = threadStore.threadCacheStore; // Use threadStore
     const currentCacheEntry = currentCache[targetThreadId];
 
     if (!currentCacheEntry) {
@@ -206,10 +207,10 @@ function handleStreamUpdateEvent(
         }
 
         // Use the update function for the specific entry
-        appStateStore.updateThreadCacheEntry(targetThreadId, { history: historyToMutate });
+        threadStore.updateEntry(targetThreadId, { history: historyToMutate }); // Use threadStore.updateEntry
     } catch (processingError: unknown) {
          console.error(`Error processing '${eventType}' in streamProcessor:`, processingError);
-         appStateStore.globalError = `Error processing '${eventType}' in streamProcessor: ${processingError instanceof Error ? processingError.message : String(processingError)}`;
+         activeStore.setGlobalError(`Error processing '${eventType}' in streamProcessor: ${processingError instanceof Error ? processingError.message : String(processingError)}`); // Use activeStore.setGlobalError
     }
 }
 
@@ -219,12 +220,12 @@ function handleErrorEvent(
 ) {
     const errorMessage = `Backend Error (${errorData.node}): ${errorData.error}`;
     console.error(`SSE Error Event Received (Thread: ${targetThreadId ?? 'N/A'}):`, errorMessage);
-    appStateStore.globalError = errorMessage;
+    activeStore.setGlobalError(errorMessage); // Use activeStore.setGlobalError
 
     // Update cache entry if threadId exists
     if (targetThreadId) {
         // Use update function for the specific entry
-        appStateStore.updateThreadCacheEntry(targetThreadId, { isStreaming: false, error: errorMessage });
+        threadStore.updateEntry(targetThreadId, { isStreaming: false, error: errorMessage }); // Use threadStore.updateEntry
     }
 }
 
@@ -238,12 +239,12 @@ async function handleEndEvent(
         const finalHistoryEntry = await getLatestHistory(targetThreadId, controller.signal);
 
         // Use update function for the specific entry
-        appStateStore.updateThreadCacheEntry(targetThreadId, { history: finalHistoryEntry, isStreaming: false, error: null });
+        threadStore.updateEntry(targetThreadId, { history: finalHistoryEntry, isStreaming: false, error: null }); // Use threadStore.updateEntry
         console.log(`Cache updated with final state for thread ${targetThreadId}`);
     } catch (fetchError: unknown) {
          if (!(fetchError instanceof DOMException && fetchError.name === 'AbortError')) {
              console.error(`Failed to fetch final history for thread ${targetThreadId}:`, fetchError);
-             appStateStore.globalError = `Failed to fetch final state: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`;
+             activeStore.setGlobalError(`Failed to fetch final state: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`); // Use activeStore.setGlobalError
          }
     }
 }
@@ -267,7 +268,7 @@ export const streamRun = async (
     runConfig: RunConfig,
     threadId: string | null
 ): Promise<AbortController> => {
-    appStateStore.globalError = null;
+    activeStore.clearGlobalError(); // Use activeStore.clearGlobalError
     const controller = new AbortController();
     // Access .state for persisted store
     const currentActiveSessionId = sessionStore.activeSessionId; // Use new session state
@@ -275,7 +276,7 @@ export const streamRun = async (
     if (!currentActiveSessionId) {
         const errorMsg = "Cannot start run: No active session selected.";
         console.error(errorMsg);
-        appStateStore.globalError = errorMsg;
+        activeStore.setGlobalError(errorMsg); // Use activeStore.setGlobalError
         controller.abort();
         return controller;
     }
@@ -285,7 +286,7 @@ export const streamRun = async (
     if (!currentSessionData) {
         const errorMsg = `Cannot start run: Active session state not found for ID ${currentActiveSessionId}.`;
         console.error(errorMsg);
-        appStateStore.globalError = errorMsg;
+        activeStore.setGlobalError(errorMsg); // Use activeStore.setGlobalError
         controller.abort();
         return controller;
     }
@@ -314,7 +315,7 @@ export const streamRun = async (
                     if (!response.ok) {
                         let errorMsg = `SSE connection failed! Status: ${response.status}`;
                         try { const errorBody = await response.json(); errorMsg += ` - ${errorBody.detail || JSON.stringify(errorBody)}`; } catch (e) { /* Ignore */ }
-                        appStateStore.globalError = `Connection Error: ${errorMsg}`;
+                        activeStore.setGlobalError(`Connection Error: ${errorMsg}`); // Use activeStore.setGlobalError
                         throw new Error(errorMsg);
                     }
                     console.log(`SSE stream opened for session ${currentActiveSessionId}`);
@@ -333,7 +334,7 @@ export const streamRun = async (
                         // Allow 'error' events even if targetThreadId is somehow null
                         if (!targetThreadId && eventType !== 'error') {
                             console.error(`SSE event type '${eventType}' received without a usable thread_id. Cannot process.`, parsedEvent);
-                            appStateStore.globalError = `System Error: Event '${eventType}' missing thread_id.`;
+                            activeStore.setGlobalError(`System Error: Event '${eventType}' missing thread_id.`); // Use activeStore.setGlobalError
                             return;
                         }
 
@@ -347,7 +348,7 @@ export const streamRun = async (
                                     handler(eventType, eventData as any, targetThreadId); // Pass eventType to combined handler
                                 } else {
                                      console.error(`Cannot process '${eventType}' without targetThreadId.`, parsedEvent);
-                                     appStateStore.globalError = `System Error: Cannot process '${eventType}' without thread ID.`;
+                                     activeStore.setGlobalError(`System Error: Cannot process '${eventType}' without thread ID.`); // Use activeStore.setGlobalError
                                 }
                             } else if (eventType === 'error') {
                                 handler(eventData as SSEErrorData, targetThreadId); // Pass potentially null targetThreadId
@@ -357,11 +358,11 @@ export const streamRun = async (
                                     Promise.resolve(handler(eventData as SSEEndData, targetThreadId, controller))
                                         .catch(err => {
                                             console.error("Error in async end handler:", err);
-                                            appStateStore.globalError = "Error finalizing stream state.";
+                                            activeStore.setGlobalError("Error finalizing stream state."); // Use activeStore.setGlobalError
                                         });
                                 } else {
                                      console.error(`Cannot process 'end' without targetThreadId.`, parsedEvent);
-                                     appStateStore.globalError = `System Error: Cannot process 'end' without thread ID.`;
+                                     activeStore.setGlobalError(`System Error: Cannot process 'end' without thread ID.`); // Use activeStore.setGlobalError
                                 }
                             }
                         } else {
@@ -369,7 +370,7 @@ export const streamRun = async (
                         }
                     } catch (error: unknown) {
                         console.error('Failed to parse or handle SSE message data:', event.data, error);
-                        appStateStore.globalError = `Failed to process message: ${error instanceof Error ? error.message : String(error)}`;
+                        activeStore.setGlobalError(`Failed to process message: ${error instanceof Error ? error.message : String(error)}`); // Use activeStore.setGlobalError
                     }
                 },
 
@@ -381,7 +382,7 @@ export const streamRun = async (
                     if (controller.signal.aborted) { return; }
                     console.error(`SSE stream error for session ${currentActiveSessionId}:`, err);
                     const errorMsg = err instanceof Error ? err.message : String(err);
-                    appStateStore.globalError = `Stream Error: ${errorMsg}`;
+                    activeStore.setGlobalError(`Stream Error: ${errorMsg}`); // Use activeStore.setGlobalError
                     // Don't throw from onerror, allow graceful closure.
                 },
             });
@@ -390,7 +391,7 @@ export const streamRun = async (
             if (!(error instanceof DOMException && error.name === 'AbortError')) {
                 console.error(`Error setting up SSE stream for session ${currentActiveSessionId}:`, error);
                 // globalError is likely already set by onopen or apiFetch, but set again just in case
-                appStateStore.globalError = `Stream Setup Error: ${error instanceof Error ? error.message : String(error)}`;
+                activeStore.setGlobalError(`Stream Setup Error: ${error instanceof Error ? error.message : String(error)}`); // Use activeStore.setGlobalError
             }
         }
     });

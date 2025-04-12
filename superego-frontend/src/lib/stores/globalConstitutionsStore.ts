@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store'; // Added get
 import type { Writable } from 'svelte/store';
-import { fetchAvailableConstitutions } from '../api'; // Assuming api.ts is one level up
+import { fetchAvailableConstitutions } from '$lib/api/rest.svelte'; // Use $lib alias and correct file name
 
 // Store for the list of global constitutions
 export const globalConstitutions: Writable<ConstitutionItem[]> = writable([]);

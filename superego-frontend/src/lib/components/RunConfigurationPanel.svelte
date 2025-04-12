@@ -1,9 +1,8 @@
 <script lang="ts">
   import { stopPropagation } from 'svelte/legacy';
-
-  import { localConstitutionsStore } from "$lib/state/localConstitutions.svelte"; // Use new state file
+  import { localConstitutionsStore } from "$lib/state/localConstitutions.svelte";
   import { sessionStore } from '$lib/state/session.svelte';
-  import { UiStore } from "$lib/state/ui.svelte";
+  import { activeStore } from "$lib/state/active.svelte"; // Import new active store
   import IconInfo from "~icons/fluent/info-24-regular";
   import IconChevronDown from "~icons/fluent/chevron-down-24-regular";
   import IconChevronUp from "~icons/fluent/chevron-up-24-regular";
@@ -90,10 +89,10 @@
   // --- Helper Functions for Direct Store Interaction ---
 
   function getActiveConfig(): ThreadConfigState | null {
-      const currentSessionId = sessionStore.activeSessionId.state; 
+      const currentSessionId = sessionStore.activeSessionId;
       if (!currentSessionId) return null;
-      const currentSession = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null;
-      const activeId = UiStore.activeConfigEditorId;
+      const currentSession = sessionStore.uiSessions[currentSessionId];
+      const activeId = activeStore.activeConfigEditorId; // Use activeStore
       if (!activeId || !currentSession?.threads) return null;
       return currentSession.threads[activeId] ?? null;
   }
@@ -105,20 +104,21 @@
 
   // Generic helper to update the configuredModules array in the store
   function updateModules(modulesUpdater: (currentModules: ConfiguredConstitutionModule[]) => ConfiguredConstitutionModule[]) {
-      const currentSessionId = sessionStore.activeSessionId.state; 
+      const currentSessionId = sessionStore.activeSessionId; // Use direct access
       if (!currentSessionId) {
           console.warn("RunConfigurationPanel: No active session ID found, cannot update modules.");
           return;
       }
-      const currentSession = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null;
-      const activeThreadConfigId = UiStore.activeConfigEditorId;
+      const currentSession = currentSessionId ? sessionStore.uiSessions[currentSessionId] : null;
+      const activeThreadConfigId = activeStore.activeConfigEditorId; // Use activeStore
       if (!activeThreadConfigId) {
           console.warn("RunConfigurationPanel: No active thread config ID found, cannot update modules.");
           return;
       }
 
-      if (currentSessionId && sessionStore.uiSessions.state[currentSessionId]?.threads?.[activeThreadConfigId]) {
-          const sessionToUpdate = sessionStore.uiSessions.state[currentSessionId];
+      // Use direct access
+      if (currentSessionId && sessionStore.uiSessions[currentSessionId]?.threads?.[activeThreadConfigId]) {
+          const sessionToUpdate = sessionStore.uiSessions[currentSessionId];
           const threadToUpdate = sessionToUpdate.threads[activeThreadConfigId];
 
           if (!threadToUpdate.runConfig) {
@@ -130,7 +130,7 @@
           if (JSON.stringify(currentModules) !== JSON.stringify(newModules)) {
               const updatedThread = { ...threadToUpdate, runConfig: { ...threadToUpdate.runConfig, configuredModules: newModules } };
               const updatedSession = { ...sessionToUpdate, threads: { ...sessionToUpdate.threads, [activeThreadConfigId]: updatedThread }, lastUpdatedAt: new Date().toISOString() };
-              sessionStore.uiSessions.state = { ...sessionStore.uiSessions.state, [currentSessionId]: updatedSession }; // Update state immutably
+              sessionStore.uiSessions = { ...sessionStore.uiSessions, [currentSessionId]: updatedSession }; // Use direct access (setter)
               console.log(`RunConfigurationPanel: Updated modules for session ${currentSessionId}, thread ${activeThreadConfigId}`);
           }
       } else {
@@ -145,7 +145,7 @@
               // Add if not present
               if (!currentModules.some(m => m.id === itemId)) {
                    const globalItem = globalConstitutionsList.find(c => c.id === itemId);
-                   const localItem = localConstitutionsStore.localConstitutions.state.find(c => c.id === itemId); // Use new state
+                   const localItem = localConstitutionsStore.localConstitutions.find(c => c.id === itemId); // Use direct access
                    const title = globalItem?.title ?? localItem?.title ?? 'Unknown Constitution'; // Provide a default title
                    return [...currentModules, { id: itemId, title: title, adherence_level: 3 }]; // Add with default level 3
               }
@@ -165,6 +165,37 @@
            )
        );
   }
+
+  // Effect to ensure a default config is selected if the active one becomes invalid
+  $effect(() => {
+      // Derive dependencies directly inside the effect
+      const activeSessionId = sessionStore.activeSessionId;
+      const activeSession = activeSessionId ? sessionStore.uiSessions[activeSessionId] : null;
+      const currentEditorId = activeStore.activeConfigEditorId;
+      const sessionThreads = activeSession?.threads;
+
+      if (sessionThreads) {
+          const threadIds = Object.keys(sessionThreads);
+          if (threadIds.length > 0) {
+              const isValidEditorId = currentEditorId !== null && sessionThreads[currentEditorId] !== undefined;
+              if (!isValidEditorId) {
+                  // If current editor ID is null or invalid for the current session, select the first one
+                  activeStore.setActiveConfigEditor(threadIds[0]);
+                  console.log(`[RunConfigPanel] Defaulting activeConfigEditorId to first thread: ${threadIds[0]}`);
+              }
+          } else {
+               // No threads in the active session, ensure editor ID is null
+               if (currentEditorId !== null) {
+                  activeStore.setActiveConfigEditor(null);
+               }
+          }
+      } else {
+           // No active session, ensure editor ID is null
+           if (currentEditorId !== null) {
+               activeStore.setActiveConfigEditor(null);
+           }
+      }
+  });
 </script>
 
 
@@ -215,7 +246,7 @@
           </div>
 
           <!-- === Local Constitutions List === -->
-          {#each localConstitutionsStore.localConstitutions.state as item (item.id)}
+          {#each localConstitutionsStore.localConstitutions as item (item.id)}
             <!-- Removed @const isSelected -->
             <div class="option-item">
               <label class="option-label">
@@ -292,7 +323,7 @@
           {/each}
 
           <!-- === Empty State === -->
-          {#if globalConstitutionsList.length === 0 && localConstitutionsStore.localConstitutions.state.length === 0}
+          {#if globalConstitutionsList.length === 0 && localConstitutionsStore.localConstitutions.length === 0}
             <p class="loading-text">No constitutions available.</p>
           {/if}
         </div>

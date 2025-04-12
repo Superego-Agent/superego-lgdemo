@@ -26,9 +26,9 @@
   }
 
   function selectConversation(sessionId: string) {
-    if (sessionId === sessionStore.activeSessionId.state) return; 
+    if (sessionId === sessionStore.activeSessionId) return; // Access directly
     editingSessionId = null;
-    sessionStore.activeSessionId.state = sessionId; 
+    sessionStore.setActiveSessionId(sessionId); // Use setter method
   }
 
   function startRename(event: MouseEvent, session: UISessionState) {
@@ -71,7 +71,7 @@
     event.stopPropagation();
 
     // Use $uiSessions store directly
-    const sessionToDelete = sessionStore.uiSessions.state[sessionId]; 
+    const sessionToDelete = sessionStore.uiSessions[sessionId]; // Access directly
     if (!sessionToDelete) return;
 
     if (
@@ -109,7 +109,7 @@
       {#each sortedSessions as session (session.sessionId)}
         <!-- Use $activeSessionId store directly -->
         <li
-          class:active={session.sessionId === sessionStore.activeSessionId.state}
+          class:active={session.sessionId === sessionStore.activeSessionId}
           class:editing={editingSessionId === session.sessionId}
         >
           {#if editingSessionId === session.sessionId}

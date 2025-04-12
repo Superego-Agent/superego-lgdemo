@@ -1,5 +1,5 @@
 import { streamRun } from '../api/sse.svelte';
-import { appStateStore } from '../state/app.svelte';
+import { activeStore } from '$lib/state/active.svelte'; // Use new active store
 import { sessionStore } from '../state/session.svelte';
 
 /**
@@ -8,19 +8,19 @@ import { sessionStore } from '../state/session.svelte';
  * @param userInput - The text entered by the user.
  */
 export async function sendUserMessage(userInput: string): Promise<void> {
-    appStateStore.globalError = null;
+    activeStore.clearGlobalError(); // Use method to clear error
 
-    const currentSessionId = sessionStore.activeSessionId.state; 
+    const currentSessionId = sessionStore.activeSessionId; // Access directly
     if (!currentSessionId) {
         console.error("[chatService] Cannot send message: No active session ID.");
-        appStateStore.globalError = "No active session selected.";
+        activeStore.setGlobalError("No active session selected."); // Use method to set error
         return;
     }
 
-    const currentSessionData = currentSessionId ? sessionStore.uiSessions.state[currentSessionId] : null; // Use the string ID value
+    const currentSessionData = currentSessionId ? sessionStore.uiSessions[currentSessionId] : null; // Access directly
     if (!currentSessionData || !currentSessionData.threads) {
         console.error(`[chatService] Cannot send message: Session state or threads not found for ID ${currentSessionId}.`);
-        appStateStore.globalError = "Session data not found.";
+        activeStore.setGlobalError("Session data not found."); // Use method to set error
         return;
     }
 
@@ -29,7 +29,7 @@ export async function sendUserMessage(userInput: string): Promise<void> {
 
     if (enabledConfigs.length === 0) {
         console.warn("[chatService] No enabled configurations to run.");
-        appStateStore.globalError = "No configurations enabled to run.";
+        activeStore.setGlobalError("No configurations enabled to run."); // Use method to set error
         return;
     }
 

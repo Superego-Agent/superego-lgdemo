@@ -1,9 +1,9 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
 
-    import { submitConstitution, fetchConstitutionContent } from '../api';
-    import { addLocalConstitution, localConstitutionsStore } from '../localConstitutions';
-    import { globalConstitutions } from '../stores/globalConstitutionsStore';
+    import { submitConstitution, fetchConstitutionContent } from '$lib/api/rest.svelte'; // Use $lib alias
+    import { localConstitutionsStore } from '$lib/state/localConstitutions.svelte'; // Use $lib alias
+    import { globalConstitutions } from '$lib/stores/globalConstitutionsStore'; // Use $lib alias
     import { createEventDispatcher } from 'svelte';
     import { tick } from 'svelte';
 
@@ -65,7 +65,7 @@
         let submitApiMessage = '';
 
         try {
-            addLocalConstitution(constitutionTitle, constitutionText);
+            localConstitutionsStore.addLocalConstitution(constitutionTitle, constitutionText); // Call method on store instance
             localAddSuccess = true;
 
             if (submitForReview) {
@@ -110,7 +110,7 @@
         ...$globalConstitutions
             .filter((c: ConstitutionItem) => c.id !== 'none')
             .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })),
-        ...$localConstitutionsStore.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text }))
+        ...localConstitutionsStore.localConstitutions.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text })) // Access .localConstitutions property
     ].sort((a, b) => a.title.localeCompare(b.title)));
     // --- Reactive Logic ---
     // Reactive statement to load template when selectedTemplateId changes
