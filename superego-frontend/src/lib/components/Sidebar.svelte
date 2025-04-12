@@ -15,7 +15,7 @@
   let renameInput: HTMLInputElement | null = $state(null);
 
   // --- Reactive Derivations ---
-  let sortedSessions = $derived(Object.values(sessionStore.uiSessions).sort(
+  let sortedSessions = $derived(Object.values(sessionStore.uiSessions).sort( // Reverted to simple expression
     (a: UISessionState, b: UISessionState) =>
       new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime()
   ));

@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; 
+// Removed imports related to the misplaced effect
 
 // --- Constants for LocalStorage Keys ---
 const KNOWN_THREADS_KEY = 'superego_knownThreads';
@@ -21,20 +22,22 @@ export class SessionStateStore {
         return persisted;
     }
 
-    // --- Public Property Declarations (Types) ---
-    // Definite assignment assertion '!' used as they are initialized in constructor via helper
-    knownThreadIds!: string[];
-    uiSessions!: Record<string, UISessionState>;
-    activeSessionId!: string | null;
+    // --- Public Property Declarations (Initialized in constructor) ---
+    knownThreadIds: string[];
+    uiSessions: Record<string, UISessionState>;
+    activeSessionId: string | null;
 
-    // Constructor no longer needs manual persistence effects
     constructor() {
-        // Initialize persisted properties using the helper
         this.#definePersisted('knownThreadIds', KNOWN_THREADS_KEY, []);
         this.#definePersisted('uiSessions', UI_SESSIONS_KEY, {});
         this.#definePersisted('activeSessionId', ACTIVE_SESSION_ID_KEY, null);
+        // Ensure initial active session is valid if loaded from storage
+        if (this.activeSessionId && !this.uiSessions[this.activeSessionId]) {
+            console.warn(`[INIT] Stored activeSessionId (${this.activeSessionId}) not found in uiSessions. Resetting.`);
+            this.activeSessionId = Object.keys(this.uiSessions)[0] || null;
+        }
+        console.log('[INIT] SessionStateStore initialized.');
     }
-
     // --- Methods for State Mutation ---
     /**
      * Creates a new UI session, adds it to the store, and sets it as active.
@@ -176,7 +179,10 @@ export class SessionStateStore {
     setActiveSessionId(sessionId: string | null): void {
         // Use direct access (setter)
         this.activeSessionId = sessionId;
-        console.log(`[OK] Set active session ID to: ${sessionId}`);
+        // console.log(`[OK] Set active session ID to: ${sessionId}`); // Original log replaced by the one below
+        const sessionData = sessionId ? this.uiSessions[sessionId] : null;
+        // Restore original log structure for now
+        console.log(`[OK] Set active session ID to: ${sessionId}. Associated threads:`, sessionData?.threads ? Object.keys(sessionData.threads) : 'None');
     }
 
     // Removed Local Constitution Methods
@@ -188,7 +194,7 @@ export class SessionStateStore {
         return this.activeSessionId ? this.uiSessions[this.activeSessionId] : undefined;
     }
 
-    // Add other derived state or methods as required
+    // Removed duplicate constructor and misplaced $effect logic (placeholder)
 }
 
 // --- Export Singleton Instance ---

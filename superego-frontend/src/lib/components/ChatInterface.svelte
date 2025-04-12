@@ -3,6 +3,8 @@
   import IconChat from "~icons/fluent/chat-24-regular";
   import { sendUserMessage } from "../services/chat.svelte";
   import { sessionStore } from "../state/session.svelte";
+  import { threadStore } from "../state/threads.svelte";
+  import { getLatestHistory } from "../api/rest.svelte";
   import ChatInput from "./ChatInput.svelte";
   import ChatView from "./ChatView.svelte";
   import Paginator from "./Paginator.svelte";
@@ -23,6 +25,58 @@
   let activeThreadIds = $derived(
     currentSessionState?.threads ? Object.keys(currentSessionState.threads) : []
   );
+
+
+  // --- Effect for Lazy Loading History ---
+  $effect(() => {
+    // This effect runs when the active session changes, giving us the list of relevant thread IDs
+    const threadsForCurrentSession = activeThreadIds; // Use the derived list of thread IDs for the session
+    
+    if (!threadsForCurrentSession || threadsForCurrentSession.length === 0) {
+        return; // No threads in this session
+    }
+
+    // Iterate through each thread associated with the current session
+    for (const threadId of threadsForCurrentSession) {
+        const threadCache = threadStore.threadCacheStore;
+        const currentEntry = threadCache[threadId];
+        // Check if THIS threadId is known
+        const isKnown = sessionStore.knownThreadIds.includes(threadId);
+
+        // Conditions to fetch for THIS threadId:
+        // 1. Thread is known to backend (dispatched)
+        // 2. History is not already present in cache for this thread
+        // 3. Not currently loading for this thread
+        if (isKnown && (!currentEntry || (!currentEntry.history && !currentEntry.isLoading))) {
+            // Wrap async logic in an IIAFE for each thread fetch
+            (async () => {
+                try {
+                    // Set loading state for this thread
+                    threadStore.updateEntry(threadId, { isLoading: true, error: null });
+
+                    // Fetch history for this thread
+                    const historyResult = await getLatestHistory(threadId);
+
+                    // Update store on success for this thread
+                    threadStore.updateEntry(threadId, { history: historyResult, isLoading: false });
+                    
+                } catch (error: any) {
+                    // Handle errors, including AbortError
+                    if (error.name === 'AbortError') {
+                        console.warn(`[ChatInterface Effect] History fetch aborted for thread: ${threadId}`);
+                        // Reset loading state on abort for this thread
+                        threadStore.updateEntry(threadId, { isLoading: false });
+                    } else {
+                        console.error(`[ChatInterface Effect] Error loading history for thread ${threadId}:`, error);
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                         // Update store on error for this thread
+                        threadStore.updateEntry(threadId, { error: `Failed to load history: ${errorMessage}`, isLoading: false });
+                    }
+                }
+            })(); // Immediately invoke the async function
+        }
+    }
+  });
 
   // --- Event Handlers ---
   async function handleSend(detail: { text: string }) {

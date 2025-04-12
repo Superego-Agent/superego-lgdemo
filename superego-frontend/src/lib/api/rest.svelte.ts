@@ -1,5 +1,6 @@
 import { logExecution } from '../utils/utils'; 
-import { activeStore } from '$lib/state/active.svelte'; // Use new active store
+import { activeStore } from '$lib/state/active.svelte';
+import { threadStore } from '$lib/state/threads.svelte'; // Import threadStore
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -125,5 +126,17 @@ export const submitConstitution = (
 			},
 			signal
 		)
+	);
+};
+
+
+// --- Thread API Functions ---
+
+/**
+ * Fetches the latest history entry (state) for a given thread.
+ */
+export const getLatestHistory = (threadId: string, signal?: AbortSignal): Promise<HistoryEntry> => {
+	return logExecution(`Fetch latest history for thread ${threadId}`, () =>
+		apiFetch<HistoryEntry>(`${BASE_URL}/threads/${threadId}/latest`, {}, signal)
 	);
 };

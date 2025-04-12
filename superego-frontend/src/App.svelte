@@ -1,4 +1,7 @@
- <script lang="ts">
+  <script lang="ts">
+  // Removed incorrect $effect import - runes are compiler features
+  import { sessionStore } from '$lib/state/session.svelte';
+  import { threadStore } from '$lib/state/threads.svelte';
 import { onMount } from 'svelte';
 import { globalConstitutionsStore } from '$lib/state/constitutions.svelte'; // Use new store instance
 import Sidebar from './lib/components/Sidebar.svelte';
@@ -7,12 +10,14 @@ import ThemeToggle from './lib/components/ThemeToggle.svelte';
 import './lib/styles/theme.css';
 import './lib/styles/dark-theme.css';
 
-import { sessionStore } from '$lib/state/session.svelte'; // Import new session state
+// Removed duplicate sessionStore import
 onMount( async () => {
     try {
         await Promise.all([
             globalConstitutionsStore.load(), 
-        ]);
+
+        ]); // End of Promise.all
+  // $effect block moved outside onMount below
     } catch (error) {
         console.error("App onMount Error: Failed to initialize constitutions:", error);
     }
@@ -34,7 +39,10 @@ onMount( async () => {
         }
         // --- END: Add Session Initialization Logic ---
 
-});
+}); // End of onMount
+
+  // --- Effect to load history for active session threads ---
+  // This runs reactively whenever activeSession or threadCacheStore changes
 
 </script>
 

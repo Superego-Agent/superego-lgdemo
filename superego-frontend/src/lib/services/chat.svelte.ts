@@ -41,6 +41,7 @@ export async function sendUserMessage(userInput: string): Promise<void> {
         console.log(`[chatService] Initiating run for thread ${threadId} with config:`, config.runConfig);
         try {
             // Call the updated streamRun, passing the specific threadId and runConfig
+            sessionStore.addKnownThreadId(threadId); // Ensure thread is marked known before dispatch
             await streamRun(userInput, config.runConfig, threadId);
         } catch (error: unknown) {
             // Log error for this specific run but continue trying others

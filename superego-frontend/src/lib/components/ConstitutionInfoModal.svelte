@@ -34,8 +34,16 @@
 
     <svelte:window onkeydown={handleKeydown}/>
 
-    <div class="modal-overlay" onclick={closeModal} transition:fade={{ duration: 150 }} role="dialog" aria-modal="true" tabindex="-1">
-        <div class="modal-content" onclick={(e) => e.stopPropagation()} transition:fade={{ duration: 150, delay: 50 }}>
+    <div
+      class="modal-overlay"
+      onclick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+      transition:fade={{ duration: 150 }}
+      role="button"
+      aria-label="Close modal"
+      tabindex="0"
+      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+    >
+        <div class="modal-content" transition:fade={{ duration: 150, delay: 50 }}>
             <button class="close-button" onclick={closeModal} aria-label="Close modal">
                 <IconClose />
             </button>

@@ -46,6 +46,7 @@ declare global {
     interface ThreadCacheData {
         history: HistoryEntry | null;
         isStreaming: boolean;
+        isLoading?: boolean; // Added flag for history loading state
         error: string | null;
     }
 

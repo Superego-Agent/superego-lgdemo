@@ -19,8 +19,15 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="modal-overlay" onclick={closeModal} role="dialog" aria-modal="true" tabindex="-1">
-  <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+<div
+  class="modal-overlay"
+  onclick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+  role="button"
+  aria-label="Close modal"
+  tabindex="0"
+  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
+>
+  <div class="modal-content">
     <button class="close-button" onclick={closeModal}>&times;</button>
     <AddConstitution onConstitutionAdded={closeModal} onClose={closeModal} />
   </div>

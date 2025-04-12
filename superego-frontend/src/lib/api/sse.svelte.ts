@@ -1,16 +1,13 @@
 import { fetchEventSource, type EventSourceMessage } from '@microsoft/fetch-event-source';
 import { logExecution, deepClone } from '../utils/utils';
-import { threadStore } from '$lib/state/threads.svelte'; // Use new thread store
-import { activeStore } from '$lib/state/active.svelte'; // Use new active store
-// Removed legacy store imports
-import { sessionStore } from '../state/session.svelte'; // Import new session state
-// Removed incorrect import for addThreadToSession, addKnownThreadId from sessionManager
-// Removed import for streamProcessor functions
-import { getLatestHistory } from './session.svelte'; // Corrected import path
+import { threadStore } from '$lib/state/threads.svelte';
+import { activeStore } from '$lib/state/active.svelte'; 
+import { sessionStore } from '../state/session.svelte';
+import { getLatestHistory } from './rest.svelte'; 
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-// --- Stream Processing Logic (Moved from streamProcessor.ts) ---
+// --- Stream Processing Logic ---
 
 /**
  * Mutates the entry by appending text content from a 'chunk' event.

@@ -33,7 +33,7 @@ class ThreadStateStore {
 			// Initialize if missing, but log a warning as it might indicate an unexpected sequence.
 			console.warn(`[ThreadStateStore] Initializing non-existent thread cache entry during update: ${threadId}`);
 			// Assuming a minimal structure is needed; adjust if a default factory is more appropriate
-			this.threadCacheStore[threadId] = { messages: [], isStreaming: false, error: null, ...updates } as ThreadCacheData;
+			this.threadCacheStore[threadId] = { messages: [], isStreaming: false, isLoading: false, error: null, ...updates } as ThreadCacheData; // Initialize isLoading
 		}
 	}
 }
