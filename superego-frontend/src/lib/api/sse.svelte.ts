@@ -156,21 +156,26 @@ function handleRunStartEvent(
             values: { messages: updatedMessages },
             runConfig: startData.runConfig
         },
-        isStreaming: true,
+        status: 'streaming',
         error: null
     };
 
     // Use the setter function to update the cache store
     threadStore.setEntry(targetThreadId, newCacheEntry); // Use threadStore.setEntry
 
-    // If this run started a *new* thread (threadIdToSend was null), update session/known IDs
+    // Ensure this thread ID is marked as dispatched now that the run has started
+    // This fixes the bug where history was fetched prematurely for existing thread IDs
+    sessionStore.addThreadIdWithBackendHistory(targetThreadId); 
+
+    // If this run started a *new* thread (threadIdToSend was null), also add it to the session's list
     if (threadIdToSend === null) {
         console.log(`Received run_start for new thread ID: ${targetThreadId} for session ${currentActiveSessionId}`);
-        sessionStore.addKnownThreadId(targetThreadId); // Call method on sessionStore instance
+        // addDispatchedThreadId is already called above
         sessionStore.addThreadToSession(currentActiveSessionId, targetThreadId); // Call method on sessionStore instance
     } else if (threadIdToSend !== targetThreadId) {
         // This case shouldn't happen with current backend logic but good to log
         console.warn(`run_start thread ID ${targetThreadId} differs from requested thread ID ${threadIdToSend}`);
+        // If it *did* happen, we might need to update the session mapping, but let's cross that bridge if needed.
     }
 }
 
@@ -188,7 +193,7 @@ function handleStreamUpdateEvent(
         return;
     }
 
-    if (!currentCacheEntry.isStreaming || currentCacheEntry.error) {
+    if (currentCacheEntry.status !== 'streaming' || currentCacheEntry.error) {
         console.warn(`Ignoring '${eventType}' for thread ${targetThreadId} because stream is not active or has an error.`);
         return;
     }
@@ -222,7 +227,7 @@ function handleErrorEvent(
     // Update cache entry if threadId exists
     if (targetThreadId) {
         // Use update function for the specific entry
-        threadStore.updateEntry(targetThreadId, { isStreaming: false, error: errorMessage }); // Use threadStore.updateEntry
+        threadStore.updateEntry(targetThreadId, { status: 'error', error: errorMessage });
     }
 }
 
@@ -236,7 +241,7 @@ async function handleEndEvent(
         const finalHistoryEntry = await getLatestHistory(targetThreadId, controller.signal);
 
         // Use update function for the specific entry
-        threadStore.updateEntry(targetThreadId, { history: finalHistoryEntry, isStreaming: false, error: null }); // Use threadStore.updateEntry
+        threadStore.updateEntry(targetThreadId, { history: finalHistoryEntry, status: 'idle', error: null });
         console.log(`Cache updated with final state for thread ${targetThreadId}`);
     } catch (fetchError: unknown) {
          if (!(fetchError instanceof DOMException && fetchError.name === 'AbortError')) {

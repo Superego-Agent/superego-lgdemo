@@ -7,7 +7,8 @@
 	let messageListContainer: any = $state(); 
 
 	let historyState: HistoryEntry | null = $state(null);
-	let isStreaming: boolean = $state(false);
+	// let isStreaming: boolean = $state(false); // Replaced by status
+	let status: ThreadStatus = $state('idle');
 	let error: string | null = $state(null);
     let showSpinner: boolean = $state(false);
 
@@ -15,9 +16,9 @@
 	$effect.pre(() => {
 		const entry = cacheEntry; // Use derived value
 		historyState = entry?.history ?? null;
-		isStreaming = entry?.isStreaming ?? false;
+		status = entry?.status ?? 'idle';
 		error = entry?.error ?? null;
-		showSpinner = isStreaming;
+		showSpinner = status === 'streaming' || status === 'fetchingHistory';
 	});
 	
 </script>
@@ -26,7 +27,7 @@
 		<div class="error-message">Error loading/streaming thread: {error}</div>
 	{/if}
 
-	{#if history}
+	{#if historyState}
 		<div class="message-list" bind:this={messageListContainer}>
 			{#each historyState?.values?.messages ?? [] as message, i (message.nodeId + '-' + i)}
 				<MessageCard {message} />

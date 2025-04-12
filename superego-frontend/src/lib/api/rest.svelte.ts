@@ -1,6 +1,5 @@
 import { logExecution } from '../utils/utils'; 
 import { activeStore } from '$lib/state/active.svelte';
-import { threadStore } from '$lib/state/threads.svelte'; // Import threadStore
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 

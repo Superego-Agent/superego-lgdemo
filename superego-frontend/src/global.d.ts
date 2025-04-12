@@ -42,11 +42,14 @@ declare global {
         runConfig: RunConfig;
     }
 
+    /** Possible statuses for a thread in the UI cache */
+    type ThreadStatus = 'idle' | 'fetchingHistory' | 'streaming' | 'error';
+
+
     /** Wrapper object stored in the thread cache */
     interface ThreadCacheData {
         history: HistoryEntry | null;
-        isStreaming: boolean;
-        isLoading?: boolean; // Added flag for history loading state
+        status: ThreadStatus;
         error: string | null;
     }
 

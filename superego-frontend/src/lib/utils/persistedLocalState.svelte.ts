@@ -32,7 +32,11 @@ export class PersistedLocalState<T> {
     this._state = newValue; // Update internal state
     // Only access localStorage if in a browser environment
     if (typeof window !== 'undefined') {
-        localStorage.setItem(this.key, this.serialize(newValue)); // Save on set
+        try { // Add try-catch for setItem
+            localStorage.setItem(this.key, this.serialize(newValue)); // Save on set
+        } catch (e) {
+            console.error(`[PersistedLocalState SETTER] Error writing to localStorage for key "${this.key}":`, e);
+        }
     }
   }
 

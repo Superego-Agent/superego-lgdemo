@@ -3,7 +3,7 @@ import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLo
 // Removed imports related to the misplaced effect
 
 // --- Constants for LocalStorage Keys ---
-const KNOWN_THREADS_KEY = 'superego_knownThreads';
+const THREAD_IDS_WITH_BACKEND_HISTORY_KEY = 'superego_threadIdsWithBackendHistory'; // Renamed from DISPATCHED_THREADS_KEY
 const UI_SESSIONS_KEY = 'superego_uiSessions';
 const ACTIVE_SESSION_ID_KEY = 'superego_activeSessionId';
 
@@ -23,12 +23,12 @@ export class SessionStateStore {
     }
 
     // --- Public Property Declarations (Initialized in constructor) ---
-    knownThreadIds: string[];
-    uiSessions: Record<string, UISessionState>;
-    activeSessionId: string | null;
+    threadIdsWithBackendHistory: string[] = []; // Renamed from dispatchedThreadIds
+    uiSessions: Record<string, UISessionState> = {};
+    activeSessionId: string | null = null;
 
     constructor() {
-        this.#definePersisted('knownThreadIds', KNOWN_THREADS_KEY, []);
+        this.#definePersisted('threadIdsWithBackendHistory', THREAD_IDS_WITH_BACKEND_HISTORY_KEY, []);
         this.#definePersisted('uiSessions', UI_SESSIONS_KEY, {});
         this.#definePersisted('activeSessionId', ACTIVE_SESSION_ID_KEY, null);
         // Ensure initial active session is valid if loaded from storage
@@ -115,13 +115,13 @@ export class SessionStateStore {
 
     /**
      * Adds a backend thread ID to a specific UI session's known threads and updates timestamp.
-     * Also ensures the thread ID is added to the global knownThreadIds list.
+     * Also ensures the thread ID is added to the global threadIdsWithBackendHistory list.
      * Note: This function assumes the thread *config* itself is added/managed elsewhere.
      * @param sessionId The ID of the UI session.
      * @param threadId The backend thread ID to associate.
      */
     addThreadToSession(sessionId: string, threadId: string): void {
-        this.addKnownThreadId(threadId); // Ensure it's known globally
+        this.addThreadIdWithBackendHistory(threadId); // Ensure it's known globally
 
         // Use direct access and immutable update
         const sessionToAddThread = this.uiSessions[sessionId];
@@ -136,7 +136,7 @@ export class SessionStateStore {
 
     /**
      * Removes a backend thread ID from a specific UI session.
-     * Note: This does not remove the thread ID from the global knownThreadIds.
+     * Note: This does not remove the thread ID from the global threadIdsWithBackendHistory.
      * @param sessionId The ID of the UI session.
      * @param threadId The backend thread ID to remove.
      */
@@ -161,14 +161,13 @@ export class SessionStateStore {
     }
 
     /**
-     * Adds a thread ID to the global list of known thread IDs if not already present.
+     * Adds a thread ID to the global list of thread IDs known to have backend history if not already present.
      * @param threadId The thread ID to add.
      */
-    addKnownThreadId(threadId: string): void {
+    addThreadIdWithBackendHistory(threadId: string): void { // Renamed from addDispatchedThreadId
        // Use direct access (getter/setter)
-       if (!this.knownThreadIds.includes(threadId)) {
-           this.knownThreadIds = [...this.knownThreadIds, threadId]; // Setter handles persistence
-           console.log(`[OK] Added thread ${threadId} to knownThreadIds`);
+       if (!this.threadIdsWithBackendHistory.includes(threadId)) {
+           this.threadIdsWithBackendHistory = [...this.threadIdsWithBackendHistory, threadId]; // Setter handles persistence
        }
     }
 

@@ -68,11 +68,8 @@
 		return String(content ?? '');
 	}
 
-    // Reverted renderedContent logic to original state (pre-Fix #1)
 	let renderedContent = $derived((() => {
 		const rawText = getRawContentText(message.content);
-		// Simplified logic: directly use rawText for parsing for all types,
-		// as the stream processor now sends the correct raw content.
 		if (message.type === 'tool') {
 			// Use rawText directly. The faulty regex parsing is removed.
 			const displayContent = rawText || (isError ? 'Error occurred' : '(No result)');
@@ -118,13 +115,13 @@
 	// Animation properties based on message type
 	let animProps = $derived((() => {
 		const common = { duration: 300, easing: elasticOut };
-		const position = message.type === 'human' ? { y: -20, x: 20 } : { y: 20, x: -20 };
+		const position = message.type === 'human' ? { y: -100, x: 20 } : { y: 100, x: -20 };
 		return { ...common, ...position };
 	})());
 
 </script>
 
-<div class="message-card-wrapper" in:fly|local={animProps}>
+<div class="message-card-wrapper" in:fade={{duration: 200}}>
 	<div class={cardClasses} style="--card-accent-color: {cardAccentColor}">
 		{#if title}
 			<div class="message-title" style:color={cardAccentColor}>

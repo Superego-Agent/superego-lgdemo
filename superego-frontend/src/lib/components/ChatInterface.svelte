@@ -41,36 +41,36 @@
         const threadCache = threadStore.threadCacheStore;
         const currentEntry = threadCache[threadId];
         // Check if THIS threadId is known
-        const isKnown = sessionStore.knownThreadIds.includes(threadId);
+        const isKnown = sessionStore.threadIdsWithBackendHistory.includes(threadId); // Renamed from dispatchedThreadIds
 
         // Conditions to fetch for THIS threadId:
         // 1. Thread is known to backend (dispatched)
         // 2. History is not already present in cache for this thread
         // 3. Not currently loading for this thread
-        if (isKnown && (!currentEntry || (!currentEntry.history && !currentEntry.isLoading))) {
+        if (isKnown && (!currentEntry || (!currentEntry.history && currentEntry.status !== 'fetchingHistory' && currentEntry.status !== 'streaming'))) {
             // Wrap async logic in an IIAFE for each thread fetch
             (async () => {
                 try {
                     // Set loading state for this thread
-                    threadStore.updateEntry(threadId, { isLoading: true, error: null });
+                    threadStore.updateEntry(threadId, { status: 'fetchingHistory', error: null });
 
                     // Fetch history for this thread
                     const historyResult = await getLatestHistory(threadId);
 
                     // Update store on success for this thread
-                    threadStore.updateEntry(threadId, { history: historyResult, isLoading: false });
+                    threadStore.updateEntry(threadId, { history: historyResult, status: 'idle' });
                     
                 } catch (error: any) {
                     // Handle errors, including AbortError
                     if (error.name === 'AbortError') {
                         console.warn(`[ChatInterface Effect] History fetch aborted for thread: ${threadId}`);
                         // Reset loading state on abort for this thread
-                        threadStore.updateEntry(threadId, { isLoading: false });
+                        threadStore.updateEntry(threadId, { status: 'idle' });
                     } else {
                         console.error(`[ChatInterface Effect] Error loading history for thread ${threadId}:`, error);
                         const errorMessage = error instanceof Error ? error.message : String(error);
                          // Update store on error for this thread
-                        threadStore.updateEntry(threadId, { error: `Failed to load history: ${errorMessage}`, isLoading: false });
+                        threadStore.updateEntry(threadId, { error: `Failed to load history: ${errorMessage}`, status: 'error' });
                     }
                 }
             })(); // Immediately invoke the async function
