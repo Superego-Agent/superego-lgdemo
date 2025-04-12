@@ -3,6 +3,7 @@
     import { sessionStore } from '../state/session.svelte'; // Import new session state
     import { activeStore } from "$lib/state/active.svelte"; // Import new active store
     import ConfigCard from './ConfigCard.svelte';
+    import IconAdd from '~icons/fluent/add-24-regular'; // Import the icon
     import { v4 as uuidv4 } from 'uuid'; // For generating new config IDs
 
     // Reactive access to the current session's configurations
@@ -110,7 +111,7 @@
         {/each}
         
         <button class="add-button" onclick={addConfiguration} title="Add new configuration">
-            + Add
+            <IconAdd /> Add
         </button>
     </div>
 </div>
@@ -144,11 +145,23 @@
         border-radius: var(--radius-sm);
         cursor: pointer;
         color: var(--text-secondary);
-        font-size: 1.2em; // Increase font size for the button text/icon
 
         &:hover {
             background-color: var(--bg-hover);
             color: var(--text-primary);
+        }
+    }
+
+    .add-button {
+        // Ensure icon and text align nicely
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xxs);
+
+        svg {
+            // Style the icon specifically
+            font-size: 1.4em; // Make icon larger
+            // vertical-align: middle; // Alternative alignment
         }
     }
 </style>

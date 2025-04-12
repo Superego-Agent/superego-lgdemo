@@ -24,6 +24,12 @@
     let modalDescription: string | undefined = $state(undefined);
     let modalContent: string | undefined = $state(undefined);
 
+    // --- Chip Display Logic ---
+    const MAX_VISIBLE_CHIPS = 4; // Show 4 chips initially
+    let allModules = $derived(config.runConfig?.configuredModules ?? []);
+    let visibleChips = $derived(allModules.slice(0, MAX_VISIBLE_CHIPS));
+    let hiddenChipCount = $derived(allModules.length - visibleChips.length);
+
     // --- Event Handlers ---
     function handleCardClick() {
         // Select the entire configuration when the card background is clicked
@@ -100,8 +106,8 @@
     <!-- Bottom Area: Constitution Chips -->
     {#if config.runConfig?.configuredModules && config.runConfig.configuredModules.length > 0}
         <div class="chips-container">
-            {#each config.runConfig.configuredModules as module (module.id)}
-                <button
+            {#each visibleChips as module (module.id)}
+                 <button
                     class="chip"
                     onclick={stopPropagation(() => showConstitutionInfo(module.id, module.title))}
                     title={`View details for: ${module.title}`}
@@ -109,6 +115,11 @@
                     {module.title}
                 </button>
             {/each}
+            {#if hiddenChipCount > 0}
+                <div class="chip indicator-chip" title={`${hiddenChipCount} more constitutions`}>
+                    +{hiddenChipCount}
+                </div>
+            {/if}
         </div>
     {/if}
 </div>
@@ -240,18 +251,8 @@
         flex-wrap: wrap;
         gap: var(--space-xs);
         width: 100%; // Take full width
-        max-height: 60px; // Limit height (approx 2 rows of chips)
-        overflow-y: auto; // Enable vertical scroll if needed
         margin-top: var(--space-xs); // Ensure separation even without border if no chips
-        text-overflow: ellipsis; // Add ellipsis for long text in chips
-
-        // Apply custom scrollbar using mixin if available
-        @include custom-scrollbar(
-           $track-bg: transparent, // Make track invisible
-           $thumb-bg: var(--border-color),
-           $width: 4px
-         );
-    }
+        // Removed max-height, overflow-y, and scrollbar styles
 
     .chip {
         /* @include small-button-reset(); // Commenting out as it might not exist or be needed */
@@ -269,14 +270,28 @@
         white-space: nowrap; // Keep nowrap for ellipsis
         overflow: hidden; // Hide overflow
         text-overflow: ellipsis; // Add ellipsis for long text
-        display: inline-block; // Needed for max-width and text-overflow on inline-like elements
-        max-width: 120px; // Set a fixed max-width for chips to force truncation
+        display: inline-block; // Needed for text-overflow on inline-like elements
+        min-width: 50px; // Sensible minimum width
+        flex-shrink: 1; // Allow chips to shrink if needed, but respect min-width
 
         &:hover {
             border-color: var(--primary);
             color: var(--primary);
             background-color: var(--primary-bg-subtle);
         }
-    }
+    } // End of .chip rule
 
+    .indicator-chip {
+        // Similar base styles to .chip, but non-interactive appearance
+        padding: 2px 5px;
+        background-color: var(--bg-surface);
+        border: 1px dashed var(--border-color); // Dashed border to indicate it's different
+        border-radius: var(--radius-lg);
+        font-size: 0.8em;
+        color: var(--text-secondary);
+        font-style: italic;
+        cursor: default; // Not clickable
+        white-space: nowrap;
+    }
+    }
 </style>
