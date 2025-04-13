@@ -189,6 +189,7 @@ async def stream_events(
 
                  # Construct cleaner payload: Use 'content' instead of 'result'
                  # Ensure tool_call_id is correctly extracted and passed.
+                         final_content_string = match.group(1)
                  sse_payload_data = SSEToolResultData(
                      node="tools", # Add node field
                      tool_name=tool_func_name or "unknown_tool",
