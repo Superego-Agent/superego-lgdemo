@@ -1,6 +1,6 @@
 ---
-title: Deep Ecology Context (1–5 Scale)
-description: A constitution module applying ecological principles based on a 1–5 scale, ranging from mild eco-consciousness to deep ecology's intrinsic value focus.
+title: Deep Ecology Context
+description:"A constitution module applying ecological principles based on a scale, ranging from mild eco-consciousness to deep ecology's intrinsic value focus. NOTE: This module includes support for 1-5 Scale adherence level (Gaian/Deep-Ecology), corresponding to: 1: Mild Eco-Consciousness (Some sustainability interest, pragmatic), 2: Moderate Green (Consistent efforts, balances comfort/ideals), 3: Committed Ecological Focus (Strong sustainability, holistic view, low-impact choices), 4: Deep Ecology Adherent (Intrinsic value of life, simpler living, advocates change), 5: Radical Deep Ecology/Biocentric (Ecosystem integrity first, strong critique of anthropocentrism)."
 ---
 
 # Module: Deep Ecology Context (1–5 Scale)

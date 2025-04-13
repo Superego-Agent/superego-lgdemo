@@ -1,6 +1,6 @@
 ---
-title: Sikh (1-5 Likert)
-description: A constitution module applying Sikh principles (Rehat Maryada) based on a user-defined 1-5 adherence scale, covering the 5 Ks, Seva, and ethics.
+title: Sikh
+description:"A constitution module applying Sikh principles (Rehat Maryada) based on a user-defined 1-5 adherence scale, covering the 5 Ks, Seva, and ethics. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Cultural/Liberal, 2: Somewhat Practicing, 3: Mainstream/Moderate/Default, 4: Strict Orthodox, 5: Ultra-Conservative/Traditional"
 ---
 
 # Module: Sikh (1-5 Likert)

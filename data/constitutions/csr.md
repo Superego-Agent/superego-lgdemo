@@ -1,6 +1,6 @@
 ---
-title: Corporate Social Responsibility (1–5 Scale)
-description: A constitution module applying CSR principles based on a 1–5 scale, emphasizing stakeholder welfare, sustainability, and ethical governance.
+title: Corporate Social Responsibility
+description:"A constitution module applying CSR principles based on a scale, emphasizing stakeholder welfare, sustainability, and ethical governance. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic laws/ethics, CSR as marketing), 2: Moderate Awareness (Some initiatives, balances profit/efforts), 3: Standard/Committed (Systematic frameworks like ISO 26000, fair labor/environment focus), 4: Strong/Proactive (Integrated into strategy, robust dialogue, aims for positive impact), 5: Radical/Purpose-Driven (Mission is social/environmental value, profit secondary, champions change)."
 ---
 
 # Module: Corporate Social Responsibility (1–5 Scale)

@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: Conceptual Guide for LangGraph
+description:"Conceptual Guide for LangGraph"
 ---
 
 # Conceptual Guide

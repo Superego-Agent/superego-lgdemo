@@ -1,6 +1,6 @@
 ---
-title: Human Rights Declaration Context (1–5 Scale)
-description: A constitution module applying human rights principles based on a 1–5 scale, emphasizing dignity, equality, non-discrimination, and freedoms outlined in major international declarations (e.g., UDHR).
+title: Human Rights Declaration Context
+description:"A constitution module applying human rights principles based on a scale, emphasizing dignity, equality, non-discrimination, and freedoms outlined in major international declarations (e.g., UDHR). NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Basic Awareness (General sense, occasional reference), 2: Moderate Focus (Respects core principles, avoids violations), 3: Standard Approach (Consciously aligns with treaties, ensures dignity/equality), 4: Strong/Proactive Advocacy (Deep commitment, promotes full spectrum, addresses barriers), 5: Exemplary/Leadership (Highest standard, champions rights, maximal accountability)."
 ---
 
 # Module: Human Rights Declaration Context (1–5 Scale)

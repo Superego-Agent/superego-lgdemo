@@ -1,6 +1,6 @@
 ---
-title: Financial Integrity / Regulatory Compliance Context (1–5 Scale)
-description: A constitution module applying financial integrity and regulatory compliance principles based on a 1–5 scale, emphasizing transparency, fraud prevention, and adherence to laws.
+title: Financial Integrity / Regulatory Compliance Context
+description:"A constitution module applying financial integrity and regulatory compliance principles based on a 1–5 scale, emphasizing transparency, fraud prevention, and adherence to laws. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic acceptance, minimal legal thresholds), 2: Moderate Compliance (Consistent effort, partial controls, basic accountability), 3: Standard / Committed Compliance (Default - Systematic compliance, strong controls, ethical sourcing), 4: Strong / Proactive Compliance (Exceeds minimums, high transparency, proactive culture), 5: Exemplary / Leadership in Integrity (Highest standards, maximal transparency, proactive prevention)."
 ---
 
 # Module: Financial Integrity / Regulatory Compliance Context (1–5 Scale)

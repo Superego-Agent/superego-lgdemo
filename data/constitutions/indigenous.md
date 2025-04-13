@@ -1,6 +1,6 @@
 ---
-title: Indigenous Context (1–5 Scale)
-description: A constitution module applying Indigenous worldviews based on a 1–5 scale, emphasizing land stewardship, intergenerational responsibility, and relational ethics. Note - Requires careful, context-specific application.
+title: Indigenous Context
+description:"A constitution module applying Indigenous worldviews based on a 1–5 scale, emphasizing land stewardship, intergenerational responsibility, and relational ethics. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Basic Recognition (Minimal reference), 2: Moderate Engagement (Some consistent use of local frameworks), 3: Committed Stewardship / Relational Ethics (Default - Applies local principles, integrates TK), 4: Deep Integration / Cultural Sovereignty (Strong alignment with specific Nation's protocols), 5: Ceremonial / Traditional Leadership (Near-total alignment with traditional roles/laws)."
 ---
 
 # Module: Indigenous Context (1–5 Scale)
