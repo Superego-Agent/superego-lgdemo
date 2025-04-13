@@ -1,5 +1,6 @@
 import uuid
 import json
+import re
 import traceback
 import logging
 from typing import List, Dict, Optional, Any, AsyncGenerator, Tuple
@@ -7,11 +8,9 @@ from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 from utils import prepare_sse_event # Import the missing helper
 
-# Langchain/Langgraph specific imports
-from langchain_core.messages import HumanMessage, BaseMessage, AIMessageChunk
+from langchain_core.messages import HumanMessage, BaseMessage, AIMessageChunk, ToolMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
-# Project-specific imports (adjust paths as needed)
 from backend_models import (
     RunConfig, CheckpointConfigurable, StreamRunRequest, MessageTypeModel, HumanApiMessageModel, # Added HumanApiMessageModel
     SSERunStartData, SSEChunkData, SSEToolCallChunkData, SSEToolResultData, # Added missing SSE types
@@ -189,11 +188,23 @@ async def stream_events(
 
                  # Construct cleaner payload: Use 'content' instead of 'result'
                  # Ensure tool_call_id is correctly extracted and passed.
-                         final_content_string = match.group(1)
+                 # --- Start: Extract content from tool_output ---
+                 final_content_string = "Error processing tool output." # Default/fallback
+                 if isinstance(tool_output, ToolMessage):
+                     final_content_string = tool_output.content
+                 elif isinstance(tool_output, str): # Keep basic string handling just in case
+                     final_content_string = tool_output
+                 else:
+                     # Fallback for other unexpected types
+                     try:
+                         final_content_string = str(tool_output)
+                     except Exception:
+                         pass # Keep the default error message if str() fails
+                 # --- End: Extract content from tool_output ---
                  sse_payload_data = SSEToolResultData(
                      node="tools", # Add node field
                      tool_name=tool_func_name or "unknown_tool",
-                     content=output_str, # Use 'content' field for the actual result
+                     content=final_content_string, # Use the extracted content
                      is_error=is_error,
                      tool_call_id=tool_call_id # Pass the extracted ID
                  )
