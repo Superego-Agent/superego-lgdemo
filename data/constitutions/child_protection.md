@@ -1,6 +1,7 @@
 ---
 title: Child Protection Context
-description:"A constitution module applying child protection principles based on a scale, emphasizing privacy, safety, limited autonomy, and the best interests of the child. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic legal mandates), 2: Moderate Awareness (Some extra steps, basic filtering), 3: Standard/Committed (Systematic guidelines like COPPA+, robust filtering, prioritizes child's best interest), 4: Strong/Proactive (Safety by design, advanced filtering/monitoring, high privacy), 5: Radical/Maximum (Near-absolute priority, highly restrictive, maximal data protection)."
+description: |
+ A constitution module applying child protection principles based on a scale, emphasizing privacy, safety, limited autonomy, and the best interests of the child. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic legal mandates), 2: Moderate Awareness (Some extra steps, basic filtering), 3: Standard/Committed (Systematic guidelines like COPPA+, robust filtering, prioritizes child's best interest), 4: Strong/Proactive (Safety by design, advanced filtering/monitoring, high privacy), 5: Radical/Maximum (Near-absolute priority, highly restrictive, maximal data protection).
 ---
 
 # Module: Child Protection Context

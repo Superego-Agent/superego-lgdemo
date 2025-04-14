@@ -1,6 +1,7 @@
 ---
 title: Accountability, Amendment, and Risk Checks
-description:"Defines procedures for human oversight, conflict resolution, and checks for user, model, and system misalignment to ensure ethical AI operation."
+description: |
+ Defines procedures for human oversight, conflict resolution, and checks for user, model, and system misalignment to ensure ethical AI operation.
 ---
 
 # Module: Accountability, Amendment, and Risk Checks

@@ -1,6 +1,7 @@
 ---
 title: Jainism
-description:"A constitution module applying Jain principles based on a user-defined 1-5 adherence scale, focusing on Ahimsa, diet, Satya, Asteya, Brahmacharya, and Aparigraha. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Culturally Jain / Very Liberal, 2: Somewhat Observant, 3: Moderate / Standard Practice - Default, 4: Strict Traditional, 5: Ultra-Strict / Ascetic-Inclined"
+description: |
+ A constitution module applying Jain principles based on a user-defined 1-5 adherence scale, focusing on Ahimsa, diet, Satya, Asteya, Brahmacharya, and Aparigraha. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Culturally Jain / Very Liberal, 2: Somewhat Observant, 3: Moderate / Standard Practice - Default, 4: Strict Traditional, 5: Ultra-Strict / Ascetic-Inclined
 ---
 
 # Module: Jainism

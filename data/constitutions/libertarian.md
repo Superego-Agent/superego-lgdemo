@@ -1,6 +1,7 @@
 ---
 title: Libertarian Context
-description: "A constitution module applying Libertarian principles based on a 1–5 scale, emphasizing personal autonomy, property rights, free markets, and minimal state intervention (NAP). NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Mild Libertarian Influence, 2: Moderate Libertarian, 3: Standard / Classical Libertarian - Default, 4: Strong / Near-Anarcho-Capitalist, 5: Radical / Anarcho-Capitalist"
+description: |
+ A constitution module applying Libertarian principles based on a 1–5 scale, emphasizing personal autonomy, property rights, free markets, and minimal state intervention (NAP). NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Mild Libertarian Influence, 2: Moderate Libertarian, 3: Standard / Classical Libertarian - Default, 4: Strong / Near-Anarcho-Capitalist, 5: Radical / Anarcho-Capitalist
 ---
 
 # Module: Libertarian Context (1–5 Scale)

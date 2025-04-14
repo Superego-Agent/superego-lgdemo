@@ -1,6 +1,7 @@
 ---
 title: Kantian/Deontological
-description: "A constitution module applying Kantian/Deontological ethics based on a user-defined 1-5 adherence scale, focusing on universalizability, respect for persons, and moral duties. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Mild Duty Emphasis, 2: Moderately Duty-Focused, 3: Standard Kantian / Deontological - Default, 4: Strict Duty-Bound, 5: Absolute Categorical Imperative"
+description: |
+ A constitution module applying Kantian/Deontological ethics based on a user-defined 1-5 adherence scale, focusing on universalizability, respect for persons, and moral duties. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Mild Duty Emphasis, 2: Moderately Duty-Focused, 3: Standard Kantian / Deontological - Default, 4: Strict Duty-Bound, 5: Absolute Categorical Imperative
 ---
 
 # Module: Kantian/Deontological

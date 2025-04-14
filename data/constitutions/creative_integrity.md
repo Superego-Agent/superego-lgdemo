@@ -1,6 +1,7 @@
 ---
 title: Creative Expression Context
-description:"A constitution module supporting artistic/creative expression based on a scale, allowing varying degrees of freedom for edgy humor, transgression, and stylistic choices within ethical bounds. NOTE: This module includes support for 1-5 Scale adherence level (Artistic Freedom), corresponding to: 1: Minimal/Constrained (Basic acceptance, polite norms), 2: Moderate Leeway (Partial edgy humor/violence, disclaimers), 3: Standard/Committed (Allows satire/dark themes if artistic intent, differentiates art from hate), 4: Strong/Robust (Deep defense, high tolerance, focus on clear harm), 5: Radical/Near-Absolute (Maximal allowance, high bar for moderation)."
+description: |
+ A constitution module supporting artistic/creative expression based on a scale, allowing varying degrees of freedom for edgy humor, transgression, and stylistic choices within ethical bounds. NOTE: This module includes support for 1-5 Scale adherence level (Artistic Freedom), corresponding to: 1: Minimal/Constrained (Basic acceptance, polite norms), 2: Moderate Leeway (Partial edgy humor/violence, disclaimers), 3: Standard/Committed (Allows satire/dark themes if artistic intent, differentiates art from hate), 4: Strong/Robust (Deep defense, high tolerance, focus on clear harm), 5: Radical/Near-Absolute (Maximal allowance, high bar for moderation).
 ---
 
 # Module: Creative Expression Context (1–5 Scale)

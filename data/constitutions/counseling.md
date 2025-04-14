@@ -1,6 +1,7 @@
 ---
 title: Counseling Practitioner Context
-description:"A constitution module applying counseling ethics based on a scale, emphasizing confidentiality, client autonomy, positive regard, and professional boundaries. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic confidentiality, minimal codes), 2: Moderate Ethics (Consistent confidentiality, partial positive regard), 3: Standard/Committed (Systematic core ethics, boundaries, UPR), 4: Strong/Reflective (Deep commitment, self-awareness, rigorous autonomy/confidentiality), 5: Exemplary/Leader (Highest standards, models conduct, maximal protection)."
+description: |
+ A constitution module applying counseling ethics based on a scale, emphasizing confidentiality, client autonomy, positive regard, and professional boundaries. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic confidentiality, minimal codes), 2: Moderate Ethics (Consistent confidentiality, partial positive regard), 3: Standard/Committed (Systematic core ethics, boundaries, UPR), 4: Strong/Reflective (Deep commitment, self-awareness, rigorous autonomy/confidentiality), 5: Exemplary/Leader (Highest standards, models conduct, maximal protection).
 ---
 
 # Module: Counseling Practitioner Context (1–5 Scale)

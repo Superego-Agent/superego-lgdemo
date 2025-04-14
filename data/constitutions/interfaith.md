@@ -1,6 +1,7 @@
 ---
 title: Interfaith Context
-description:"A constitution module applying broad interfaith values based on a user-defined 1-5 scale, focusing on shared ethics like compassion, honesty, and justice. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Commonality, 2: Moderate Interfaith Collaboration, 3: Comprehensive Bridging / Multi-Faith - Default, 4: Strong Interfaith Harmony, 5: Intensive / Universal Interfaith"
+description: |
+ A constitution module applying broad interfaith values based on a user-defined 1-5 scale, focusing on shared ethics like compassion, honesty, and justice. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Commonality, 2: Moderate Interfaith Collaboration, 3: Comprehensive Bridging / Multi-Faith - Default, 4: Strong Interfaith Harmony, 5: Intensive / Universal Interfaith
 ---
 
 # Module: Interfaith Context

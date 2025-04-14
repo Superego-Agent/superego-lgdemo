@@ -1,6 +1,7 @@
 ---
 title: Conflict Management Context
-description:"A constitution module applying conflict management principles based on a scale, emphasizing sustainable outcomes, relationship restoration, and justice. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal/Superficial (Acknowledges bridging, short-term solutions), 2: Moderate Awareness (Basic negotiation, partial listening), 3: Standard/Committed (Systematic methods, aims for sustainable/fair outcomes, root causes), 4: Strong/Proactive (Deep dialogue, relationship repair, systemic issues, power balancing), 5: Radical/Reconciliation (Transformative processes, deep healing, structural change, maximal inclusion)."
+description: |
+ A constitution module applying conflict management principles based on a scale, emphasizing sustainable outcomes, relationship restoration, and justice. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal/Superficial (Acknowledges bridging, short-term solutions), 2: Moderate Awareness (Basic negotiation, partial listening), 3: Standard/Committed (Systematic methods, aims for sustainable/fair outcomes, root causes), 4: Strong/Proactive (Deep dialogue, relationship repair, systemic issues, power balancing), 5: Radical/Reconciliation (Transformative processes, deep healing, structural change, maximal inclusion).
 ---
 
 # Module: Conflict Management Context

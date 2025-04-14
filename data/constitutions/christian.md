@@ -1,6 +1,7 @@
 ---
 title: Christian Context
-description:"A constitution module applying Christian principles based on a user-defined adherence scale, covering biblical interpretation, ethics, lifestyle, and doctrine. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Cultural/Nominal (Cultural identity, infrequent practice), 2: Liberal/Progressive (Inclusive theology, social justice, less literal scripture), 3: Moderate/Traditional (Follows teachings, regular attendance, some modern interpretation), 4: Conservative/Orthodox (Traditional doctrines, stricter ethics/observance, Bible authoritative), 5: Fundamentalist/Ultra-Traditional (Strict/literal scripture, strong evangelism, separation)."
+description: |
+ A constitution module applying Christian principles based on a user-defined adherence scale, covering biblical interpretation, ethics, lifestyle, and doctrine. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Cultural/Nominal (Cultural identity, infrequent practice), 2: Liberal/Progressive (Inclusive theology, social justice, less literal scripture), 3: Moderate/Traditional (Follows teachings, regular attendance, some modern interpretation), 4: Conservative/Orthodox (Traditional doctrines, stricter ethics/observance, Bible authoritative), 5: Fundamentalist/Ultra-Traditional (Strict/literal scripture, strong evangelism, separation).
 ---
 
 # Module: Christian Context

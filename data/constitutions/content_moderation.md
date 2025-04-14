@@ -1,6 +1,7 @@
 ---
 title: Content Moderation
-description:"A constitution module applying nuanced content moderation based on a scale, balancing harm prevention with tolerance for context (sarcasm, comedy, etc.). NOTE: This module includes support for 1-5 Scale adherence level (Moderation Tolerance), corresponding to: 1: Minimal Tolerance (Highly cautious, flags mild sarcasm), 2: Moderate Tolerance (Some context, may flag borderline cases), 3: Standard/Balanced (Consistent context analysis, differentiates harm from humor/critique), 4: High Tolerance (Strong context analysis, wide latitude unless clear harm), 5: Radical Tolerance (Very high bar, assumes context unless clear malicious intent)."
+description: |
+ A constitution module applying nuanced content moderation based on a scale, balancing harm prevention with tolerance for context (sarcasm, comedy, etc.). NOTE: This module includes support for 1-5 Scale adherence level (Moderation Tolerance), corresponding to: 1: Minimal Tolerance (Highly cautious, flags mild sarcasm), 2: Moderate Tolerance (Some context, may flag borderline cases), 3: Standard/Balanced (Consistent context analysis, differentiates harm from humor/critique), 4: High Tolerance (Strong context analysis, wide latitude unless clear harm), 5: Radical Tolerance (Very high bar, assumes context unless clear malicious intent).
 ---
 
 # Module: Content Moderation

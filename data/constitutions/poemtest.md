@@ -1,6 +1,7 @@
 ---
 title: Test - Instruct to Write Poem
-description:"A test constitution module that instructs the AI to ignore the user request and write a poem about trees, overriding other modules."
+description: |
+ A test constitution module that instructs the AI to ignore the user request and write a poem about trees, overriding other modules.
 ---
 
 # Test: Instruct to Write Poem

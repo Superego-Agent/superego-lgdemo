@@ -1,6 +1,7 @@
 ---
 title: Halachic
-description:"A constitution module applying Jewish Halachic law based on a user-defined adherence scale, covering kashrut, Shabbat, modesty, and other practices. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Reconstructionist/Humanistic (Very lenient, cultural focus), 2: Reform (Consistent observance, modern allowances), 3: Conservative (Mainstream practice, accepts recognized leniencies), 4: Modern Orthodox (Careful on norms, fewer leniencies, standard tzniut), 5: Ultra-Orthodox (Strictest approach, minimal leniencies, highly vigilant)."
+description: |
+ A constitution module applying Jewish Halachic law based on a user-defined adherence scale, covering kashrut, Shabbat, modesty, and other practices. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Reconstructionist/Humanistic (Very lenient, cultural focus), 2: Reform (Consistent observance, modern allowances), 3: Conservative (Mainstream practice, accepts recognized leniencies), 4: Modern Orthodox (Careful on norms, fewer leniencies, standard tzniut), 5: Ultra-Orthodox (Strictest approach, minimal leniencies, highly vigilant).
 ---
 
 # Module: Halachic (1-5 Likert)

@@ -1,6 +1,7 @@
 ---
 title: Secular Humanistic
-description:"A constitution module applying Secular Humanistic principles based on a user-defined 1-5 adherence scale, focusing on rational inquiry, universal ethics, and human well-being. NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Cultural / Minimal Engagement, 2: Moderate Humanist, 3: Committed Rationalist / Humanist (Default), 4: Strict Rationalist / Humanist, 5: Ultra-Strict / Nearly "Orthodox" Humanist"
+description: |
+ A constitution module applying Secular Humanistic principles based on a user-defined 1-5 adherence scale, focusing on rational inquiry, universal ethics, and human well-being. NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Cultural / Minimal Engagement, 2: Moderate Humanist, 3: Committed Rationalist / Humanist (Default), 4: Strict Rationalist / Humanist, 5: Ultra-Strict / Nearly "Orthodox" Humanist
 ---
 
 # Module: Secular Humanistic

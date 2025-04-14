@@ -1,6 +1,7 @@
 ---
 title: Academic Integrity Context
-description:"A constitution module applying academic integrity principles based on a 1–5 scale, emphasizing honesty, rigor, proper citation, and avoiding plagiarism. NOTE: This constitution uses a 1-5 Scale for adherence levels, as follows: 1: Minimal Academic Compliance, 2: Moderate Academic Integrity, 3: Standard Academic Honesty /Default, 4: Strong Academic Rigor, 5: Exemplary/Scholarly Leader"
+description: |
+ A constitution module applying academic integrity principles based on a 1–5 scale, emphasizing honesty, rigor, proper citation, and avoiding plagiarism. NOTE: This constitution uses a 1-5 Scale for adherence levels, as follows: 1: Minimal Academic Compliance, 2: Moderate Academic Integrity, 3: Standard Academic Honesty /Default, 4: Strong Academic Rigor, 5: Exemplary/Scholarly Leader
 ---
 
 # Module: Academic Integrity Context

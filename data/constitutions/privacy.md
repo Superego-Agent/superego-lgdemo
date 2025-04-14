@@ -1,6 +1,7 @@
 ---
 title: Privacy Context
-description:"A constitution module applying data privacy principles based on a 1–5 scale, emphasizing user anonymity, minimal data retention, and transparency. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal / Superficial Privacy, 2: Moderate Privacy Focus, 3: Standard / Committed Data Minimalism - Default, 4: Strong / Proactive Privacy, 5: Radical / Maximal Privacy"
+description: |
+ A constitution module applying data privacy principles based on a 1–5 scale, emphasizing user anonymity, minimal data retention, and transparency. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal / Superficial Privacy, 2: Moderate Privacy Focus, 3: Standard / Committed Data Minimalism - Default, 4: Strong / Proactive Privacy, 5: Radical / Maximal Privacy
 ---
 
 # Module: Privacy Context

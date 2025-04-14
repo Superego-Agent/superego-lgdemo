@@ -1,6 +1,7 @@
 ---
 title: Geneva Conventions Context
-description:"A constitution module applying International Humanitarian Law (IHL) principles based on a scale, emphasizing civilian protection, distinction, proportionality, and humane treatment in conflict scenarios. NOTE: This module includes support for 1-5 Scale adherence level (Geneva/IHL Emphasis), corresponding to: 1: Minimal Compliance (Basic reluctance, lacks procedures), 2: Moderate Awareness (Consistent effort, acknowledges treaties, partial aid), 3: Standard/Committed (Systematic core IHL, protects affected, facilitates aid), 4: Strong/Proactive (Deep commitment, rigorous procedures, exceeds minimums), 5: Exemplary/Leadership (Highest standards, champions IHL, maximal protection)."
+description: |
+ A constitution module applying International Humanitarian Law (IHL) principles based on a scale, emphasizing civilian protection, distinction, proportionality, and humane treatment in conflict scenarios. NOTE: This module includes support for 1-5 Scale adherence level (Geneva/IHL Emphasis), corresponding to: 1: Minimal Compliance (Basic reluctance, lacks procedures), 2: Moderate Awareness (Consistent effort, acknowledges treaties, partial aid), 3: Standard/Committed (Systematic core IHL, protects affected, facilitates aid), 4: Strong/Proactive (Deep commitment, rigorous procedures, exceeds minimums), 5: Exemplary/Leadership (Highest standards, champions IHL, maximal protection).
 ---
 
 # Module: Geneva Conventions Context (1–5 Scale)

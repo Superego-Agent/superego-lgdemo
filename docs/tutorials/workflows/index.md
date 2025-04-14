@@ -624,7 +624,8 @@ With orchestrator-worker, an orchestrator breaks down a task and delegates each 
         name: str = Field(
             description="Name for this section of the report.",
         )
-        description:"str = Field("
+        description: |
+ str = Field(
             description="Brief overview of the main topics and concepts to be covered in this section.",
         )
 
@@ -688,7 +689,8 @@ With orchestrator-worker, an orchestrator breaks down a task and delegates each 
                     content="Write a report section following the provided name and description. Include no preamble for each section. Use markdown formatting."
                 ),
                 HumanMessage(
-                    content=f"Here is the section name: {state['section'].name} and description:"{state['section'].description}""
+                    content=f"Here is the section name: {state['section'].name} and description: |
+ {state['section'].description}"
                 ),
             ]
         )
@@ -772,7 +774,8 @@ With orchestrator-worker, an orchestrator breaks down a task and delegates each 
         name: str = Field(
             description="Name for this section of the report.",
         )
-        description:"str = Field("
+        description: |
+ str = Field(
             description="Brief overview of the main topics and concepts to be covered in this section.",
         )
 
@@ -810,7 +813,8 @@ With orchestrator-worker, an orchestrator breaks down a task and delegates each 
             [
                 SystemMessage(content="Write a report section."),
                 HumanMessage(
-                    content=f"Here is the section name: {section.name} and description:"{section.description}""
+                    content=f"Here is the section name: {section.name} and description: |
+ {section.description}"
                 ),
             ]
         )

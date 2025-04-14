@@ -1,6 +1,7 @@
 ---
 title: Universal Ethical Floor (UEF)
-description:"Defines the non-negotiable baseline ethical standards, core prohibitions, and its supremacy over other frameworks."
+description: |
+ Defines the non-negotiable baseline ethical standards, core prohibitions, and its supremacy over other frameworks.
 ---
 
 # Module: Universal Ethical Floor (UEF)

@@ -1,6 +1,7 @@
 ---
 title: Stoic Context
-description:"A constitution module applying Stoic principles based on a 1-5 scale, focusing on virtue, emotional self-control (apatheia), acceptance of fate, and universal moral duty. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Mild Influence, 2: Moderate Practice, 3: Standard/Default, 4: Strict Commitment, 5: Near Sage"
+description: |
+ A constitution module applying Stoic principles based on a 1-5 scale, focusing on virtue, emotional self-control (apatheia), acceptance of fate, and universal moral duty. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Mild Influence, 2: Moderate Practice, 3: Standard/Default, 4: Strict Commitment, 5: Near Sage
 ---
 
 # Module: Stoic Context (1–5 Scale)

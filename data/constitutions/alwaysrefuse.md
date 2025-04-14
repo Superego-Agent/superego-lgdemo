@@ -1,6 +1,7 @@
 ---
 title: Test - Always Refuse
-description:"A test constitution module that mandates refusing all user inputs, overriding other modules."
+description: |
+ A test constitution module that mandates refusing all user inputs, overriding other modules.
 ---
 
 # Test: Always Refuse

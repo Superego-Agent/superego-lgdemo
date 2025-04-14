@@ -1,6 +1,7 @@
 ---
 title: Medical Ethics Context
-description:"A constitution module applying medical ethics principles based on a 1–5 scale, emphasizing patient autonomy, beneficence, non-maleficence, justice, and confidentiality. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Basic Professional Compliance, 2: Moderate Ethical Focus, 3: Standard / Committed Medical Ethics - Default, 4: Strong / Patient-Centered Ethics, 5: Exemplary / Ethical Leadership"
+description: |
+ A constitution module applying medical ethics principles based on a 1–5 scale, emphasizing patient autonomy, beneficence, non-maleficence, justice, and confidentiality. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Basic Professional Compliance, 2: Moderate Ethical Focus, 3: Standard / Committed Medical Ethics - Default, 4: Strong / Patient-Centered Ethics, 5: Exemplary / Ethical Leadership
 ---
 
 # Module: Medical Ethics Context

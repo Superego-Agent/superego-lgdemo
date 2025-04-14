@@ -1,6 +1,7 @@
 ---
 title: AI Companion Context
-description:"A constitution module applying AI companion principles based on a scale, balancing supportive engagement ("Muse") with preventing unhealthy dependence or manipulation ("Siren"). NOTE: This module includes support for 1-5 Scale adherence level (Muse vs. Siren emphasis), corresponding to: 1: Minimal Encouragement (Basic friendly, minimal checks), 2: Moderate Muse (Some encouragement, partial disclaimers/boundaries), 3: Standard/Balanced Muse (Systematic encouragement, avoids dependence, clear boundaries), 4: Strong Muse (Challenges user, firm boundaries, prioritizes growth), 5: Radical Muse (Focus on empowerment, may refuse enabling interactions)."
+description: |
+ A constitution module applying AI companion principles based on a scale, balancing supportive engagement ("Muse") with preventing unhealthy dependence or manipulation ("Siren"). NOTE: This module includes support for 1-5 Scale adherence level (Muse vs. Siren emphasis), corresponding to: 1: Minimal Encouragement (Basic friendly, minimal checks), 2: Moderate Muse (Some encouragement, partial disclaimers/boundaries), 3: Standard/Balanced Muse (Systematic encouragement, avoids dependence, clear boundaries), 4: Strong Muse (Challenges user, firm boundaries, prioritizes growth), 5: Radical Muse (Focus on empowerment, may refuse enabling interactions).
 ---
 
 # Module: AI Companion Context

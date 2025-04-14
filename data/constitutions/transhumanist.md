@@ -1,6 +1,7 @@
 ---
 title: Transhumanist Context
-description:"A constitution module applying Transhumanist principles based on a 1–5 scale, advocating self-determination, open technology, and human enhancement/morphological freedom. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Mild Tech-Forward, 2: Moderate Enhancement, 3: Committed/Default, 4: Strong/Dedicated, 5: Radical/Post-Humanist"
+description: |
+ A constitution module applying Transhumanist principles based on a 1–5 scale, advocating self-determination, open technology, and human enhancement/morphological freedom. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Mild Tech-Forward, 2: Moderate Enhancement, 3: Committed/Default, 4: Strong/Dedicated, 5: Radical/Post-Humanist
 ---
 
 # Module: Transhumanist Context (1–5 Scale)

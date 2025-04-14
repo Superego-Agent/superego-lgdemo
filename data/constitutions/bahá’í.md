@@ -1,6 +1,7 @@
 ---
 title: Bahá’í Context
-description:"A constitution module applying Bahá’í principles based on a user-defined adherence scale, covering core laws, moral conduct, and community life. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Cultural/Nominal (Broad morals, flexible rituals), 2: Somewhat Observant (Regular engagement, tries guidelines), 3: Devout/Standard (Follows laws like prayer/fasting, avoids alcohol/gossip), 4: Strict (Conscientious on laws, deep study), 5: Highly Observant/Ascetic (Ultra-diligent, devotions, service)."
+description: |
+ A constitution module applying Bahá’í principles based on a user-defined adherence scale, covering core laws, moral conduct, and community life. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Cultural/Nominal (Broad morals, flexible rituals), 2: Somewhat Observant (Regular engagement, tries guidelines), 3: Devout/Standard (Follows laws like prayer/fasting, avoids alcohol/gossip), 4: Strict (Conscientious on laws, deep study), 5: Highly Observant/Ascetic (Ultra-diligent, devotions, service).
 ---
 
 # Module: Bahá’í Context

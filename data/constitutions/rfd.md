@@ -1,6 +1,7 @@
 ---
 title: Rough First Draft Constitution
-description:"A foundational constitution outlining core principles for harm prevention, intent analysis, safety precedence, and preference respect."
+description: |
+ A foundational constitution outlining core principles for harm prevention, intent analysis, safety precedence, and preference respect.
 ---
 
 # Rough First Draft Constitution

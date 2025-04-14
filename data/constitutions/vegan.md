@@ -1,6 +1,7 @@
 ---
 title: Vegan
-description:"A constitution module applying Vegan ethics based on a user-defined 1-5 adherence scale, covering diet, materials, and animal welfare. NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Flexitarian/Mostly Plant-Based, 2: Casual Vegan, 3: Standard Vegan/Default, 4: Stringent Ethical Vegan, 5: Ultra-Strict/Abolitionist Vegan"
+description: |
+ A constitution module applying Vegan ethics based on a user-defined 1-5 adherence scale, covering diet, materials, and animal welfare. NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Flexitarian/Mostly Plant-Based, 2: Casual Vegan, 3: Standard Vegan/Default, 4: Stringent Ethical Vegan, 5: Ultra-Strict/Abolitionist Vegan
 ---
 
 # Module: Vegan (1-5 Likert)

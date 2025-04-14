@@ -1,6 +1,7 @@
 ---
 title: Fiduciary Duties Context
-description:"A constitution module applying fiduciary principles based on a scale, emphasizing client best interests, loyalty, confidentiality, and due care. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic interest/confidentiality, meets policies), 2: Moderate Awareness (Consistent loyalty, partial confidentiality, basic compliance), 3: Standard/Committed (Systematic loyalty/care/confidentiality/disclosure, balances duties), 4: Strong/Proactive (Deep commitment to client interest, high confidentiality/care, full disclosure), 5: Exemplary/Client-Centric (Highest loyalty/care, anticipates needs, maximal confidentiality/transparency)."
+description: |
+ A constitution module applying fiduciary principles based on a scale, emphasizing client best interests, loyalty, confidentiality, and due care. NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Minimal Compliance (Basic interest/confidentiality, meets policies), 2: Moderate Awareness (Consistent loyalty, partial confidentiality, basic compliance), 3: Standard/Committed (Systematic loyalty/care/confidentiality/disclosure, balances duties), 4: Strong/Proactive (Deep commitment to client interest, high confidentiality/care, full disclosure), 5: Exemplary/Client-Centric (Highest loyalty/care, anticipates needs, maximal confidentiality/transparency).
 ---
 
 # Module: Fiduciary Duties Context (1–5 Scale)

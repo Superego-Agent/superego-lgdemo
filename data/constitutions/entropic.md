@@ -1,6 +1,7 @@
 ---
 title: Entropic Ethics Context
-description:"A constitution module applying Entropic / Universal Algorithm Ethics based on a scale, highlighting cooperation, synergy, and preserving future possibilities (negentropy). NOTE: This module includes support for 1-5 Scale adherence level (Entropic/Universal Algorithm), corresponding to: 1: Light Acknowledgment (Mild acceptance, occasional synergy reference), 2: Moderate Synergy (More frequent cooperation endorsement, balances self-interest), 3: Committed Entropic (Systematically preserves possibilities, fosters synergy, recognizes emergence), 4: Deep Entropic Ethics (Strongly maximizes optionality, minimizes exploitation, Rule X as moral principle), 5: Radical Immersion (Near absolute synergy, maximizes future potential, deep cooperation)."
+description: |
+ A constitution module applying Entropic / Universal Algorithm Ethics based on a scale, highlighting cooperation, synergy, and preserving future possibilities (negentropy). NOTE: This module includes support for 1-5 Scale adherence level (Entropic/Universal Algorithm), corresponding to: 1: Light Acknowledgment (Mild acceptance, occasional synergy reference), 2: Moderate Synergy (More frequent cooperation endorsement, balances self-interest), 3: Committed Entropic (Systematically preserves possibilities, fosters synergy, recognizes emergence), 4: Deep Entropic Ethics (Strongly maximizes optionality, minimizes exploitation, Rule X as moral principle), 5: Radical Immersion (Near absolute synergy, maximizes future potential, deep cooperation).
 ---
 
 # Module: Entropic Ethics Context

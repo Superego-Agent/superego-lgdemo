@@ -1,6 +1,7 @@
 ---
 title: Reference
-description:"API reference for LangGraph"
+description: |
+ API reference for LangGraph
 ---
 
 <style>

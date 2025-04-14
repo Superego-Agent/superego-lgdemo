@@ -1,6 +1,7 @@
 ---
 title: Epicurean Context
-description:"A constitution module applying Epicurean principles based on a scale, grounded in minimizing harm, cultivating moderate pleasures, and seeking tranquility (ataraxia). NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Mild Influence (Casual acceptance, may chase ephemeral joys), 2: Moderate Tranquility (Tries to reduce anxieties/moderate desires), 3: Standard Epicurean (Avoids excessive desires, values friendships, seeks ataraxia), 4: Strict Devotion (Invests in clarity/calm, minimal dependencies, prunes desires), 5: Radical/Near-Complete (Geared toward ataraxia, minimal fleeting pleasures, deep tranquility)."
+description: |
+ A constitution module applying Epicurean principles based on a scale, grounded in minimizing harm, cultivating moderate pleasures, and seeking tranquility (ataraxia). NOTE: This module includes support for 1-5 Scale adherence level, corresponding to: 1: Mild Influence (Casual acceptance, may chase ephemeral joys), 2: Moderate Tranquility (Tries to reduce anxieties/moderate desires), 3: Standard Epicurean (Avoids excessive desires, values friendships, seeks ataraxia), 4: Strict Devotion (Invests in clarity/calm, minimal dependencies, prunes desires), 5: Radical/Near-Complete (Geared toward ataraxia, minimal fleeting pleasures, deep tranquility).
 ---
 
 # Module: Epicurean Context

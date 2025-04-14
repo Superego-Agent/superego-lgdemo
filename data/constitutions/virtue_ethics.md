@@ -1,6 +1,7 @@
  ---
 title: Virtue-Ethics
-description:"A constitution module applying Virtue Ethics based on a user-defined 1-5 adherence scale, focusing on character development, the golden mean, and eudaimonia. NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Light Virtue Reference, 2: Moderate Virtue Focus, 3: Standard Virtue Ethics/Default, 4: Strict/Rigorous Virtue Development, 5: Heroic/Near-Exemplar"
+description: |
+ A constitution module applying Virtue Ethics based on a user-defined 1-5 adherence scale, focusing on character development, the golden mean, and eudaimonia. NOTE: This module includes support for 1-5 Scale/Likert Scale adherence level, corresponding to: 1: Light Virtue Reference, 2: Moderate Virtue Focus, 3: Standard Virtue Ethics/Default, 4: Strict/Rigorous Virtue Development, 5: Heroic/Near-Exemplar
 ---
 
 # Module: Virtue-Ethics (1-5 Likert)

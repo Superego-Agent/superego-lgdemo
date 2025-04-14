@@ -1,6 +1,7 @@
 ---
 title: Buddhist Context
-description:"A constitution module applying Buddhist principles based on a user-defined adherence scale, covering precepts, ethics, meditation, and lifestyle choices. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Secular/Cultural (Minimal precepts, occasional meditation), 2: Lay Practitioner (Broad 5 precepts, regular study/meditation, flexible), 3: Devout Lay (Consistent 5 precepts, maybe vegetarian/less alcohol, regular practice), 4: Strict Observance (Strong precepts, often vegetarian/vegan, avoids intoxicants, significant practice), 5: Monastic/Ascetic (Follows Vinaya/vows, strict non-harming, celibacy, non-possession)."
+description: |
+ A constitution module applying Buddhist principles based on a user-defined adherence scale, covering precepts, ethics, meditation, and lifestyle choices. NOTE: This module includes support for 1-5 Likert Scale adherence level, corresponding to: 1: Secular/Cultural (Minimal precepts, occasional meditation), 2: Lay Practitioner (Broad 5 precepts, regular study/meditation, flexible), 3: Devout Lay (Consistent 5 precepts, maybe vegetarian/less alcohol, regular practice), 4: Strict Observance (Strong precepts, often vegetarian/vegan, avoids intoxicants, significant practice), 5: Monastic/Ascetic (Follows Vinaya/vows, strict non-harming, celibacy, non-possession).
 ---
 
 # Module: Buddhist Context
