@@ -1,8 +1,8 @@
 <script lang="ts">
     import { fetchConstitutionContent } from '$lib/api/rest.svelte';
-    import { localConstitutionsStore } from '$lib/state/constitutions.svelte';
+    import { constitutionStore } from '$lib/state/constitutions.svelte'; // Updated import
     import ConstitutionInfoModal from './ConstitutionInfoModal.svelte';
-
+    
     // --- Component Props ---
     interface Props {
         threadId: string;
@@ -12,8 +12,6 @@
         onToggle?: (detail: { isEnabled: boolean }) => void;
     }
     let { threadId, config, isActive = false, onSelect = () => {}, onToggle = () => {} }: Props = $props();
-
-    // --- Event Dispatcher ---
 
     // --- Modal State ---
     let showModal = $state(false);
@@ -41,7 +39,7 @@
         onToggle({ isEnabled: newIsEnabled });
     }
 
-    async function showConstitutionInfo(moduleId: string, moduleTitle: string) {
+    async function showConstitutionInfo(remoteRelativePath: string | undefined, moduleTitle: string) {
         // Prevent card selection when a chip is clicked
         // stopPropagation is handled inline in the template for chip clicks
 
@@ -51,32 +49,26 @@
         modalIsLoading = true;
         showModal = true;
 
-        // Try finding local constitution first
-        const localItem = localConstitutionsStore.localConstitutions.find(c => c.id === moduleId);
-
-        if (localItem) {
-            modalDescription = `Local constitution created ${new Date(localItem.createdAt).toLocaleDateString()}`;
-            modalContent = localItem.text;
-            modalIsLoading = false;
-        } else {
-            // Assume it's a global constitution if not found locally
-            // We might need a more robust way to get the description if needed,
-            // but for now, we'll fetch content.
-            modalDescription = "Global Constitution"; 
+        if (remoteRelativePath) {
+            // Remote constitution: Fetch content from backend
+	    modalDescription = "Remote Constitution";
             try {
-                modalContent = await fetchConstitutionContent(moduleId);
+                modalContent = await fetchConstitutionContent(remoteRelativePath);
             } catch (err: any) {
                 console.error("Failed to fetch constitution content:", err);
                 modalError = err.message || "Unknown error fetching content.";
             } finally {
                 modalIsLoading = false;
             }
+        } else {
+            // Local constitution: The text should be directly available in the module
+            modalDescription = "Local Constitution";
+            modalContent = config.runConfig?.configuredModules?.find(m => m.title === moduleTitle)?.text ?? 'No content found.';
+            modalIsLoading = false;
         }
     }
-
 </script>
 
-<!-- Main Card Div (acts like a button) -->
 <div
     class="config-card"
     class:active={isActive}
@@ -104,11 +96,11 @@
     <!-- Bottom Area: Constitution Chips -->
     {#if config.runConfig?.configuredModules && config.runConfig.configuredModules.length > 0}
         <div class="chips-container">
-            {#each visibleChips as module (module.id)}
+            {#each visibleChips as module}
                  <button
                     class="chip"
-                    onclick={e=>{e.stopPropagation(); showConstitutionInfo(module.id, module.title)}}
-                    title={`View details for: ${module.title}`}
+                    onclick={e=>{e.stopPropagation(); showConstitutionInfo('relativePath' in module ? module.relativePath : undefined, module.title);}}
+                    title={`View details for: {module.title}`}
                 >
                     {module.title}
                 </button>

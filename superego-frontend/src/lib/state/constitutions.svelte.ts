@@ -1,123 +1,222 @@
 import { nanoid } from 'nanoid';
-import { persistedLocalState, PersistedLocalState } from '$lib/utils/persistedLocalState.svelte'; // Import type
-import { fetchAvailableConstitutions } from '$lib/api/rest.svelte';
+import { fetchConstitutionHierarchy } from '$lib/api/rest.svelte';
 
-// --- Constants for LocalStorage Keys ---
+// --- Constants ---
 const LOCAL_CONSTITUTIONS_KEY = 'superego_local_constitutions';
 
-export class LocalConstitutionsStateStore {
-    // --- Helper to define persisted properties ---
-    #definePersisted<T>(propName: keyof this, storageKey: string, defaultValue: T): PersistedLocalState<T> {
-        const persisted = persistedLocalState<T>(storageKey, defaultValue);
-        Object.defineProperty(this, propName, {
-            get: () => persisted.state,
-            set: (value: T) => { persisted.state = value; },
-            enumerable: true,
-            configurable: true
-        });
-        return persisted;
-    }
+// --- Helper Function for Sorting UI Nodes ---
+function sortNodes(a: UINode, b: UINode): number {
+	if (a.type === 'folder' && b.type === 'file') return -1;
+	if (a.type === 'file' && b.type === 'folder') return 1;
 
-    // --- Public Property Declarations (Types) ---
-    localConstitutions!: LocalConstitution[];
-
-    constructor() {
-        this.#definePersisted('localConstitutions', LOCAL_CONSTITUTIONS_KEY, []);
-    }
-
-    // --- Methods for State Mutation ---
-
-    /** Adds a new local constitution to the store. */
-    addItem(title: string, text: string): LocalConstitution {
-        const newConstitution: LocalConstitution = {
-            id: nanoid(), // Generate unique local ID
-            title: title.trim(),
-            text: text, // Keep original text formatting
-            createdAt: new Date().toISOString(),
-        };
-        this.localConstitutions.push(newConstitution); // Use direct access (setter triggers mutation)
-        console.log(`[OK] Added local constitution: ${newConstitution.id} (${newConstitution.title})`);
-        return newConstitution;
-    }
-
-    /** Updates an existing local constitution by its ID. */
-    updateItem(id: string, title: string, text: string): boolean {
-        // Use direct access (getter)
-        const index = this.localConstitutions.findIndex(c => c.id === id);
-        if (index !== -1) {
-            const updatedConstitution = {
-                ...this.localConstitutions[index], // Use this.localConstitutions
-                title: title.trim(),
-                text: text,
-            };
-            // Create new array for update as direct mutation of item in array might not trigger setter
-            const newList = [...this.localConstitutions];
-            newList[index] = updatedConstitution;
-            this.localConstitutions = newList; // Trigger setter
-            console.log(`[OK] Updated local constitution: ${id}`);
-            return true;
-        }
-        console.warn(`Attempted update on non-existent local constitution: ${id}`);
-        return false;
-    }
-
-    /** Deletes a local constitution by its ID. */
-    deleteItem(id: string): boolean {
-        // Use direct access (getter) and filter for immutable update
-        const initialLength = this.localConstitutions.length;
-        const filtered = this.localConstitutions.filter(c => c.id !== id);
-        if (filtered.length < initialLength) {
-            this.localConstitutions = filtered; // Trigger setter
-            console.log(`[OK] Deleted local constitution: ${id}`);
-            return true;
-        }
-        console.warn(`Attempted delete on non-existent local constitution: ${id}`);
-        return false;
-    }
+	// Both are folders or both are files, sort alphabetically
+	const titleA = a.type === 'folder' ? a.title : a.metadata.title;
+	const titleB = b.type === 'folder' ? b.title : b.metadata.title;
+	return titleA.localeCompare(titleB);
 }
 
-export class GlobalConstitutionsStore {
-    // --- State Properties ---
-    constitutions = $state<ConstitutionItem[]>([]);
-    isLoading = $state<boolean>(false);
-    error = $state<string | null>(null);
-    #hasLoaded = $state<boolean>(false); // Private state to prevent multiple fetches
-
-    // --- Methods ---
-
-    /**
-     * Fetches the global constitutions from the API and updates the store state.
-     * Should typically be called once, e.g., on application load.
-     */
-    async load(): Promise<void> {
-        if (this.#hasLoaded || this.isLoading) {
-            // Already loaded or currently loading, do nothing
-            return;
-        }
-
-        this.isLoading = true;
-        this.error = null;
-        this.#hasLoaded = true; // Set flag immediately
-
-        try {
-            const fetchedConstitutions = await fetchAvailableConstitutions();
-            // Filter out 'none' if present in the fetched data
-            this.constitutions = fetchedConstitutions.filter((c: ConstitutionItem) => c.id !== 'none');
-        } catch (err: any) {
-            console.error("Failed to load global constitutions:", err);
-            this.error = err.message || "Unknown error fetching global constitutions.";
-            this.#hasLoaded = false; // Reset flag on error to allow retry
-        } finally {
-            this.isLoading = false;
-        }
-    }
-
-    // --- Derived State (Example, if needed) ---
-    // get constitutionNames(): string[] {
-    //     return this.constitutions.map(c => c.name);
-    // }
+// --- Helper Functions for Transforming Global Hierarchy ---
+function transformGlobalFile(file: RemoteConstitutionMetadata): UIFileNode {
+	return {
+		type: 'file',
+		metadata: file,
+		uiPath: `remote:${file.relativePath}`
+	};
 }
 
-// --- Export Singleton Instances ---
-export const localConstitutionsStore = new LocalConstitutionsStateStore();
-export const globalConstitutionsStore = new GlobalConstitutionsStore();
+function transformGlobalFolder(folder: ConstitutionFolder): UIFolderNode {
+	const children: UINode[] = [
+		...folder.subFolders.map(transformGlobalFolder), // Recursive call
+		...folder.constitutions.map(transformGlobalFile)
+	];
+	children.sort(sortNodes); // Sort children within this folder 
+
+	// Construct a unique-ish path for the folder node itself for keying/identification if needed
+	// Using the first child's path prefix or just the title might be fragile.
+	// Let's use a prefix and the title. The primary use is structure, children have the real paths.
+	const folderUiPath = `remote:folder:${folder.folderTitle}`; // Simple identifier
+
+	return {
+		type: 'folder',
+		title: folder.folderTitle,
+		uiPath: folderUiPath,
+		isExpanded: false, // Default to collapsed
+		children: children
+	};
+}
+
+
+// --- Main Store Class ---
+
+export class ConstitutionStore {
+	// --- Local Constitutions State ---
+	localConstitutions: LocalConstitutionMetadata[] = $state([]);
+
+	// --- Global Constitutions State ---
+	globalHierarchy: ConstitutionHierarchy | null = $state(null);
+	isLoadingGlobal: boolean = $state(false);
+	globalError: string | null = $state(null);
+	// Removed #hasFetchedGlobal guard
+
+	constructor() {
+		// --- Load initial state from localStorage ---
+		if (typeof window !== 'undefined' && window.localStorage) {
+			const stored = localStorage.getItem(LOCAL_CONSTITUTIONS_KEY);
+			if (stored) {
+				try {
+					this.localConstitutions = JSON.parse(stored);
+				} catch (e) {
+					console.error("Failed to parse local constitutions from localStorage", e);
+					localStorage.removeItem(LOCAL_CONSTITUTIONS_KEY); // Clear invalid data
+					this.localConstitutions = [];
+				}
+			} else {
+				this.localConstitutions = [];
+			}
+		} else {
+			this.localConstitutions = [];
+		}
+
+
+		// --- Fetch Global Constitutions on Initialization ---
+		this.#fetchGlobalData();
+	}
+
+	// --- Private Helper for Initial Fetch ---
+	async #fetchGlobalData() {
+		console.log('[ConstitutionStore] Initializing global constitution fetch...');
+		this.isLoadingGlobal = true;
+		this.globalError = null;
+		try {
+			const fetchedHierarchy = await fetchConstitutionHierarchy();
+			this.globalHierarchy = fetchedHierarchy;
+			console.log('[ConstitutionStore] Successfully fetched global constitution hierarchy.');
+		} catch (err: any) {
+			console.error("[ConstitutionStore] Failed to load global constitutions:", err);
+			this.globalError = err.message || "Unknown error fetching global constitutions.";
+		} finally {
+			this.isLoadingGlobal = false;
+		}
+	}
+
+	// --- Private Helper to Save Local State ---
+	#saveLocalState() {
+		// Check if running in a browser environment before accessing localStorage
+		if (typeof window !== 'undefined' && window.localStorage) {
+			localStorage.setItem(LOCAL_CONSTITUTIONS_KEY, JSON.stringify(this.localConstitutions));
+			console.log('[ConstitutionStore] Saved local constitutions to localStorage.');
+		}
+	}
+
+	// --- Methods for Local State Mutation ---
+
+	/** Adds a new local constitution. */
+	addItem(title: string, text: string): LocalConstitutionMetadata {
+		const newConstitution: LocalConstitutionMetadata = {
+			localStorageKey: nanoid(),
+			title: title.trim(),
+			text: text,
+			source: 'local'
+		};
+		this.localConstitutions = [...this.localConstitutions, newConstitution];
+		console.log(`[ConstitutionStore] Added local constitution: ${newConstitution.localStorageKey} (${newConstitution.title})`);
+		this.#saveLocalState(); // Save after modification
+		return newConstitution;
+	}
+
+	/** Updates an existing local constitution by its key. */
+	updateItem(key: string, title: string, text: string): boolean {
+		const index = this.localConstitutions.findIndex(c => c.localStorageKey === key);
+		if (index !== -1) {
+			const updatedConstitution = {
+				...this.localConstitutions[index],
+				title: title.trim(),
+				text: text
+			};
+			const newList = [...this.localConstitutions];
+			newList[index] = updatedConstitution;
+			this.localConstitutions = newList;
+			console.log(`[ConstitutionStore] Updated local constitution: ${key}`);
+			this.#saveLocalState(); // Save after modification
+			return true;
+		}
+		console.warn(`[ConstitutionStore] Attempted update on non-existent local constitution: ${key}`);
+		return false;
+	}
+
+	/** Deletes a local constitution by its key. */
+	deleteItem(key: string): boolean {
+		const initialLength = this.localConstitutions.length;
+		const filtered = this.localConstitutions.filter(c => c.localStorageKey !== key);
+		if (filtered.length < initialLength) {
+			this.localConstitutions = filtered; // Immutable update
+			console.log(`[ConstitutionStore] Deleted local constitution: ${key}`);
+			this.#saveLocalState(); // Save after modification
+			return true;
+		}
+		console.warn(`[ConstitutionStore] Attempted delete on non-existent local constitution: ${key}`);
+		return false;
+	}
+
+	// --- Derived State for UI Tree ---
+
+	get displayTree(): UINode[] {
+		// --- Handle Loading State ---
+		if (this.isLoadingGlobal) {
+			return [{
+				type: 'folder',
+				title: 'Loading Global...', // Use title property
+				uiPath: 'loading:global',
+				isExpanded: true,
+				children: []
+			}];
+		}
+
+		// --- Handle Error State ---
+		if (this.globalError) {
+			return [{
+				type: 'folder',
+				title: `Error Loading Global: ${this.globalError}`, // Use title property
+				uiPath: 'error:global',
+				isExpanded: true,
+				children: []
+			}];
+		}
+
+		// --- Transform Local Constitutions ---
+		const localFiles: UIFileNode[] = this.localConstitutions.map(meta => {
+			console.log("[ConstitutionStore] local constitution meta:", meta); 
+			return {
+				type: 'file',
+				metadata: meta,
+				uiPath: `local:${meta.localStorageKey}` 
+			};
+		});
+		localFiles.sort(sortNodes); // Sort local files alphabetically by title
+
+		const localFolder: UIFolderNode = {
+			type: 'folder',
+			title: 'Local', // Use title property
+			uiPath: 'local:folder', // Identifier for the local folder itself
+			isExpanded: true, // Default local folder to expanded
+			children: localFiles
+		};
+
+		// --- Transform Global Constitutions ---
+		let globalNodes: UINode[] = [];
+		if (this.globalHierarchy) {
+			const globalRootFolders = this.globalHierarchy.rootFolders.map(transformGlobalFolder);
+			const globalRootFiles = this.globalHierarchy.rootConstitutions.map(transformGlobalFile);
+			globalNodes = [...globalRootFolders, ...globalRootFiles];
+			globalNodes.sort(sortNodes); // Sort root global folders (first) and files alphabetically
+		}
+
+		// --- Combine and Return ---
+		const displayTree = [localFolder, ...globalNodes];
+		console.log("[ConstitutionStore] displayTree:", displayTree);
+		return displayTree;
+	}
+}
+
+// --- Export Singleton Instance ---
+export const constitutionStore = new ConstitutionStore();

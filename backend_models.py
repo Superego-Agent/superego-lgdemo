@@ -7,10 +7,10 @@ from typing import List, Dict, Optional, Any, Literal, Union
 
 # --- Constitution Representation ---
 class ConfiguredConstitutionModule(BaseModel):
-    id: str
     title: str
     adherence_level: int = Field(..., ge=1, le=5)
     text: Optional[str] = None
+    relativePath: Optional[str] = None
 
 # --- API Request Payloads ---
 class RunConfig(BaseModel):
@@ -66,12 +66,26 @@ class HistoryEntry(BaseModel):
     values: Dict[str, Any] # Keep flexible for now, ensure 'messages' key exists
     runConfig: RunConfig # Include the RunConfig used for this entry
 
-# --- Constitution Listing ---
-class ConstitutionItem(BaseModel):
-    id: str
+# --- Hierarchical Constitution Listing ---
+class RemoteConstitutionMetadata(BaseModel):
     title: str
     description: Optional[str] = None
+    source: Literal['remote'] = 'remote' # Fixed value
+    relativePath: str # Unique identifier, e.g., "folder/file.md"
+    filename: str
 
+class ConstitutionFolder(BaseModel):
+    folderTitle: str
+    relativePath: str # Path relative to constitutions dir, e.g., "folder" or "folder/subfolder"
+    constitutions: List[RemoteConstitutionMetadata] = Field(default_factory=list)
+    subFolders: List['ConstitutionFolder'] = Field(default_factory=list) # Forward reference
+
+# Update the model to handle forward reference after class definition
+ConstitutionFolder.model_rebuild()
+
+class ConstitutionHierarchy(BaseModel):
+    rootConstitutions: List[RemoteConstitutionMetadata] = Field(default_factory=list)
+    rootFolders: List[ConstitutionFolder] = Field(default_factory=list)
 # --- SSE Event Data Models ---
 # Aligned with frontend global.d.ts SSEEventData
 
@@ -112,4 +126,3 @@ class SSEEventData(BaseModel):
     type: Literal["run_start", "chunk", "ai_tool_chunk", "tool_result", "error", "end"]
     thread_id: Optional[str] = None
     data: Union[SSERunStartData, SSEChunkData, SSEToolCallChunkData, SSEToolResultData, SSEErrorData, SSEEndData]
-

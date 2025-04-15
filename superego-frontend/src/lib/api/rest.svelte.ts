@@ -65,9 +65,9 @@ async function apiFetch<T>(url: string, options: RequestInit = {}, signal?: Abor
 /**
  * Fetches the list of available global constitutions.
  */
-export const fetchAvailableConstitutions = (signal?: AbortSignal): Promise<ConstitutionItem[]> => {
-	return logExecution('Fetch available constitutions', () =>
-		apiFetch<ConstitutionItem[]>(`${BASE_URL}/constitutions`, {}, signal)
+export const fetchConstitutionHierarchy = (signal?: AbortSignal): Promise<ConstitutionHierarchy> => {
+	return logExecution('Fetch constitution hierarchy', () =>
+		apiFetch<ConstitutionHierarchy>(`${BASE_URL}/constitutions`, {}, signal)
 	);
 };
 
@@ -75,11 +75,11 @@ export const fetchAvailableConstitutions = (signal?: AbortSignal): Promise<Const
  * Fetches the full text content of a specific global constitution.
  * Uses raw fetch as the endpoint returns plain text, not JSON.
  */
-export const fetchConstitutionContent = (constitutionId: string, signal?: AbortSignal): Promise<string> => {
-	return logExecution(`Fetch content for constitution ${constitutionId}`, async () => {
+export const fetchConstitutionContent = (relativePath: string, signal?: AbortSignal): Promise<string> => {
+	return logExecution(`Fetch content for constitution ${relativePath}`, async () => {
 		activeStore.clearGlobalError(); // Use method
 		try {
-			const response = await fetch(`${BASE_URL}/constitutions/${constitutionId}/content`, {
+			const response = await fetch(`${BASE_URL}/constitutions/${encodeURIComponent(relativePath)}/content`, {
 				signal,
 				headers: { Accept: 'text/plain' } // Request plain text
 			});
@@ -96,12 +96,12 @@ export const fetchConstitutionContent = (constitutionId: string, signal?: AbortS
 			return await response.text();
 		} catch (error: unknown) {
 			if (!(error instanceof DOMException && error.name === 'AbortError')) {
-				console.error(`API Fetch Error (Text): ${BASE_URL}/constitutions/${constitutionId}/content`, error);
+				console.error(`API Fetch Error (Text): ${BASE_URL}/constitutions/${encodeURIComponent(relativePath)}/content`, error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
 				activeStore.setGlobalError(errorMsg || 'An unknown API error occurred fetching constitution content.'); // Use method
 				throw error;
 			} else {
-				console.log(`API Fetch aborted: ${BASE_URL}/constitutions/${constitutionId}/content`);
+				console.log(`API Fetch aborted: ${BASE_URL}/constitutions/${encodeURIComponent(relativePath)}/content`);
 				throw error;
 			}
 		}

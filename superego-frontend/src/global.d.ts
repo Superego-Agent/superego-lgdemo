@@ -4,9 +4,7 @@ declare global {
         name: string;
         createdAt: string;
         lastUpdatedAt: string;
-        // threadIds: string[]; // Replaced by threads object keys
         threads: Record<string, ThreadConfigState>; // Key is frontend-generated threadId (UUID)
-        // activeConfigThreadId: string | null; // REMOVED - Now managed by transient activeConfigEditorId store
     }
 
     /** Represents the configuration state for a single thread/config card in the UI */
@@ -17,12 +15,12 @@ declare global {
         isEnabled: boolean; // Should new messages be sent to this thread?
     }
 
-    interface ConfiguredConstitutionModule {
-        id: string;
+    // Represents a configured constitution module, used both internally and for API payload.
+    // Must have title, level, and EITHER id (remote lookup key) OR full text (local).
+    type ConfiguredConstitutionModule = {
         title: string;
         adherence_level: number;
-        text?: string;
-    }
+    } & ({ relativePath: string; text?: never } | { text: string; relativePath?: never });
 
     interface RunConfig {
         configuredModules: ConfiguredConstitutionModule[];
@@ -53,12 +51,59 @@ declare global {
         error: string | null;
     }
 
-    /** Represents a single constitution available for selection. */
-    interface ConstitutionItem {
-        id: string;
+    // --- Hierarchical Constitution Types ---
+
+    interface BaseConstitutionMetadata {
         title: string;
         description?: string;
+        source: 'local' | 'remote';
     }
+
+    interface LocalConstitutionMetadata extends BaseConstitutionMetadata {
+        source: 'local';
+        localStorageKey: string; // Unique key for localStorage
+        text: string;
+    }
+
+    interface RemoteConstitutionMetadata extends BaseConstitutionMetadata {
+        source: 'remote';
+        relativePath: string; // Unique identifier from backend (e.g., "folder/file.md")
+        filename: string;
+    }
+
+    interface ConstitutionFolder {
+        folderTitle: string;
+        relativePath: string;
+        constitutions: RemoteConstitutionMetadata[];
+        subFolders: ConstitutionFolder[];
+    }
+
+    interface ConstitutionHierarchy {
+        rootConstitutions: RemoteConstitutionMetadata[];
+        rootFolders: ConstitutionFolder[];
+    }
+
+    // --- UI Tree Node Types ---
+
+    interface UINodeBase {
+        type: 'folder' | 'file';
+        uiPath: string; // Unique path for UI state (e.g., "local/key", "remote/rel/path")
+    }
+
+    interface UIFolderNode extends UINodeBase {
+        type: 'folder';
+        title: string;
+        children: UINode[];
+        isExpanded: boolean; // State for UI expansion
+    }
+
+    interface UIFileNode extends UINodeBase {
+        type: 'file';
+        metadata: LocalConstitutionMetadata | RemoteConstitutionMetadata;
+    }
+
+    type UINode = UIFolderNode | UIFileNode;
+
 
     interface BaseApiMessage {
         type: 'human' | 'ai' | 'system' | 'tool';
@@ -97,13 +142,6 @@ declare global {
     /** Represents message types received from the backend API. */
     type MessageType = HumanApiMessage | AiApiMessage | SystemApiMessage | ToolApiMessage;
 
-    /** Represents a constitution stored locally in localStorage */
-    interface LocalConstitution {
-        id: string;
-        title: string;
-        text: string;
-        createdAt: string;
-    }
 
     /** Input structure for starting a run */
     interface StreamRunInput {
@@ -183,5 +221,4 @@ declare global {
 
 }
 
-// Ensures this file is treated as a module. Required for declare global.
 export { };

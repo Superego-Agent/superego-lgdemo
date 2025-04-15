@@ -56,13 +56,20 @@ async def stream_events(
 
         for module in run_config.configuredModules:
             content = module.text
-            if content is None: # If text is not provided, try fetching by ID
-                content = get_constitution_content(module.id)
+            if module.relativePath:  # If relativePath is provided, try fetching from file
+                try:
+                    content = get_constitution_content(module.relativePath)
+                except Exception as e:
+                    print(f"Error reading constitution from file {module.relativePath}: {e}")
+                    content = None  # Handle file reading errors gracefully
+
+            if content is None and module.text:
+                content = module.text # Use provided text if available
 
             if content is not None:
                 processed_modules.append((content, module.title, module.adherence_level))
             else:
-                missing_ids.append(module.id) # Track IDs that couldn't be loaded
+                missing_ids.append(module.relativePath or "unknown") # Track IDs that couldn't be loaded
 
         # Generate constitution text and adherence report lines using list comprehensions
         constitution_texts = [content for content, _, _ in processed_modules]

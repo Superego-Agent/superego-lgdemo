@@ -25,7 +25,6 @@
   role="button"
   aria-label="Close modal"
   tabindex="0"
-  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeModal(); }}
 >
   <div class="modal-content">
     <button class="close-button" onclick={closeModal}>&times;</button>

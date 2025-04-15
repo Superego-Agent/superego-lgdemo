@@ -270,7 +270,7 @@ export const streamRun = async (
     runConfig: RunConfig,
     threadId: string | null
 ): Promise<AbortController> => {
-    activeStore.clearGlobalError(); // Use activeStore.clearGlobalError
+    activeStore.clearGlobalError();
     const controller = new AbortController();
     // Access .state for persisted store
     const currentActiveSessionId = sessionStore.activeSessionId; // Use new session state
@@ -278,7 +278,7 @@ export const streamRun = async (
     if (!currentActiveSessionId) {
         const errorMsg = "Cannot start run: No active session selected.";
         console.error(errorMsg);
-        activeStore.setGlobalError(errorMsg); // Use activeStore.setGlobalError
+        activeStore.setGlobalError(errorMsg); 
         controller.abort();
         return controller;
     }
@@ -288,7 +288,7 @@ export const streamRun = async (
     if (!currentSessionData) {
         const errorMsg = `Cannot start run: Active session state not found for ID ${currentActiveSessionId}.`;
         console.error(errorMsg);
-        activeStore.setGlobalError(errorMsg); // Use activeStore.setGlobalError
+        activeStore.setGlobalError(errorMsg); 
         controller.abort();
         return controller;
     }
@@ -389,10 +389,8 @@ export const streamRun = async (
                 },
             });
         } catch (error) {
-            // Catches errors from fetchEventSource setup or onopen.
             if (!(error instanceof DOMException && error.name === 'AbortError')) {
                 console.error(`Error setting up SSE stream for session ${currentActiveSessionId}:`, error);
-                // globalError is likely already set by onopen or apiFetch, but set again just in case
                 activeStore.setGlobalError(`Stream Setup Error: ${error instanceof Error ? error.message : String(error)}`); // Use activeStore.setGlobalError
             }
         }

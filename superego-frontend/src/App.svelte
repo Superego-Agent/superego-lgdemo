@@ -3,7 +3,7 @@
   import { sessionStore } from '$lib/state/session.svelte';
   import { threadStore } from '$lib/state/threads.svelte';
 import { onMount } from 'svelte';
-import { globalConstitutionsStore } from '$lib/state/constitutions.svelte'; // Use new store instance
+import { constitutionStore } from '$lib/state/constitutions.svelte'; // Use updated single store instance
 import Sidebar from './lib/components/Sidebar.svelte';
 import ChatInterface from '$lib/components/ChatInterface.svelte';
 import ThemeToggle from './lib/components/ThemeToggle.svelte';
@@ -14,7 +14,7 @@ import './lib/styles/dark-theme.css';
 onMount( async () => {
     try {
         await Promise.all([
-            globalConstitutionsStore.load(), 
+            // constitutionStore.load(), // Removed - store loads itself via $effect.pre
 
         ]); // End of Promise.all
   // $effect block moved outside onMount below

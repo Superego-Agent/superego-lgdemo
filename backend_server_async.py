@@ -24,7 +24,7 @@ from langgraph.checkpoint.base import CheckpointTuple, BaseCheckpointSaver # Kee
 try:
     from config import CONFIG # Keep temporarily
     # Import only get_constitution_content if get_available_constitutions is only used in the router
-    from constitution_utils import get_available_constitutions, get_constitution_content # Keep temporarily
+    from constitution_utils import get_constitution_hierarchy, get_constitution_content # Keep temporarily
     from superego_core_async import create_models, create_workflow # Keep for lifespan
 except ImportError as e:
     print(f"Error importing project modules: {e}")

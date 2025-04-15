@@ -1,8 +1,7 @@
 <script lang="ts">
 
     import { fetchConstitutionContent, submitConstitution } from '$lib/api/rest.svelte';
-    import { localConstitutionsStore } from '$lib/state/constitutions.svelte';
-    import { globalConstitutionsStore } from '$lib/state/constitutions.svelte';
+    import { constitutionStore } from '$lib/state/constitutions.svelte'; // Updated import
     import { tick } from 'svelte';
 
     let { onConstitutionAdded = (detail?: { success: boolean }) => {}, onClose = () => {} } = $props<{
@@ -10,9 +9,10 @@
         onClose?: () => void;
     }>();
 
-    let availableConstitutions = $derived(globalConstitutionsStore.constitutions);
-    let isLoading = $derived(globalConstitutionsStore.isLoading);
-    let error = $derived(globalConstitutionsStore.error); 
+    // Use the single store instance for global state
+    let availableConstitutions = $derived(constitutionStore.globalHierarchy);
+    let isLoading = $derived(constitutionStore.isLoadingGlobal);
+    let error = $derived(constitutionStore.globalError);
 
     // --- Component State ---
     let constitutionTitle = $state('');
@@ -28,12 +28,29 @@
     // --- Template Handling ---
     // Combine global and local for template dropdown
     type TemplateOption =
-        | { type: 'global'; id: string; title: string }
-        | { type: 'local'; id: string; title: string; text: string }; // Include text for local
+        | { type: 'remote'; id: string; title: string } // 'id' will be relativePath
+        | { type: 'local'; id: string; title: string; text: string }; // 'id' will be localStorageKey
 
 
 
     // --- Functions ---
+    function flattenHierarchy(hierarchy: ConstitutionHierarchy | null): RemoteConstitutionMetadata[] {
+        if (!hierarchy) {
+            return [];
+        }
+        const constitutions: RemoteConstitutionMetadata[] = [...hierarchy.rootConstitutions];
+        function recurseFolders(folders: ConstitutionFolder[]) {
+            for (const folder of folders) {
+                constitutions.push(...folder.constitutions);
+                if (folder.subFolders && folder.subFolders.length > 0) {
+                    recurseFolders(folder.subFolders);
+                }
+            }
+        }
+        recurseFolders(hierarchy.rootFolders);
+        return constitutions;
+    }
+
     async function loadTemplateContent(templateId: string) {
         const selectedTemplate = allConstitutionsForTemplate.find(t => t.id === templateId);
         if (!selectedTemplate) return;
@@ -45,8 +62,8 @@
         try {
             if (selectedTemplate.type === 'local') {
                 constitutionText = selectedTemplate.text;
-            } else {
-                // Fetch content for global constitutions
+            } else { // type === 'remote'
+                // Fetch content for remote constitutions using relativePath (stored in id)
                 constitutionText = await fetchConstitutionContent(selectedTemplate.id);
             }
         } catch (error) {
@@ -70,7 +87,7 @@
         let submitApiMessage = '';
 
         try {
-            localConstitutionsStore.addItem(constitutionTitle, constitutionText); // Call method on store instance
+            constitutionStore.addItem(constitutionTitle, constitutionText); // Use updated store name
             localAddSuccess = true;
 
             if (submitForReview) {
@@ -111,15 +128,20 @@
             isSubmitting = false;
         }
     }
-    let allConstitutionsForTemplate = $derived([
-        ...globalConstitutionsStore.constitutions // Access directly
-            .filter((c: ConstitutionItem) => c.id !== 'none')
-            .map((c: ConstitutionItem): TemplateOption => ({ type: 'global', id: c.id, title: c.title })),
-        ...localConstitutionsStore.localConstitutions.map((c: LocalConstitution): TemplateOption => ({ type: 'local', id: c.id, title: c.title, text: c.text })) // Access .localConstitutions property
-    ].sort((a, b) => a.title.localeCompare(b.title)));
+    let allConstitutionsForTemplate = $derived((() => {
+        const remoteConstitutions = flattenHierarchy(constitutionStore.globalHierarchy); // Use updated store name
+        const remoteOptions: TemplateOption[] = remoteConstitutions
+            // .filter(c => c.relativePath !== 'none') // Filtering 'none' might not be needed depending on backend
+            .map((c): TemplateOption => ({ type: 'remote', id: c.relativePath, title: c.title }));
+
+        const localOptions: TemplateOption[] = constitutionStore.localConstitutions.map((c: LocalConstitutionMetadata): TemplateOption => ({ type: 'local', id: c.localStorageKey, title: c.title, text: c.text })); // Use updated store name and add type
+
+        return [...remoteOptions, ...localOptions].sort((a, b) => a.title.localeCompare(b.title));
+    })()); // Immediately invoke the function expression
     // --- Reactive Logic & Effects ---
     // Fetch constitutions on component mount using the store's load method
-    globalConstitutionsStore.load();
+    // No need to call load() explicitly, the store handles it internally via $effect.pre
+    // globalConstitutionsStore.load();
 
     // Reactive statement to load template when selectedTemplateId changes
     $effect(() => {
