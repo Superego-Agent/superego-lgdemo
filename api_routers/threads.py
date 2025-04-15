@@ -198,9 +198,24 @@ async def get_thread_latest_endpoint(
         history_entry = _adapt_snapshot_to_history_entry(state_snapshot, thread_id)
 
         if not history_entry:
-             # This indicates an issue within the adaptation function itself
-             print(f"Error: Failed to adapt state snapshot to HistoryEntry for thread {thread_id}")
-             raise HTTPException(status_code=500, detail="Failed to process history data.")
+            # If adaptation returns None, it means the thread exists but has no history yet.
+            # Return a default empty HistoryEntry instead of a 500 error.
+            print(f"Thread {thread_id} exists but has no history snapshots. Returning default empty entry.")
+            # Attempt to get RunConfig from the potentially minimal snapshot, default if missing
+            run_config_dict = state_snapshot.config.get("configurable", {}).get("runConfig")
+            try:
+                # Use the RunConfig model directly from backend_models
+                run_config_obj = RunConfig.model_validate(run_config_dict) if run_config_dict else RunConfig(configuredModules=[])
+            except Exception as e:
+                 print(f"Warning: Could not parse runConfig for empty state of thread {thread_id}: {e}")
+                 run_config_obj = RunConfig(configuredModules=[]) # Default on error
+
+            return HistoryEntry(
+                checkpoint_id="empty-state", # Placeholder for no actual checkpoint
+                thread_id=thread_id,
+                values={"messages": []},
+                runConfig=run_config_obj # Use extracted or default RunConfig
+            )
 
         return history_entry
 
