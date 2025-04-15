@@ -240,6 +240,10 @@
     padding: var(--space-md);
     background-color: var(--bg-primary);
     flex-shrink: 0;
+    max-width: 1024px; // Limit width
+    margin-left: auto; // Center horizontally
+    margin-right: auto; // Center horizontally
+    width: 100%; // Ensure it takes available width up to max-width
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);

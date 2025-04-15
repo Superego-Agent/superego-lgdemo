@@ -142,6 +142,7 @@
         flex-direction: column; // Stack top row and chips vertically
         gap: var(--space-sm); // Space between top row and chips
         min-width: 150px; // Ensure a minimum width
+        min-height: 100px; // Ensure a minimum height
         width: 100%;
         max-width: 100%; // Prevent card from overflowing its container if container is constrained
         position: relative; // For potential absolute positioning if needed later

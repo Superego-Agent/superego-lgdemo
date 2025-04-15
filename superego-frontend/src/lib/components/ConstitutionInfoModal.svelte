@@ -1,6 +1,8 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
     import IconClose from '~icons/fluent/dismiss-24-regular';
+    import { marked } from 'marked';
+    import DOMPurify from 'dompurify';
 
     interface Props {
         title?: string;
@@ -19,6 +21,9 @@
         error = null,
         onClose = () => {}
     }: Props = $props();
+
+    // Parse and sanitize markdown content
+    let parsedHtml = $derived(content ? DOMPurify.sanitize(marked.parse(content, { async: false })) : '');
 
         function closeModal() {
             onClose();
@@ -59,7 +64,7 @@
             {:else if error}
                 <div class="error-message">Error loading content: {error}</div>
             {:else if content}
-                <pre class="content-area">{content}</pre>
+                <div class="content-area">{@html parsedHtml}</div>
             {:else}
                 <p>No content available.</p>
             {/if}
@@ -125,16 +130,31 @@
         }
 
         .content-area {
-            white-space: pre-wrap; /* Wrap long lines */
-            word-wrap: break-word; /* Break long words */
-            font-family: var(--font-mono);
-            font-size: 0.85em;
+            /* Removed pre-wrap, word-wrap, font-family */
+            font-size: 0.9em; /* Slightly larger default font for rendered HTML */
             background-color: var(--bg-primary); /* Slightly different background */
             padding: var(--space-md);
             border-radius: var(--radius-md);
             border: 1px solid var(--input-border);
             max-height: 50vh; /* Limit height within modal */
             overflow-y: auto;
+
+        /* Style headings within the rendered markdown */
+        .content-area h1 {
+            font-size: 1.4em; /* Or adjust as needed */
+            line-height: 1.2;
+            margin-top: 0.8em;
+            margin-bottom: 0.4em;
+        }
+        .content-area h2 {
+            font-size: 1.2em; /* Or adjust as needed */
+            line-height: 1.2;
+            margin-top: 0.6em;
+            margin-bottom: 0.3em;
+        }
+        /* Add rules for h3, h4, etc. if needed */
+
+
             @include custom-scrollbar($track-bg: var(--bg-primary), $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
         }
 

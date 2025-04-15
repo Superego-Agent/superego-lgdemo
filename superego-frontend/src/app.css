@@ -36,11 +36,6 @@ html {
   overflow: hidden;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
 /* Removed unused .card class */
 
 #app {
@@ -71,3 +66,4 @@ button:focus-visible {
 }
 
 /* Removed prefers-color-scheme media query as theme is handled by data-theme attribute */
+

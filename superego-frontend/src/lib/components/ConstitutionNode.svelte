@@ -32,8 +32,9 @@
 
 	<!-- === Folder Node === -->
 	{#if node.type === 'folder'}
-		<div class="node-content folder">
-			<span class="chevron" onclick={() => onToggleExpand(node)} style="cursor: pointer;">
+		<div class="node-content folder" onclick={() => onToggleExpand(node)} title="Toggle folder">
+			<!-- Removed onclick from chevron span, parent div handles it -->
+			<span class="chevron" style="cursor: pointer;">
 				{#if isExpanded}
 				  <IconChevronDown />
 				{:else}
@@ -53,7 +54,7 @@
               // Comparing potentially large text strings directly. Consider hashing if performance becomes an issue.
               return m.text === childNode.metadata.text;
           }
-          return false; 
+          return false;
       })}
                            <Self
                                 node={childNode}
@@ -72,43 +73,72 @@
 
 	<!-- === File Node === -->
 	{:else if node.type === 'file'}
-		<div class="node-content file">
+		<div class="node-content file" onclick={() => onToggleSelect(node.uiPath, !isSelectedProp, node.metadata)} title="Toggle selection">
 			<input
 				type="checkbox"
 				checked={isSelectedProp}
 				onchange={(e) => onToggleSelect(node.uiPath, e.currentTarget.checked, node.metadata)}
 				class="checkbox"
 			/>
-			<div class="file-info" onclick ={() => onShowDetail(node.metadata)} style="cursor: pointer;">
-				<IconDocumentRegular class="icon" />
-				<span class="title">{node.metadata.title}</span>
+			<!-- Remove onclick from file-info, handle clicks on specific elements -->
+			<div class="file-info">
+				<!-- Wrap icon and title for separate click/hover -->
+				<!-- Removed stopPropagation modifier -->
+				<span class="file-details-clickable" onclick={(event) => { event.stopPropagation(); onShowDetail(node.metadata); }} title="View constitution details">
+					<IconDocumentRegular class="icon file-icon" /> <!-- Added file-icon class -->
+					<span class="title">{node.metadata.title}</span>
+				</span>
 			</div>
 			{#if isSelectedProp && module}
-				<input
-					type="range"
-					min="1"
-					max="5"
-					value={module.adherence_level ?? 3}
-					oninput={(e) => onSliderInput(node.uiPath, parseInt(e.currentTarget.value))}
-					class="slider"
-					title={`Adherence Level: ${module.adherence_level ?? 3}`}
-				/>
+				<!-- Wrapper for slider and level display -->
+				<div class="slider-container">
+					<input
+						type="range"
+						min="1"
+						max="5"
+						value={module.adherence_level ?? 3}
+						oninput={(e) => onSliderInput(node.uiPath, parseInt(e.currentTarget.value))}
+						class="slider"
+						title={`Adherence Level: ${module.adherence_level ?? 3}`}
+					/>
+					<span class="level-display">
+						{module.adherence_level ?? 3}<span class="dimmed">/5</span>
+					</span>
+				</div>
 			{/if}
 		</div>
 	{/if}
 </div>
 
 <!-- === Styles === -->
-<style>
+<style lang="scss">
 	.node-container {
-		margin-bottom: 0.25rem;
+		/* Removed margin-bottom, will apply to specific node types */
 	}
 
 	.node-content {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding: 0.1rem 0;
+		padding: 0.1rem 0.2rem; // Add slight horizontal padding for hover bg
+		border-radius: 3px; // Rounded corners for hover bg
+		transition: background-color 0.15s ease; // Smooth hover transition
+		cursor: pointer; // Indicate clickability
+	}
+
+	.node-content:hover {
+		background-color: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.1)); // Subtle hover background
+	}
+
+	/* Add specific margins for folder and file types */
+	.node-content.folder {
+		margin-bottom: 0.25rem; /* Keep original spacing for folders */
+	}
+
+	.node-content.file {
+		margin-bottom: 0.05rem; /* Further reduce spacing for files */
+		padding-top: 0rem; /* Remove top padding for files */
+		padding-bottom: 0rem; /* Remove bottom padding for files */
 	}
 
 	.icon {
@@ -116,6 +146,10 @@
 		width: 1.1em;
 		height: 1.1em;
 		vertical-align: middle;
+	}
+
+	.file-icon {
+		transition: transform 0.15s ease, filter 0.15s ease; /* Smooth transition for hover */
 	}
 
 	.chevron {
@@ -160,22 +194,69 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		flex-grow: 1;
-		min-width: 0;
+		flex-grow: 1; // Revert to original flex-grow
+		// min-width: 0; // Remove min-width
 		padding: 0.1rem 0.2rem;
 		border-radius: 3px;
 	}
 
-	.file-info:hover {
+	/* Remove hover from file-info, apply to node-content */
+	/* .file-info:hover {
 		background-color: var(--vscode-list-hoverBackground);
+	} */
+
+	/* Style for the clickable icon/title area */
+	.file-details-clickable {
+		display: inline-flex; /* Align icon and title */
+		align-items: center;
+		gap: 0.4rem; /* Match gap in file-info */
+		cursor: pointer;
+		padding: 0.1rem 0.2rem; /* Match padding */
+		border-radius: 3px; /* Match radius */
+		transition: background-color 0.15s ease;
+	}
+
+	.file-details-clickable:hover {
+		background-color: var(--vscode-list-hoverBackground); /* Highlight on hover */
+		/* Optionally add text decoration or color change */
+		/* color: var(--primary); */
+	}
+
+	/* Add hover effect specifically for the file icon within the clickable area */
+	.file-details-clickable:hover .file-icon {
+		transform: scale(1.2); /* Grow the icon */
+		filter: brightness(1.2); /* Brighten the icon */
+	}
+
+	.slider-container {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm); // Keep gap
+		margin-left: auto; // Restore margin-left: auto
+		width: 160px; // Give container explicit width
+		flex-shrink: 0; // Keep flex-shrink
 	}
 
 	.slider {
-		margin-left: auto;
-		flex-shrink: 0;
-		width: 80px;
+		// margin-left: auto; // Moved margin to container
+		flex-shrink: 0; // Keep shrink 0
+		width: 120px; // Increase fixed width
 		height: 1rem;
 		cursor: pointer;
+		accent-color: var(--primary); // Style slider color
+	}
+
+	.level-display {
+		font-size: 0.9em; // Increased font size
+		color: var(--text-primary); // Base color for the number
+		min-width: 25px; // Ensure space for "X/5"
+		text-align: right;
+		flex-shrink: 0;
+
+		.dimmed {
+			color: var(--text-secondary); // Dimmer color for "/5"
+			opacity: 0.7; // Slightly dimmer
+		}
 	}
 
 </style>

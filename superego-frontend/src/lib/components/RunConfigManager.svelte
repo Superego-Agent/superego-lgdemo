@@ -123,15 +123,16 @@
 
     .cards-container {
         display: grid;
-        // grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); // More responsive alternative
-        grid-template-columns: repeat(4, minmax(100px, 1fr)); // 4 columns, min 100px each
+        // grid-template-columns: repeat(4, minmax(100px, 1fr)); // Old fixed column layout
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); // Responsive grid, min 200px, max flexible
         gap: var(--space-sm);
-        // align-items: stretch; // Grid items stretch by default
+        align-items: stretch; // Ensure cards stretch vertically to fill row height
     }
 
     .add-button {
         margin: 0px;
-        height: 100%;
+        // height: 100%; // Let min-height handle vertical size
+        min-height: 100px; // Ensure minimum height
         padding: var(--space-xs) var(--space-sm);
         background-color: var(--bg-secondary);
         border: 2px dashed var(--secondary);
@@ -148,6 +149,7 @@
     .add-button {
         display: inline-flex;
         align-items: center;
+        justify-content: center; // Center icon and text horizontally
         gap: var(--space-xxs);
 
     }
