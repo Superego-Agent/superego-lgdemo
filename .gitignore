@@ -6,7 +6,13 @@
 *.venv
 **/__pycache__/
 data/sessions/*.db
+data/sessions/*.db-shm
+data/sessions/*.db-wal
 data/sessions/*.bin
 uv.lock
 .clinerules
 .clinerules/*
+
+*.roo
+**/.vscode/
+**/.DS_Store/
