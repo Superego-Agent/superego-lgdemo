@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: superego-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend_server_async:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: PORT
+        value: 8000
+      - key: BACKEND_PORT
+        value: 8000
+    plan: free
