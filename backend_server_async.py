@@ -28,14 +28,8 @@ try:
     from config import CONFIG  # Keep temporarily
 
     # Import only get_constitution_content if get_available_constitutions is only used in the router
-    from constitution_utils import (  # Keep temporarily
-        get_constitution_content,
-        get_constitution_hierarchy,
-    )
-    from superego_core_async import (
-        create_models,  # Keep for lifespan
-        create_workflow,
-    )
+    from superego_core_async import create_models  # Keep for lifespan
+    from superego_core_async import create_workflow
 except ImportError as e:
     print(f"Error importing project modules: {e}")
     print(
