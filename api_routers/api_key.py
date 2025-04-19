@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import os
 import traceback
 from typing import Optional
 
@@ -30,15 +31,14 @@ class ApiKeyRequest(BaseModel):
 
 
 # Fixed encryption key - must match the frontend
-SECRET_KEY = "superego-encryption-key-28jgowgnwvnwoqb"
+SECRET_KEY = os.environ["ENCRYPTION_SECRET"]
+print(SECRET_KEY)
 
 
 # Decrypt the API key from the frontend
 def decrypt_api_key(encrypted_data: str) -> Optional[str]:
     try:
         print(f"Attempting to decrypt API key, length: {len(encrypted_data)}")
-        print(f"First 20 chars of encrypted data: {encrypted_data[:20]}...")
-
         # Parse the CryptoJS format
         # CryptoJS format is a string like: "U2FsdGVkX1..." which is a base64 encoded string
         # that contains the salt, iv, and ciphertext
@@ -160,8 +160,10 @@ async def set_api_key(request: ApiKeyRequest):
         if not request.encrypted_key:
             # Instead of raising an exception, return a message prompting for an API key
             return {
-                "status": "needs_key",
+                "status": "needs_api_key",  # Match the status used elsewhere
                 "message": "Please enter your Anthropic API key in the top left corner for your session",
+                "is_error": False,  # Indicate this is not a critical error but a setup step
+                "first_time_setup": True,  # Indicate this is likely a first-time setup
             }
 
         # Decrypt the API key
@@ -248,10 +250,12 @@ async def check_api_key(session_id: Optional[str] = None):
         }
     else:
         return {
-            "status": "needs_key",
+            "status": "needs_api_key",  # Match the status used in runs.py
             "message": f"No API key set for session {session_id}. Please set an API key.",
             "has_key": False,
             "session_id": session_id,
+            "is_error": False,  # Indicate this is not a critical error but a setup step
+            "first_time_setup": True,  # Indicate this is likely a first-time setup
         }
 
 

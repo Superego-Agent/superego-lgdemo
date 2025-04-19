@@ -7,7 +7,7 @@
 import CryptoJS from 'crypto-js';
 
 // Fixed encryption key - must match the backend
-const SECRET_KEY = 'superego-encryption-key-28jgowgnwvnwoqb';
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_SECRET;
 
 /**
  * Encrypts an API key using CryptoJS AES encryption
