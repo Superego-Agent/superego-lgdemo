@@ -26,14 +26,13 @@ From your browser, http://localhost:5173/ gives you access to the frontend
 
 - Our Constitutions are devised based on [Agentic AI Safety Rubric](https://www.nellwatson.com/agentic)
 - These Constitutions offer a means to personalization where one can instruct the AI to adhere and steer towards their personal principles and beliefs. A Universal Ehtics Floor is developed by default
-- To use these constitutions in your day to day work, we provide an MCP Server. 
+- To use these constitutions in your day to day interaction with AI, we provide an MCP Server. 
 
-If your MCP Client supports SSE, here is an example configuration
+a. If your MCP Client supports SSE (like Cline/Cursor) here is an example configuration to connect to the Remote MCP server that offers our constitutions
 ```
-
 {
   "mcpServers": {
-    "agentic_ai_constitutions": {
+    "ethical-constitutions": {
       "disabled": false,
       "timeout": 60,
       "url": "https://constitutions-onrender.com/mcp",
@@ -41,6 +40,23 @@ If your MCP Client supports SSE, here is an example configuration
     }
   }
 }
+```
+
+b. If your MCP client doesn't support SSE (like Claude Desktop), here is an example configuration to connect to the Remote MCP server that offers our constitutions
+
+```
+Install the package mcp-proxy using a package manager of your choice. 
+Ex: pip install mcp-proxy
+
+{
+    "mcpServers": {
+      "ethical-constitutions": {
+          "command": "<Path to where mcp-proxy has been installed>/mcp-proxy",
+          "args": ["https://constitutions-onrender.com/mcp"]
+      }
+    }
+  }
+
 ```
 
 3.1 Local MCP Configuration
