@@ -41,6 +41,32 @@ If your MCP Client supports SSE, here is an example configuration
     }
   }
 }
-
 ```
 
+3.1 Local MCP Configuration
+- Using Cline, a VS Code extension that supports MCP resources, you can use constitutions as follows:
+- Clone this repository
+- Setup [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Add a `constitutions-mcp` entry to your `mcpServers` field in your cline settings file.
+- Here is an example:
+```
+{
+  "mcpServers": {
+    "constitutions-mcp": {
+      "disabled": false,
+      "timeout": 60,
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/ABOLUTE_INSTALL_PATH/superego-lgdemo",
+        "run",
+        "constitution_mcp_server.py"
+      ],
+      "transportType": "stdio"
+    }
+  }
+}
+
+```
+- You should now see the Constitutions MCP Server with a green toggle and the relevant resources:
+- ![Cline Constitutions Setup](docs/static/cline_constitutions_setup.png)
