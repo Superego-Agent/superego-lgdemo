@@ -69,4 +69,5 @@ If your MCP Client supports SSE, here is an example configuration
 
 ```
 - You should now see the Constitutions MCP Server with a green toggle and the relevant resources:
-- ![Cline Constitutions Setup](docs/static/cline_constitutions_setup.png)
+
+![Cline Constitutions Setup](docs/static/cline_constitutions_setup.png)
