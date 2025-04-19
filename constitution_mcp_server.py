@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 from constitution_utils import get_constitution_content, get_constitution_hierarchy
 
 # Create an MCP server
-mcp = FastMCP("Constitution Server")
+mcp = FastMCP("Constitution Server", host="0.0.0.0", port=8080)
 
 
 def list_constitutions() -> list:
