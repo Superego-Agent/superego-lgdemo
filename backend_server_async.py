@@ -9,15 +9,16 @@ from typing import Any, Optional  # Keep Any for graph_app type hint
 # Third-party imports
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_mcp import FastApiMCP
 from langgraph.checkpoint.base import (
-    BaseCheckpointSaver,  # Keep for checkpointer type hint
-)
+    BaseCheckpointSaver,
+)  # Keep for checkpointer type hint
 
 # Langchain/Langgraph specific imports
 # from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, AIMessageChunk # Likely removable
 from langgraph.checkpoint.sqlite.aio import (
-    AsyncSqliteSaver,  # Keep for lifespan type check
-)
+    AsyncSqliteSaver,
+)  # Keep for lifespan type check
 
 # from sse_starlette.sse import EventSourceResponse, ServerSentEvent # Likely removable
 
@@ -31,7 +32,10 @@ try:
         get_constitution_content,
         get_constitution_hierarchy,
     )
-    from superego_core_async import create_models, create_workflow  # Keep for lifespan
+    from superego_core_async import (
+        create_models,  # Keep for lifespan
+        create_workflow,
+    )
 except ImportError as e:
     print(f"Error importing project modules: {e}")
     print(
@@ -111,6 +115,15 @@ async def lifespan(app: FastAPI):
 # --- FastAPI App ---
 # Pass the lifespan manager to the FastAPI app instance
 app = FastAPI(title="Superego Backend", lifespan=lifespan)
+
+mcp = FastApiMCP(
+    app,
+    name="MCP for Constitutions",
+    description="MCP server for constitutions",
+    base_url="<http://localhost:8000>",
+)
+
+mcp.mount()
 
 
 @app.get("/")
