@@ -22,4 +22,5 @@ uvicorn>=0.27.0
 sse-starlette>=1.0.0,<2.2.0 # Constraint added due to langgraph-api dependency
 
 mcp>=1.6.0
+fastmcp>=2.2.0
 fastapi-mcp==0.2.0
