@@ -32,7 +32,6 @@ class ApiKeyRequest(BaseModel):
 
 # Fixed encryption key - must match the frontend
 SECRET_KEY = os.environ["ENCRYPTION_SECRET"]
-print(SECRET_KEY)
 
 
 # Decrypt the API key from the frontend
@@ -80,7 +79,6 @@ def decrypt_api_key(encrypted_data: str) -> Optional[str]:
 
         # Convert to string
         decrypted_key = decrypted.decode("utf-8")
-        print("decrypted_key: ", decrypted_key)
 
         print(f"Decryption successful, key length: {len(decrypted_key)}")
         return decrypted_key
@@ -182,7 +180,9 @@ async def set_api_key(request: ApiKeyRequest):
 
         # Check if the API key has changed
         current_key = keystore.get_key(session_id)
+        print("Current Key: ", current_key)
         key_changed = current_key != decrypted_key
+        print("Key Changed: ", key_changed)
 
         # Store the API key in the keystore
         keystore.set_key(session_id, decrypted_key)
