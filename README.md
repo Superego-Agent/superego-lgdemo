@@ -35,7 +35,7 @@ a. If your MCP Client supports SSE (like Cline/Cursor) here is an example config
     "ethical-constitutions": {
       "disabled": false,
       "timeout": 60,
-      "url": "https://constitutions-onrender.com/mcp",
+      "url": "https://ethical-constitutions.onrender.com/sse",
       "transportType": "sse"
     }
   }
@@ -46,18 +46,29 @@ b. If your MCP client doesn't support SSE (like Claude Desktop), here is an exam
 
 ```
 Install the package mcp-proxy using a package manager of your choice. 
-Ex: pip install mcp-proxy
+Ex: pip install mcp-proxy or uv add mcp-proxy
 
 {
     "mcpServers": {
       "ethical-constitutions": {
           "command": "<Path to where mcp-proxy has been installed>/mcp-proxy",
-          "args": ["https://constitutions-onrender.com/mcp"]
+          "args": ["https://ethical-constitutions.onrender.com/sse"]
       }
     }
   }
 
 ```
+
+Restart your Claude Desktop Application
+
+You should see the MCP server at the bottom as it appears here
+
+![Claude Server](docs/static/installed_mcp_server.png)
+
+You should see constitutions as available resources as it appears here
+
+![MCP Resources](docs/static/mcp_resources.png)
+
 
 3.1 Local MCP Configuration
 - Using Cline, a VS Code extension that supports MCP resources, you can use constitutions as follows:
