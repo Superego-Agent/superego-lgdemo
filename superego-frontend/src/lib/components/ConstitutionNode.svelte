@@ -100,6 +100,7 @@
 						oninput={(e) => onSliderInput(node.uiPath, parseInt(e.currentTarget.value))}
 						class="slider"
 						title={`Adherence Level: ${module.adherence_level ?? 3}`}
+						onclick={(e) => e.stopPropagation()}
 					/>
 					<span class="level-display">
 						{module.adherence_level ?? 3}<span class="dimmed">/5</span>

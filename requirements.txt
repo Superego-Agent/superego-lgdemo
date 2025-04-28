@@ -21,4 +21,9 @@ fastapi>=0.110.0
 uvicorn>=0.27.0
 sse-starlette>=1.0.0,<2.2.0 # Constraint added due to langgraph-api dependency
 
+# Encryption for API keys
+cryptography>=44.0.2
+cffi>=1.17.1
+pycparser>=2.22
+
 mcp>=1.6.0

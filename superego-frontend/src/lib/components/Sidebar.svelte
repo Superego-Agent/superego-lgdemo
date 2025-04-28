@@ -3,6 +3,7 @@
 
   import { tick } from "svelte";
   import { sessionStore } from "../state/session.svelte";
+  import ApiKeyInput from "./ApiKeyInput.svelte";
 
   import IconEdit from "~icons/fluent/edit-24-regular";
   import IconDelete from "~icons/fluent/delete-24-regular";
@@ -92,6 +93,11 @@
 <div class="sidebar">
 
   <div class="sidebar-section threads-section">
+    <!-- API Key Input -->
+    <div class="api-key-section">
+      <ApiKeyInput />
+    </div>
+    
     <!-- === Session List === -->
     <ul class="thread-list">
       <!-- Iterate over sortedSessions derived from $uiSessions -->
@@ -196,6 +202,10 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+  }
+  
+  .api-key-section {
+    margin-bottom: var(--space-md);
   }
 
   .thread-list {

@@ -302,6 +302,7 @@ export const streamRun = async (
     const requestBody = {
         input: { type: 'human', content: userInput },
         configurable: checkpointConfigurable,
+        session_id: currentActiveSessionId,
     };
 
     logExecution(`Stream run for session ${currentActiveSessionId} (Thread: ${threadIdToSend ?? 'NEW'})`, async () => {

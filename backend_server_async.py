@@ -31,7 +31,10 @@ try:
         get_constitution_content,
         get_constitution_hierarchy,
     )
-    from superego_core_async import create_models, create_workflow  # Keep for lifespan
+    from superego_core_async import (
+        create_models,  # Keep for lifespan
+        create_workflow,
+    )
 except ImportError as e:
     print(f"Error importing project modules: {e}")
     print(
@@ -42,6 +45,7 @@ except ImportError as e:
     sys.exit(1)
 
 # Import Routers
+from api_routers import api_key as api_key_router
 from api_routers import constitutions as constitutions_router
 from api_routers import runs as runs_router
 from api_routers import threads as threads_router
@@ -59,6 +63,10 @@ async def lifespan(app: FastAPI):
     global graph_app, checkpointer, inner_agent_app
     print("Backend server starting up...")
     try:
+        # The API key will be provided by the frontend
+        print("Waiting for API key to be provided by the frontend...")
+
+        # Continue with normal initialization
         superego_model, inner_model = create_models()
         graph_app, checkpointer, inner_agent_app = await create_workflow(
             superego_model=superego_model, inner_model=inner_model
@@ -70,21 +78,29 @@ async def lifespan(app: FastAPI):
         if not inner_agent_app:
             print("Warning: Inner agent app was not initialized.")
 
-        print("Models, graph, and databases initialized successfully.")
+        # print("Models, graph, and databases initialized successfully.")
 
         # Pass instances to routers after they are created
         # This ensures routers have access to the necessary components
         if graph_app:
             runs_router.router.graph_app_instance = graph_app
-            print("Passed graph_app instance to runs_router.")
+            api_key_router.router.graph_app_instance = graph_app
+            print("Passed graph_app instance to runs_router and api_key_router.")
         if checkpointer:
             runs_router.router.checkpointer_instance = checkpointer
             threads_router.router.checkpointer_instance = checkpointer
-            print("Passed checkpointer instance to runs_router and threads_router.")
+            api_key_router.router.checkpointer_instance = checkpointer
+            print(
+                "Passed checkpointer instance to runs_router, threads_router, and api_key_router."
+            )
         # Pass graph_app instance to threads_router as well
         if graph_app:
             threads_router.router.graph_app_instance = graph_app
             print("Passed graph_app instance to threads_router.")
+        # Pass inner_agent_app instance to api_key_router
+        if inner_agent_app:
+            api_key_router.router.inner_agent_app_instance = inner_agent_app
+            print("Passed inner_agent_app instance to api_key_router.")
 
     except Exception as e:
         print(f"FATAL: Error during startup: {e}")
@@ -133,17 +149,13 @@ app.add_middleware(
 app.include_router(runs_router.router)
 app.include_router(threads_router.router)
 app.include_router(constitutions_router.router)
+app.include_router(api_key_router.router)
 print("Included API routers.")
 
 
 # --- Main Execution ---
 if __name__ == "__main__":
     import uvicorn
-
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print(
-            "WARNING: ANTHROPIC_API_KEY environment variable not set. LangGraph models may fail."
-        )
 
     # Explicitly bind to 127.0.0.1 for testing localhost connection
     host = os.getenv("BACKEND_HOST", "127.0.0.1")
