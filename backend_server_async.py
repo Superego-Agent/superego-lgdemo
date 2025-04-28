@@ -10,14 +10,14 @@ from typing import Any, Optional  # Keep Any for graph_app type hint
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.checkpoint.base import (
-    BaseCheckpointSaver,
-)  # Keep for checkpointer type hint
+    BaseCheckpointSaver,  # Keep for checkpointer type hint
+)
 
 # Langchain/Langgraph specific imports
 # from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, AIMessageChunk # Likely removable
 from langgraph.checkpoint.sqlite.aio import (
-    AsyncSqliteSaver,
-)  # Keep for lifespan type check
+    AsyncSqliteSaver,  # Keep for lifespan type check
+)
 
 # from sse_starlette.sse import EventSourceResponse, ServerSentEvent # Likely removable
 
@@ -31,8 +31,10 @@ try:
         get_constitution_content,
         get_constitution_hierarchy,
     )
-    from superego_core_async import create_models  # Keep for lifespan
-    from superego_core_async import create_workflow
+    from superego_core_async import (
+        create_models,  # Keep for lifespan
+        create_workflow,
+    )
 except ImportError as e:
     print(f"Error importing project modules: {e}")
     print(

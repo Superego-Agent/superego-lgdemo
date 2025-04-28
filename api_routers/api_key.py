@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from api_routers import runs as runs_router
+from api_routers import threads as threads_router
 from keystore import keystore
 
 # Create the router instance
@@ -124,13 +126,24 @@ async def reinitialize_models(session_id: str):
         # If models were created successfully, recreate the workflow
         if superego_model is not None and inner_model is not None:
             # Create new workflow with the new models
-            new_graph_app, checkpointer, new_inner_agent_app = await create_workflow(
+            (
+                new_graph_app,
+                new_checkpointer,
+                new_inner_agent_app,
+            ) = await create_workflow(
                 superego_model=superego_model, inner_model=inner_model
             )
 
             # Update the global instances
+            runs_router.router.graph_app_instance = new_graph_app
             graph_app_instance = new_graph_app
+            threads_router.router.graph_app_instance = new_graph_app
+
             inner_agent_app_instance = new_inner_agent_app
+
+            runs_router.router.checkpointer_instance = new_checkpointer
+            threads_router.router.checkpointer_instance = new_checkpointer
+
             # Note: We don't update checkpointer_instance as it should remain the same
 
             print(
@@ -180,9 +193,7 @@ async def set_api_key(request: ApiKeyRequest):
 
         # Check if the API key has changed
         current_key = keystore.get_key(session_id)
-        print("Current Key: ", current_key)
         key_changed = current_key != decrypted_key
-        print("Key Changed: ", key_changed)
 
         # Store the API key in the keystore
         keystore.set_key(session_id, decrypted_key)

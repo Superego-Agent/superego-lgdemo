@@ -1,8 +1,8 @@
 <script lang="ts">
   import { scale } from "svelte/transition";
 
-  import IconLoading from '~icons/fluent/arrow-sync-circle-24-regular';
-  import IconSend from '~icons/fluent/send-24-regular';
+  import IconLoading from "~icons/fluent/arrow-sync-circle-24-regular";
+  import IconSend from "~icons/fluent/send-24-regular";
 
   // --- Component State ---
   let userInput: string = $state("");
@@ -10,7 +10,7 @@
   let isExpanded = $state(false);
 
   // --- Props ---
-  
+
   interface Props {
     /** Controls whether the input and button are disabled. Passed from parent. */
     disabled?: boolean;
@@ -63,7 +63,10 @@
 <form
   class="chat-input-form"
   class:expanded={isExpanded}
-  onsubmit={(e) => {e.preventDefault(); handleSubmit()}}
+  onsubmit={(e) => {
+    e.preventDefault();
+    handleSubmit();
+  }}
 >
   <!-- Text Input Area -->
   <div class="textarea-container">
@@ -72,7 +75,7 @@
       bind:value={userInput}
       placeholder="Type your message here..."
       rows={isExpanded ? 3 : 1}
-      disabled={disabled}
+      {disabled}
       onfocus={handleFocus}
       onblur={handleBlur}
       oninput={handleInput}
@@ -91,8 +94,8 @@
     disabled={!userInput.trim() || disabled}
     class:loading={disabled}
     title="Send Message"
-    in:scale|local={{ duration: 150, start: 0.8 }}>
-
+    in:scale|local={{ duration: 150, start: 0.8 }}
+  >
     {#if disabled}
       <IconLoading class="loading-icon-animate" />
     {:else}
@@ -102,7 +105,7 @@
 </form>
 
 <style lang="scss">
-  @use '../styles/mixins' as *;
+  @use "../styles/mixins" as *;
 
   .chat-input-form {
     width: 100%;
@@ -115,7 +118,6 @@
     justify-content: center;
   }
   .chat-input-form.expanded {
-
     padding: 0px;
   }
   .textarea-container {
@@ -145,7 +147,11 @@
     max-height: 150px;
     transition: all 0.2s ease;
     overflow-y: auto;
-    @include custom-scrollbar($track-bg: transparent, $thumb-bg: var(--primary-light), $width: 6px); // Use mixin
+    @include custom-scrollbar(
+      $track-bg: transparent,
+      $thumb-bg: var(--primary-light),
+      $width: 6px
+    ); // Use mixin
   }
 
   // Style the container when the textarea inside it is focused
@@ -166,32 +172,34 @@
   }
 
   button {
-      padding: 0;
-      height: 44px;
-      width: 44px;
-      cursor: pointer;
-      align-self: flex-end;
-      margin-bottom: var(--space-sm);
-      background-color: var(--button-bg, #eee); 
-      border: 1px solid var(--button-border, #ccc); 
-      border-radius: var(--radius-pill);
-      color: var(--button-text, #333); 
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      transition: background-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+    padding: 0;
+    height: 44px;
+    width: 44px;
+    cursor: pointer;
+    align-self: flex-end;
+    margin-bottom: var(--space-sm);
+    background-color: var(--button-bg, #eee);
+    border: 1px solid var(--button-border, #ccc);
+    border-radius: var(--radius-pill);
+    color: var(--button-text, #333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition:
+      background-color 0.2s ease,
+      opacity 0.2s ease,
+      color 0.2s ease;
   }
-   button:disabled {
-       cursor: not-allowed;
-       opacity: var(--button-disabled-opacity, 0.6); 
-       background-color: var(--button-disabled-bg, #f5f5f5); 
-       color: var(--button-disabled-text, #999);
+  button:disabled {
+    cursor: not-allowed;
+    opacity: var(--button-disabled-opacity, 0.6);
+    background-color: var(--button-disabled-bg, #f5f5f5);
+    color: var(--button-disabled-text, #999);
   }
   button:not(:disabled) {
-      background-color: var(--success);
-      color: #ffffff; /* White text for contrast on green */
-      border-color: transparent; /* Remove border when active */
-   }
-
+    background-color: var(--success);
+    color: #ffffff; /* White text for contrast on green */
+    border-color: transparent; /* Remove border when active */
+  }
 </style>

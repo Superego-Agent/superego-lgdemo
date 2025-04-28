@@ -25,7 +25,9 @@ from backend_models import (  # Added HumanApiMessageModel; Added missing SSE ty
     SSEToolResultData,
     StreamRunRequest,
 )
-from constitution_utils import get_constitution_content  # Assuming this is accessible
+
+# Assuming this is accessible
+from constitution_utils import get_constitution_content
 from keystore import keystore
 from utils import prepare_sse_event  # Import the missing helper
 
@@ -40,11 +42,14 @@ router.checkpointer_instance = None
 # --- Helper Function for Standard Streaming ---
 # Moved from backend_server_async.py
 async def stream_events(
-    thread_id: str,  # The unique LangGraph thread ID (string UUID) for this specific run
+    # The unique LangGraph thread ID (string UUID) for this specific run
+    thread_id: str,
     input_messages: List[BaseMessage],
     run_config: RunConfig,  # Use the RunConfig model
-    configurable_metadata: CheckpointConfigurable,  # Pass the full configurable object
-    run_app: Any,  # The compiled LangGraph app to run (passed via router attribute)
+    # Pass the full configurable object
+    configurable_metadata: CheckpointConfigurable,
+    # The compiled LangGraph app to run (passed via router attribute)
+    run_app: Any,
     checkpointer: BaseCheckpointSaver,  # Passed via router attribute
     set_id: Optional[str] = None,  # Identifier for compare mode sets
 ) -> AsyncGenerator[ServerSentEvent, None]:
@@ -62,7 +67,8 @@ async def stream_events(
     final_checkpoint_id: Optional[str] = None
 
     try:
-        processed_modules: List[Tuple[str, str, int]] = []  # (content, title, level)
+        # (content, title, level)
+        processed_modules: List[Tuple[str, str, int]] = []
         missing_ids: List[str] = []
 
         for module in run_config.configuredModules:
@@ -363,9 +369,10 @@ async def run_stream_endpoint(request: StreamRunRequest):
         configurable_data = request.configurable
         thread_id = configurable_data.thread_id
         run_config = configurable_data.runConfig
+        session_id = request.session_id
 
         # Get the session ID from the request if available
-        session_id = getattr(request, "session_id", None)
+        # session_id = getattr(request, "session_id", None)
 
         # If session_id is not provided in the request, try to extract it from headers or cookies
         if not session_id and request.headers.get("x-session-id"):

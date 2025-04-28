@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { apiKeyStore, setApiKey } from '../state/apiKey.svelte.ts';
-  import { sendApiKeyToBackend } from '../services/apiKey.svelte';
-  import { activeStore } from '$lib/state/active.svelte';
+  import { apiKeyStore, setApiKey } from "../state/apiKey.svelte";
+  import { sendApiKeyToBackend } from "../services/apiKey.svelte";
+  import { activeStore } from "$lib/state/active.svelte";
   import IconEye from "~icons/fluent/eye-24-regular";
   import IconEyeOff from "~icons/fluent/eye-off-24-regular";
   import IconInfo from "~icons/fluent/info-24-regular";
@@ -10,19 +10,19 @@
   import IconError from "~icons/fluent/error-circle-24-regular";
 
   // Component state
-  let apiKey = $state('');
+  let apiKey = $state("");
   let showApiKey = $state(false);
   let isTooltipVisible = $state(false);
   let isSending = $state(false);
-  let sendStatus = $state<'idle' | 'success' | 'error'>('idle');
-  let statusMessage = $state('');
+  let sendStatus = $state<"idle" | "success" | "error">("idle");
+  let statusMessage = $state("");
 
   // Subscribe to the store to update the component when the store changes
   $effect(() => {
-    const unsubscribe = apiKeyStore.subscribe(value => {
+    const unsubscribe = apiKeyStore.subscribe((value) => {
       apiKey = value;
     });
-    
+
     return unsubscribe;
   });
 
@@ -30,28 +30,29 @@
   function handleInputChange() {
     setApiKey(apiKey); // Use setApiKey to update both stores
     // Reset status when the key changes
-    sendStatus = 'idle';
-    statusMessage = '';
+    sendStatus = "idle";
+    statusMessage = "";
   }
 
   // Send the API key to the backend
   async function sendApiKey() {
     if (!apiKey) {
-      activeStore.setGlobalError('Please enter an API key');
+      activeStore.setGlobalError("Please enter an API key");
       return;
     }
 
     isSending = true;
-    sendStatus = 'idle';
-    statusMessage = '';
+    sendStatus = "idle";
+    statusMessage = "";
 
     try {
       const result = await sendApiKeyToBackend();
-      sendStatus = 'success';
-      statusMessage = result.message || 'API key sent successfully';
+      sendStatus = "success";
+      statusMessage = result.message || "API key sent successfully";
     } catch (error) {
-      sendStatus = 'error';
-      statusMessage = error instanceof Error ? error.message : 'Failed to send API key';
+      sendStatus = "error";
+      statusMessage =
+        error instanceof Error ? error.message : "Failed to send API key";
     } finally {
       isSending = false;
     }
@@ -64,10 +65,10 @@
 
   // Clear the API key
   function clearApiKey() {
-    apiKey = '';
-    setApiKey(''); // Use setApiKey to clear both stores
-    sendStatus = 'idle';
-    statusMessage = '';
+    apiKey = "";
+    setApiKey(""); // Use setApiKey to clear both stores
+    sendStatus = "idle";
+    statusMessage = "";
   }
 
   // Show/hide tooltip
@@ -83,44 +84,46 @@
 <div class="api-key-container">
   <div class="api-key-header">
     <label for="api-key-input">Enter your Anthropic API Key here</label>
-    <div 
-      class="info-icon" 
-      on:mouseenter={showTooltip} 
-      on:mouseleave={hideTooltip}
-      on:focus={showTooltip}
-      on:blur={hideTooltip}
+    <div
+      class="info-icon"
+      onmouseenter={showTooltip}
+      onmouseleave={hideTooltip}
+      onfocus={showTooltip}
+      onblur={hideTooltip}
       tabindex="0"
+      role="button"
     >
       <IconInfo />
       {#if isTooltipVisible}
         <div class="tooltip">
-          This API key is stored in memory only and will be cleared when you refresh or close the page.
+          This API key is stored in memory only and will be cleared when you
+          refresh or close the page.
         </div>
       {/if}
     </div>
   </div>
-  
-  {#if activeStore.globalError && activeStore.globalError.includes('API key')}
+
+  {#if activeStore.globalError && activeStore.globalError.includes("API key")}
     <div class="api-key-required-message">
       <IconError />
       <span>{activeStore.globalError}</span>
     </div>
   {/if}
-  
+
   <div class="input-group">
-    <input 
+    <input
       id="api-key-input"
       type={showApiKey ? "text" : "password"}
       placeholder="Enter API key"
       bind:value={apiKey}
-      on:input={handleInputChange}
+      oninput={handleInputChange}
       class="api-key-input"
     />
-    
-    <button 
-      type="button" 
-      class="icon-button visibility-toggle" 
-      on:click={toggleVisibility}
+
+    <button
+      type="button"
+      class="icon-button visibility-toggle"
+      onclick={toggleVisibility}
       title={showApiKey ? "Hide API key" : "Show API key"}
     >
       {#if showApiKey}
@@ -129,12 +132,12 @@
         <IconEye />
       {/if}
     </button>
-    
+
     {#if apiKey}
-      <button 
-        type="button" 
-        class="icon-button clear-button" 
-        on:click={clearApiKey}
+      <button
+        type="button"
+        class="icon-button clear-button"
+        onclick={clearApiKey}
         title="Clear API key"
       >
         <IconDelete />
@@ -143,10 +146,10 @@
   </div>
 
   <div class="api-key-actions">
-    <button 
-      type="button" 
-      class="send-button" 
-      on:click={sendApiKey}
+    <button
+      type="button"
+      class="send-button"
+      onclick={sendApiKey}
       disabled={!apiKey || isSending}
     >
       {#if isSending}
@@ -156,12 +159,12 @@
       {/if}
     </button>
 
-    {#if sendStatus === 'success'}
+    {#if sendStatus === "success"}
       <div class="status-message success">
         <IconCheck />
         <span>{statusMessage}</span>
       </div>
-    {:else if sendStatus === 'error'}
+    {:else if sendStatus === "error"}
       <div class="status-message error">
         <IconError />
         <span>{statusMessage}</span>
@@ -182,7 +185,7 @@
     display: flex;
     align-items: center;
     margin-bottom: var(--space-xs);
-    
+
     label {
       font-size: 0.9em;
       font-weight: 500;
@@ -196,8 +199,9 @@
     display: inline-flex;
     color: var(--text-secondary);
     cursor: pointer;
-    
-    &:hover, &:focus {
+
+    &:hover,
+    &:focus {
       color: var(--primary);
     }
   }
@@ -227,19 +231,21 @@
   .api-key-input {
     flex: 1;
     padding: var(--space-sm);
-    padding-right: calc(var(--space-sm) * 2 + 24px); /* Make room for the buttons */
+    padding-right: calc(
+      var(--space-sm) * 2 + 24px
+    ); /* Make room for the buttons */
     border: 1px solid var(--input-border);
     border-radius: var(--radius-sm);
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-size: 0.9em;
-    
+
     &:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 1px var(--primary-light);
     }
-    
+
     &::placeholder {
       color: var(--text-tertiary);
     }
@@ -256,8 +262,9 @@
     color: var(--text-secondary);
     padding: 4px;
     transition: color 0.2s ease;
-    
-    &:hover, &:focus {
+
+    &:hover,
+    &:focus {
       color: var(--primary);
     }
   }
@@ -268,8 +275,9 @@
 
   .clear-button {
     right: 28px;
-    
-    &:hover, &:focus {
+
+    &:hover,
+    &:focus {
       color: var(--error);
     }
   }
@@ -290,11 +298,11 @@
     cursor: pointer;
     font-size: 0.9em;
     transition: background-color 0.2s ease;
-    
+
     &:hover:not(:disabled) {
       background-color: var(--primary-dark);
     }
-    
+
     &:disabled {
       background-color: var(--primary-light);
       cursor: not-allowed;
@@ -309,18 +317,18 @@
     font-size: 0.8em;
     padding: var(--space-xs);
     border-radius: var(--radius-sm);
-    
+
     &.success {
       background-color: var(--success-bg);
       color: var(--success);
     }
-    
+
     &.error {
       background-color: var(--error-bg);
       color: var(--error);
     }
   }
-  
+
   .api-key-required-message {
     display: flex;
     align-items: center;
