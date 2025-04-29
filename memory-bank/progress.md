@@ -1,4 +1,4 @@
-# Progress: Superego LangGraph Agent (As of 2025-04-10 ~02:57 AM)
+# Progress: Superego LangGraph Agent (As of 2025-04-28 ~02:57 PM)
 
 ## 1. What Works / Completed
 
@@ -22,8 +22,23 @@
 
 ## 2. What's Left / In Progress
 
-*   **Small Cleanups (Next):** Address minor code improvements/issues (Details TBD by user).
-*   **Implement Comparison Mode (Next):** Develop side-by-side run comparison feature (Details TBD by user).
+*   **Feature: Model Switcher (In Progress)**
+    *   **Overall Goal:** Integrate model switcher via `RunConfig`.
+    *   **Phase 1: Backend Config & Storage (Next Action)**
+        *   **Step 1:** Refine `backend_models.py`: Define nested `ModelConfig` within `RunConfig` using provider-specific parameter models (e.g., `OpenAIParams`) and a validator. No API key info in `RunConfig`.
+        *   **Step 2:** Update `api_routers/runs.py`: Modify `/api/runs/stream` to accept the new `RunConfig`, serialize `ModelConfig`, and store it under `"model_config"` in the LangGraph `configurable` dictionary (persisted in checkpoints).
+    *   **Phase 2: Backend LLM Logic (Planned)**
+        *   **Step 3:** Update `superego_core_async.py`: Implement LLM switching logic to read `"model_config"`, fetch API keys from `keystore.py` based on provider, instantiate the correct LangChain client with appropriate parameters, and invoke it.
+    *   **Phase 3: Future Work (Planned)**
+        *   **Step 4:** Output Handling: Defer handling provider-specific output metadata and detailed "thinking" steps. Focus on core text response initially.
+        *   **Step 5:** Frontend Integration: Prepare a briefing for the separate frontend team after backend work. *(Note: Frontend is in a separate repository)*.
+    *   **Key Decisions:**
+        *   Use provider-specific Pydantic models for parameters.
+        *   API keys managed via `keystore.py` based on provider, not stored in `RunConfig`.
+        *   Frontend is separate, requires briefing.
+
+*   **Small Cleanups (Planned):** Address minor code improvements/issues (Details TBD by user).
+*   **Implement Comparison Mode (Planned):** Develop side-by-side run comparison feature (Details TBD by user).
 *   **Testing:** Thoroughly test the refactored workflows and recent fixes.
 *   **Configuration CRUD (Future):** UI/API for managing constitutions.
 *   **Output Superego (Future):** Implement output screening agent.
@@ -35,6 +50,7 @@
 *   **Complexity of Stream Processing:** Logic in `streamProcessor.ts` needs careful review/testing.
 *   **Old `localStorage` Data:** Will be discarded. (Acceptable).
 *   **Minimal Error Handling:** Focus on core demo functionality. (Acceptable).
+*   **Frontend/Backend Split:** Requires clear communication and briefing for frontend integration.
 
 ## 4. Decision Evolution
 
@@ -45,3 +61,4 @@
 *   **Backend API Structure:** Confirmed use of FastAPI routers.
 *   **State Management Refinement:** Adopted `threadCacheStore` with `ThreadCacheData`.
 *   **Constitution Handling:** Shifted from component-level fetch to global store (`globalConstitutionsStore`). Refactored sending logic into `chatService.ts`.
+*   **Model Configuration (`RunConfig`):** Decided on nested `ModelConfig` with provider-specific parameter models, validation, and separate API key handling via `keystore.py`.

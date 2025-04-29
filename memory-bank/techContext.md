@@ -4,35 +4,44 @@
 
 *   **Language:** Python (version specified in `.python-version`)
 *   **Core Framework:** LangGraph (for defining and running the agent graph)
+*   **LLM Integration:** LangChain (e.g., `langchain-openai`, `langchain-anthropic`) for interacting with different LLM providers.
 *   **Web Server:** FastAPI, using `APIRouter` for modular endpoints (see `api_routers/`). Serves the REST API and SSE endpoint.
-*   **Persistence:** LangGraph Checkpointer implementation (e.g., `langgraph.checkpoint.sqlite.SqliteSaver` or `AsyncSqliteSaver` for async) using SQLite by default (as indicated by `conversations.db` files).
-*   **Dependency Management:** Poetry (indicated by `pyproject.toml`, `poetry.lock`) and potentially `uv` (indicated by `uv.lock`).
-*   **Configuration Files:** Markdown (`.md`) for agent instructions and constitutions.
+*   **Persistence:** LangGraph Checkpointer implementation (`AsyncSqliteSaver`) using SQLite by default (`data/sessions/conversations.db`). Checkpoints store graph state including the `configurable` dictionary.
+*   **Dependency Management:** Poetry (`pyproject.toml`, `poetry.lock`).
+*   **Configuration Management:**
+    *   Agent instructions/constitutions: Markdown (`.md`) files.
+    *   Run Configuration (`RunConfig` in `backend_models.py`): Defines runtime settings.
+        *   *Current:* Contains list of `ConfiguredConstitutionModule`.
+        *   *Planned:* Will include a nested `ModelConfig` object specifying LLM `provider`, `name`, and provider-specific parameters (e.g., `base_url`, `project`) via nested Pydantic models. This `ModelConfig` will be serialized and stored in the LangGraph `configurable` dictionary under the key `"model_config"`.
+    *   API Keys: Securely managed via `keystore.py`. Backend logic will fetch keys based on the `provider` specified in the `RunConfig` at runtime. **API keys are NOT stored in `RunConfig` or checkpoints.**
 
-## 2. Frontend Technologies
+## 2. Frontend Technologies *(Note: Developed in a separate repository)*
 
-*   **Framework:** Svelte / SvelteKit (inferred from `svelte.config.js`, `vite.config.ts`)
-*   **Language:** TypeScript (indicated by `tsconfig.json`, `.ts` files), JavaScript
-*   **State Management:** `svelte/store` (for `writable`), `svelte-persisted-store` (for `uiSessions`, `knownThreadIds`). A non-persisted `threadCacheStore` (writable store holding `Record<string, ThreadCacheData>`) is used for caching thread states and status. Service modules (e.g., `chatService.ts`) may also manage related state.
-*   **Styling:** Likely CSS or a preprocessor (TailwindCSS is common with SvelteKit, but not explicitly confirmed).
-*   **Build Tool:** Vite (indicated by `vite.config.ts`)
-*   **Package Management:** npm (indicated by `package.json`, `package-lock.json`)
-*   **Utility Libraries:** `uuid` (for generating frontend session IDs)
+*   **Framework:** Svelte / SvelteKit (`svelte.config.js`, `vite.config.ts`)
+*   **Language:** TypeScript (`tsconfig.json`, `.ts` files), JavaScript
+*   **State Management:** `svelte/store`, `svelte-persisted-store`, `threadCacheStore`.
+*   **Styling:** CSS / CSS Variables.
+*   **Build Tool:** Vite (`vite.config.ts`)
+*   **Package Management:** npm (`package.json`, `package-lock.json`)
+*   **Utility Libraries:** `uuid`
 
 ## 3. Communication Protocol
 
-*   **Frontend <-> Backend:** REST API for control/history, Server-Sent Events (SSE) for real-time streaming updates from agent runs.
+*   **Frontend <-> Backend:** REST API for control/history, Server-Sent Events (SSE) for real-time streaming updates.
 
 ## 4. Development Environment & Setup
 
-*   **Backend:** Requires Python environment managed by Poetry/uv. Run via `python backend_server_async.py` (or similar).
-*   **Frontend:** Requires Node.js/npm. Run development server via `npm run dev` (standard SvelteKit command). Located in `superego-frontend/` subdirectory.
-*   **Database:** SQLite database file (e.g., `data/sessions/conversations.db`) used by the checkpointer.
+*   **Backend:** Requires Python environment managed by Poetry. Run via `python backend_server_async.py`.
+*   **Frontend:** Requires Node.js/npm. Run development server via `npm run dev`. *(Located in separate repository)*.
+*   **Database:** SQLite database file (`data/sessions/conversations.db`).
+*   **API Keys:** Requires appropriate keys to be configured in `keystore.py` for desired LLM providers.
 
 ## 5. Technical Constraints & Considerations
 
-*   **Checkpoint Alignment:** Frontend `MessageType` interface (`global.d.ts`) MUST be kept aligned with the structure of messages stored in backend checkpoints. (Critical point from `refactor_plan.md`).
-*   **Backend API Contract:** Backend API endpoints (`/api/runs/stream`, `/api/threads/...`) must strictly adhere to the request/response structures defined in `refactor_plan.md` (especially the `configurable` object).
-*   **SQLite:** Default checkpointer uses SQLite, which might have limitations for high concurrency compared to other database backends (though likely sufficient for a research demo).
-*   **Dependency Usage:** Use external packages where appropriate to avoid reinventing the wheel and reduce custom code complexity. The focus is on clean, minimal *custom* logic, not avoiding dependencies altogether.
-*   **CRITICAL: NO GUESSING:** Do not make assumptions about APIs (especially LangGraph), configurations, or system behavior. If unsure, verify through documentation, code examination, or asking clarifying questions. Incorrect assumptions lead to bugs and unnecessary complexity.
+*   **Checkpoint Alignment:** Frontend `MessageType` interface MUST align with backend checkpoint message structure.
+*   **Backend API Contract:** Backend API endpoints must strictly adhere to defined request/response structures, including the `configurable` object (which will contain `"constitution_content"` and `"model_config"`).
+*   **`RunConfig` Structure:** The nested `ModelConfig` structure with provider-specific parameter models must be correctly implemented and validated (`backend_models.py`).
+*   **API Key Security:** Ensure `keystore.py` is handled securely and keys are not exposed elsewhere.
+*   **Frontend/Backend Separation:** Requires clear API contracts and potentially separate deployment strategies. Briefing needed for frontend team.
+*   **SQLite:** Default checkpointer uses SQLite; consider alternatives if high concurrency becomes an issue.
+*   **CRITICAL: NO GUESSING:** Do not make assumptions about APIs (LangGraph, LangChain provider integrations), configurations, or system behavior. Verify through documentation, code examination, or asking clarifying questions.
