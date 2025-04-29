@@ -7,14 +7,14 @@ if needed.
 """
 
 import threading
+# Update type hint for nested dictionary
 from typing import Dict, Optional
 
 
 class KeyStore:
     """
-    A thread-safe in-memory store for API keys indexed by session ID.
+    A thread-safe in-memory store for API keys indexed by session ID and provider.
     """
-
     _instance = None
     _lock = threading.Lock()
 
@@ -23,39 +23,56 @@ class KeyStore:
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super(KeyStore, cls).__new__(cls)
-                cls._instance._keys = {}  # Initialize the keys dictionary
+                # Initialize the keys dictionary with the new structure type hint
+                cls._instance._keys: Dict[str, Dict[str, str]] = {}
         return cls._instance
 
+    # __init__ is likely redundant with the singleton's __new__ initialization,
+    # but we'll keep the type hint update here for clarity if it remains.
     def __init__(self):
         """Initialize the keystore if it hasn't been initialized yet."""
         if not hasattr(self, "_keys"):
-            self._keys: Dict[str, str] = {}
+            self._keys: Dict[str, Dict[str, str]] = {}
 
-    def set_key(self, session_id: str, api_key: str) -> None:
+    # Update type hints for method signature (logic changes will follow)
+    def set_key(self, session_id: str, provider: str, api_key: str) -> None:
         """
-        Store an API key for a session ID.
+        Store an API key for a specific provider under a session ID.
 
         Args:
             session_id: The session ID to associate with the API key
+            provider: The provider name (e.g., 'openai', 'anthropic')
             api_key: The API key to store
         """
         with self._lock:
-            self._keys[session_id] = api_key
+            # Get the dictionary for the session, creating it if it doesn't exist
+            session_keys = self._keys.setdefault(session_id, {})
+            # Set the key for the specific provider
+            session_keys[provider] = api_key
 
-    def get_key(self, session_id: str) -> Optional[str]:
+    # Update type hints for method signature
+    def get_key(self, session_id: str, provider: str) -> Optional[str]:
         """
         Retrieve an API key for a session ID.
 
         Args:
             session_id: The session ID to retrieve the API key for
+            provider: The provider name to retrieve the key for
 
         Returns:
-            The API key associated with the session ID, or None if not found
+            The API key associated with the session ID and provider, or None if not found
         """
         with self._lock:
-            return self._keys.get(session_id)
+            # Get the dictionary for the session
+            session_keys = self._keys.get(session_id)
+            # If the session exists, get the key for the specific provider
+            if session_keys:
+                return session_keys.get(provider)
+            # Return None if session or provider key not found
+            return None
 
-    def delete_key(self, session_id: str) -> bool:
+    # Rename and update type hint
+    def delete_session(self, session_id: str) -> bool:
         """
         Delete an API key for a session ID.
 
@@ -71,7 +88,8 @@ class KeyStore:
                 return True
             return False
 
-    def has_key(self, session_id: str) -> bool:
+    # Rename and update type hint
+    def has_session(self, session_id: str) -> bool:
         """
         Check if a session ID has an associated API key.
 
@@ -98,6 +116,24 @@ class KeyStore:
         """
         with self._lock:
             return list(self._keys.keys())
+
+    # Add new method signature
+    def get_session_keys(self, session_id: str) -> Optional[Dict[str, str]]:
+        """
+        Get a dictionary of all provider keys for a session ID.
+
+        Args:
+            session_id: The session ID to retrieve keys for
+
+        Returns:
+            A dictionary mapping provider names to API keys, or None if session not found.
+        """
+        with self._lock:
+            session_keys = self._keys.get(session_id)
+            # Return a copy to prevent external modification of the internal dict
+            if session_keys:
+                return session_keys.copy()
+            return None
 
 
 # Create a singleton instance

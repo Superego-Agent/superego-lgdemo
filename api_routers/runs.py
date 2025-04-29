@@ -147,6 +147,8 @@ async def stream_events(
 
         config_for_run = configurable_metadata.model_dump()
         config_for_run["constitution_content"] = final_constitution_content
+        # Ensure session_id is included in the config passed to the graph
+        config_for_run["session_id"] = thread_id # Assuming thread_id is the session_id here
 
         # Extract and serialize model configuration
         model_config_data = run_config.model.model_dump(exclude_none=True)
@@ -382,12 +384,9 @@ async def run_stream_endpoint(request: StreamRunRequest):
         if not session_id and request.headers.get("x-session-id"):
             session_id = request.headers.get("x-session-id")
 
-        # If we have a session ID, get the API key from the keystore
-        api_key = None
-        if session_id:
-            api_key = keystore.get_key(session_id)
-            if api_key:
-                print(f"Using API key from keystore for session {session_id}")
+        # API key fetching is now handled dynamically within the graph nodes (superego_core_async.py)
+        # based on the provider specified in the runConfig and the session_id passed in configurable.
+        # The old logic here checking for *a* key and reinitializing is removed.
 
         if not input_data or not input_data.content:
             raise HTTPException(status_code=400, detail="Input content is required.")
@@ -402,18 +401,9 @@ async def run_stream_endpoint(request: StreamRunRequest):
                 update={"thread_id": new_thread_id}
             )
 
-            # Import here to avoid circular imports
-            from superego_core_async import create_models
-
-            # If we have an API key from the session, create new models with it
-            if api_key:
-                # Create new models with the API key
-                superego_model, inner_model = create_models(api_key)
-
-                # If models were created successfully, use them for this request
-                if superego_model is not None and inner_model is not None:
-                    print(f"Created new models with API key from session {session_id}")
-                    # TODO: Create a new workflow with these models if needed
+            # The logic to reinitialize models based on a single key here is removed.
+            # The graph (`superego_core_async.py`) now dynamically loads the correct
+            # model and key based on the runConfig and session_id passed in `configurable_metadata`.
 
             # Call the renamed helper for new threads
             event_stream = stream_run_for_new_thread(

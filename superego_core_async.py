@@ -20,7 +20,7 @@ from langgraph.prebuilt import ToolNode
 from backend_models import ModelConfig
 from config import CONFIG
 from inner_agent_definitions import default_inner_agent_node
-from keystore import get_api_key # Import get_api_key directly
+from keystore import keystore # Import the keystore instance
 from utils import shout_if_fails
 
 # API keys are now fetched dynamically within node functions
@@ -120,6 +120,7 @@ def call_superego(
     """Dynamically instantiates and calls the Superego LLM based on config."""
     messages = state["messages"]
     configurable = config.get("configurable", {})
+    session_id = configurable.get("session_id") # Get session_id from config
 
     # --- 1. Access and Validate Model Configuration ---
     model_config_dict = configurable.get("model_config")
@@ -134,14 +135,18 @@ def call_superego(
         # Re-raise clearly indicating the source of the error
         raise ValueError(f"Invalid 'model_config' provided: {e}") from e
 
-    # --- 2. Fetch API Key ---
-    api_key = get_api_key(model_config.provider)
+    # --- 2. Fetch API Key (using session_id and provider) ---
+    api_key = keystore.get_key(session_id, model_config.provider) if session_id else None
+
     # Vertex AI uses Application Default Credentials (ADC) by default, so API key might not be needed/provided
+    # Only raise error if a key is expected (not Vertex) AND it wasn't found for the session
+    # Only raise error if a key is expected (not Vertex) AND it wasn't found for the specific provider in this session
     if not api_key and model_config.provider != "google_vertex":
-        raise ValueError(
-            f"Missing API key for provider '{model_config.provider}' in keystore. "
-            "Ensure the key is added via the /apikeys endpoint or keystore.py."
-        )
+        error_msg = f"Missing API key for provider '{model_config.provider}' in session '{session_id}'. " \
+                    f"Ensure the key for this provider is added via the /apikeys endpoint for this session."
+        if not session_id:
+             error_msg = f"Missing session_id in configuration. Cannot retrieve API key for provider '{model_config.provider}'."
+        raise ValueError(error_msg)
 
     # --- 3. Dynamic LLM Client Instantiation ---
     llm = None

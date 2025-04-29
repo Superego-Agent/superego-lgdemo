@@ -29,6 +29,7 @@ DEFAULT_SESSION_ID = "default"
 # Model for API key submission
 class ApiKeyRequest(BaseModel):
     encrypted_key: str
+    provider: str  # Add provider field
     session_id: Optional[str] = None
 
 
@@ -111,11 +112,20 @@ async def reinitialize_models(session_id: str):
     try:
         print(f"Reinitializing models for session {session_id}...")
 
-        # Get the API key from the keystore
-        api_key = keystore.get_key(session_id)
-        if not api_key:
-            print(f"Error: API key not found in keystore for session {session_id}")
-            return False
+        # TODO: This function needs rethinking with multiple keys per session.
+        # How do we know which provider's key to use for reinitialization?
+        # For now, let's assume it uses a default or primary key if needed,
+        # but this is flawed. The dynamic loading in superego_core_async is better.
+        # Let's fetch *a* key for now, maybe the first one found? Or a specific default?
+        # This highlights the issue with this reinitialization approach.
+        # Temporarily commenting out the core logic.
+        # api_key = keystore.get_key(session_id, "anthropic") # Example: try anthropic?
+        # if not api_key:
+        #     print(f"Error: Default API key not found in keystore for session {session_id} during reinit")
+        print(f"Warning: reinitialize_models logic is likely outdated due to multi-provider keys.")
+        return False # Temporarily disable reinitialization via this function
+        # if not api_key:
+        #     print(f"Error: API key not found in keystore for session {session_id}")
         print(
             f"API key found in keystore for session {session_id}, length: {len(api_key)}"
         )
@@ -188,21 +198,22 @@ async def set_api_key(request: ApiKeyRequest):
                 "message": "Failed to decrypt API key. Please try again with a valid key.",
             }
 
-        # Use the provided session ID or generate a new one
+        # Use the provided session ID or the default
         session_id = request.session_id or DEFAULT_SESSION_ID
+        provider = request.provider # Get provider from request
 
-        # Check if the API key has changed
-        current_key = keystore.get_key(session_id)
+        # Check if the API key for the specific provider has changed
+        current_key = keystore.get_key(session_id, provider)
         key_changed = current_key != decrypted_key
 
-        # Store the API key in the keystore
-        keystore.set_key(session_id, decrypted_key)
+        # Store the API key in the keystore for the specific provider
+        keystore.set_key(session_id, provider, decrypted_key)
         print(
-            f"API key stored in keystore for session {session_id}, length: {len(decrypted_key)}"
+            f"API key for provider '{provider}' stored in keystore for session {session_id}, length: {len(decrypted_key)}"
         )
 
-        # Verify the key is accessible
-        test_key = keystore.get_key(session_id)
+        # Verify the key is accessible for the specific provider
+        test_key = keystore.get_key(session_id, provider)
         if test_key != decrypted_key:
             print(
                 f"Warning: API key not stored correctly in keystore for session {session_id}"
@@ -212,27 +223,30 @@ async def set_api_key(request: ApiKeyRequest):
                 "message": "Failed to store API key. Please try again.",
             }
 
-        print(f"API key has been set successfully for session {session_id}")
+        print(f"API key for provider '{provider}' has been set successfully for session {session_id}")
 
-        # If the key has changed, reinitialize the models
-        if key_changed:
-            success = await reinitialize_models(session_id)
-            if success:
-                return {
-                    "status": "success",
-                    "message": "API key has been set and models reinitialized successfully",
-                    "session_id": session_id,
-                }
-            else:
-                return {
-                    "status": "partial_success",
-                    "message": "API key has been set but models could not be reinitialized",
-                    "session_id": session_id,
-                }
+        # If the key has changed, reinitialize the models (COMMENTED OUT - see reinitialize_models function)
+        # if key_changed:
+        #     print(f"Key changed for {provider}, attempting reinitialization (currently disabled)...")
+        #     # success = await reinitialize_models(session_id) # This logic is flawed now
+        #     # if success:
+        #     #     return {
+        #     #         "status": "success",
+        #     #         "message": f"API key for {provider} has been set and models reinitialized successfully",
+        #     #         "session_id": session_id,
+        #     #         "provider": provider,
+        #     #     }
+        #     # else:
+        #     #     return {
+        #     #         "status": "partial_success",
+        #     #         "message": f"API key for {provider} has been set but models could not be reinitialized",
+        #     #         "session_id": session_id,
+        #     #         "provider": provider,
+        #     #     }
 
         return {
             "status": "success",
-            "message": "API key has been set successfully",
+            "message": f"API key for provider '{provider}' has been set successfully",
             "session_id": session_id,
         }
     except ValueError as e:
@@ -244,26 +258,50 @@ async def set_api_key(request: ApiKeyRequest):
 
 
 @router.get("/check")
-async def check_api_key(session_id: Optional[str] = None):
-    """Check if an API key is set for the specified session."""
+async def check_api_key(session_id: Optional[str] = None, provider: Optional[str] = None):
+    """Check if an API key is set for the specified session and optionally provider."""
     # Use the provided session ID or the default
     session_id = session_id or DEFAULT_SESSION_ID
 
-    # Check if the session has an API key
-    has_key = keystore.has_key(session_id)
-
-    if has_key:
-        return {
-            "status": "success",
-            "message": f"API key is set for session {session_id}",
-            "has_key": True,
-            "session_id": session_id,
-        }
+    if provider:
+        # Check for a specific provider key
+        api_key = keystore.get_key(session_id, provider)
+        if api_key:
+            return {
+                "status": "success",
+                "message": f"API key for provider '{provider}' is set for session {session_id}",
+                "has_key": True,
+                "session_id": session_id,
+                "provider": provider,
+            }
+        else:
+            # Check if the session exists at all, even if the specific provider key doesn't
+            session_exists = keystore.has_session(session_id)
+            return {
+                "status": "needs_api_key",
+                "message": f"No API key set for provider '{provider}' in session {session_id}. Please set the key.",
+                "has_key": False, # Key for this provider is missing
+                "session_exists": session_exists, # Indicate if other keys might exist
+                "session_id": session_id,
+                "provider": provider,
+                "is_error": False,
+                "first_time_setup": not session_exists, # Suggest setup if session is entirely new
+            }
     else:
-        return {
-            "status": "needs_api_key",  # Match the status used in runs.py
-            "message": f"No API key set for session {session_id}. Please set an API key.",
-            "has_key": False,
+        # Check if the session exists (has any key)
+        session_exists = keystore.has_session(session_id)
+        if session_exists:
+            return {
+                "status": "success",
+                "message": f"Session {session_id} exists (has at least one API key).",
+                "has_key": True, # Indicate *some* key exists
+                "session_id": session_id,
+            }
+        else:
+            return {
+                "status": "needs_api_key", # Match the status used in runs.py
+                "message": f"No API keys set for session {session_id}. Please set an API key.",
+                "has_key": False,
             "session_id": session_id,
             "is_error": False,  # Indicate this is not a critical error but a setup step
             "first_time_setup": True,  # Indicate this is likely a first-time setup
