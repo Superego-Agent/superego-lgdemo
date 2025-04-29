@@ -148,6 +148,10 @@ async def stream_events(
         config_for_run = configurable_metadata.model_dump()
         config_for_run["constitution_content"] = final_constitution_content
 
+        # Extract and serialize model configuration
+        model_config_data = run_config.model.model_dump(exclude_none=True)
+        config_for_run["model_config"] = model_config_data
+
         config_payload = {"configurable": config_for_run}
         stream_input = {"messages": input_messages}
 

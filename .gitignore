@@ -12,9 +12,9 @@ data/sessions/*.bin
 uv.lock
 .clinerules
 .clinerules/*
-
-**/memory-bank/
-**/memory-bank/*
+memory-bank
 *.roo
 **/.vscode/
 **/.DS_Store/
+.roo
+memory.md

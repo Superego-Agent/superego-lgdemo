@@ -1,7 +1,7 @@
 # backend_models.py
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 # --- Pydantic Models ---
 # Aligned with frontend expectations (src/global.d.ts) and refactor_plan.md
@@ -16,11 +16,98 @@ class ConfiguredConstitutionModule(BaseModel):
     relativePath: Optional[str] = None
 
 
+# --- Provider-Specific Parameter Models ---
+class AnthropicParams(BaseModel):
+    pass # No extra params needed
+
+class GoogleGenAIParams(BaseModel):
+    pass # No extra params needed
+
+class GoogleVertexParams(BaseModel):
+    project: Optional[str] = None
+    location: Optional[str] = None
+
+class OpenAIParams(BaseModel):
+    base_url: Optional[HttpUrl] = None
+    organization: Optional[str] = None
+
+class GenericOAIParams(BaseModel):
+    base_url: HttpUrl
+    default_headers: Optional[Dict[str, str]] = None
+
+class OpenRouterParams(BaseModel):
+    base_url: HttpUrl = Field(default="https://openrouter.ai/api/v1")
+    default_headers: Optional[Dict[str, str]] = None
+
+# --- Main Model Configuration ---
+class ModelConfig(BaseModel):
+    provider: Literal[
+        "anthropic",
+        "google_genai",
+        "google_vertex",
+        "openai",
+        "openai_compatible",
+        "openrouter"
+    ] = "anthropic"
+    name: str = "claude-3-haiku-20240307" # Default model
+
+    # Provider params (optional, validated)
+    anthropic_params: Optional[AnthropicParams] = None
+    google_genai_params: Optional[GoogleGenAIParams] = None
+    google_vertex_params: Optional[GoogleVertexParams] = None
+    openai_params: Optional[OpenAIParams] = None
+    openai_compatible_params: Optional[GenericOAIParams] = None
+    openrouter_params: Optional[OpenRouterParams] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def check_and_set_params(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            provider = data.get('provider', 'anthropic') # Get provider or default
+            param_field_map = {
+                "anthropic": ("anthropic_params", AnthropicParams),
+                "google_genai": ("google_genai_params", GoogleGenAIParams),
+                "google_vertex": ("google_vertex_params", GoogleVertexParams),
+                "openai": ("openai_params", OpenAIParams),
+                "openai_compatible": ("openai_compatible_params", GenericOAIParams),
+                "openrouter": ("openrouter_params", OpenRouterParams),
+            }
+
+            # Ensure only the correct param field is potentially present or set default
+            provided_param_field = None
+            param_fields_present = []
+            for p, (field, _) in param_field_map.items():
+                if field in data and data[field] is not None:
+                   param_fields_present.append(field)
+                   if provider == p:
+                       provided_param_field = field
+
+            if len(param_fields_present) > 1:
+                 raise ValueError(f"Multiple provider parameter fields provided ({', '.join(param_fields_present)}). Only one matching the provider ('{provider}') is allowed.")
+            if len(param_fields_present) == 1 and provided_param_field is None:
+                 raise ValueError(f"Parameter field '{param_fields_present[0]}' does not match provider '{provider}'.")
+
+
+            # If no params provided for the selected provider, set default empty params
+            target_field, target_type = param_field_map.get(provider)
+            if target_field and target_field not in data: # Check if the specific field for the provider is missing
+                 data[target_field] = target_type() # Instantiate default params
+
+            # Remove param fields for other providers if they exist (shouldn't happen with checks above, but belt-and-suspenders)
+            # Ensure we don't delete the one we might have just added or validated
+            for p, (field, _) in param_field_map.items():
+                 if p != provider and field in data:
+                     del data[field]
+
+        return data
+
+
 # --- API Request Payloads ---
 
 
 class RunConfig(BaseModel):
-    configuredModules: List[ConfiguredConstitutionModule]
+    configuredModules: List[ConfiguredConstitutionModule] = Field(default_factory=list)
+    model: ModelConfig = Field(default_factory=ModelConfig) # Embed the model config
 
 
 class CheckpointConfigurable(BaseModel):
