@@ -22,6 +22,7 @@ from config import CONFIG
 from inner_agent_definitions import default_inner_agent_node
 from keystore import keystore # Import the keystore instance
 from utils import shout_if_fails
+from backend_server_async import ENV_API_KEYS # Import ENV keys for fallback
 
 # API keys are now fetched dynamically within node functions
 
@@ -135,27 +136,47 @@ def call_superego(
         # Re-raise clearly indicating the source of the error
         raise ValueError(f"Invalid 'model_config' provided: {e}") from e
 
-    # --- 2. Fetch API Key (using session_id and provider) ---
-    api_key = keystore.get_key(session_id, model_config.provider) if session_id else None
+    # --- 2. Fetch API Key with Fallback ---
+    provider = model_config.provider
+    user_api_key = keystore.get_key(session_id, provider) if session_id else None
+    env_api_key = ENV_API_KEYS.get(provider, "")
 
+    api_key_to_use = None
+    key_source = "none"
+
+    # Prioritize non-empty user key
+    if user_api_key: # Check if not None and not empty string
+        api_key_to_use = user_api_key
+        key_source = "user"
+        print(f"Using user-provided API key for provider '{provider}' in session '{session_id}'.")
+    # Fallback to non-empty .env key if user key is missing or empty
+    elif env_api_key:
+        api_key_to_use = env_api_key
+        key_source = "env"
+        print(f"User key for provider '{provider}' missing or empty in session '{session_id}'. Falling back to .env key.")
+    else:
+        # Both user key and .env key are missing/empty
+        print(f"No API key found for provider '{provider}' in session '{session_id}' or .env file.")
+
+    # --- 3. Validate Key Presence (if required by provider) ---
     # Vertex AI uses Application Default Credentials (ADC) by default, so API key might not be needed/provided
-    # Only raise error if a key is expected (not Vertex) AND it wasn't found for the session
-    # Only raise error if a key is expected (not Vertex) AND it wasn't found for the specific provider in this session
-    if not api_key and model_config.provider != "google_vertex":
-        error_msg = f"Missing API key for provider '{model_config.provider}' in session '{session_id}'. " \
-                    f"Ensure the key for this provider is added via the /apikeys endpoint for this session."
-        if not session_id:
-             error_msg = f"Missing session_id in configuration. Cannot retrieve API key for provider '{model_config.provider}'."
+    if not api_key_to_use and provider != "google_vertex":
+        error_msg = f"Missing required API key for provider '{provider}'. "
+        if session_id:
+            error_msg += f"No key found in session '{session_id}' (user-provided) or in the .env file (fallback)."
+        else:
+            error_msg += f"No session_id provided, and no key found in the .env file (fallback)."
         raise ValueError(error_msg)
 
-    # --- 3. Dynamic LLM Client Instantiation ---
+    # --- 4. Dynamic LLM Client Instantiation ---
+    # Use api_key_to_use which holds either the user key or the fallback .env key
     llm = None
     try:
         if model_config.provider == "anthropic":
             params = model_config.anthropic_params.model_dump(exclude_none=True) if model_config.anthropic_params else {}
             llm = ChatAnthropic(
                 model=model_config.name,
-                api_key=api_key,
+                api_key=api_key_to_use, # Use the determined key
                 streaming=CONFIG.get("streaming", True),
                 **params,
             )
@@ -163,7 +184,7 @@ def call_superego(
             params = model_config.openai_params.model_dump(exclude_none=True) if model_config.openai_params else {}
             llm = ChatOpenAI(
                 model=model_config.name,
-                api_key=api_key,
+                api_key=api_key_to_use, # Use the determined key
                 streaming=CONFIG.get("streaming", True),
                 **params,
             )
@@ -171,7 +192,7 @@ def call_superego(
             params = model_config.google_genai_params.model_dump(exclude_none=True) if model_config.google_genai_params else {}
             llm = ChatGoogleGenerativeAI(
                 model=model_config.name,
-                google_api_key=api_key,
+                google_api_key=api_key_to_use, # Use the determined key
                 # streaming=CONFIG.get("streaming", True), # TODO: Check if streaming is supported/needed here
                 **params,
             )
@@ -191,12 +212,21 @@ def call_superego(
 
     except Exception as e:
         # Catch potential instantiation errors (e.g., invalid model name for provider)
-        raise RuntimeError(f"Failed to instantiate LLM client for provider '{model_config.provider}' with model '{model_config.name}': {e}") from e
+       # Add context about which key source failed if possible
+       if key_source == "user":
+           error_detail = f"The API key you provided for provider '{provider}' in session '{session_id}' may be invalid or lack permissions for model '{model_config.name}'."
+       elif key_source == "env":
+           error_detail = f"The fallback API key from the .env file for provider '{provider}' may be invalid or lack permissions for model '{model_config.name}'."
+       else: # Should not happen if ValueError check passed, but include for completeness
+            error_detail = f"An unexpected error occurred trying to instantiate the LLM client for provider '{provider}' with model '{model_config.name}' (key status unknown)."
 
-    # Bind the appropriate tool for Superego
+       # Include the original error from the library for technical detail
+       raise RuntimeError(f"{error_detail} Original error: {e}") from e
+
+   # Bind the appropriate tool for Superego
     superego_llm = llm.bind_tools([superego_decision])
 
-    # --- 4. Prepare Prompt and Invoke ---
+    # --- 5. Prepare Prompt and Invoke ---
     constitution_content = configurable.get("constitution_content", "")
     adherence_levels_text = configurable.get("adherence_levels_text", "")
     superego_instructions = load_superego_instructions()
