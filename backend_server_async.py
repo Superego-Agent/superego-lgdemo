@@ -35,7 +35,7 @@ try:
         get_constitution_hierarchy,
     )
     from superego_core_async import (
-        create_models,  # Keep for lifespan
+        # create_models function removed from superego_core_async
         create_workflow,
     )
 except ImportError as e:
@@ -69,67 +69,61 @@ async def lifespan(app: FastAPI):
     global graph_app, checkpointer, inner_agent_app, ENV_API_KEYS # Add ENV_API_KEYS to global
     print("Backend server starting up...")
     try:
-       # Load environment variables from .env file
-       load_dotenv()
-       print("Loaded environment variables from .env file.")
+        # Load environment variables from .env file
+        load_dotenv()
+        print("Loaded environment variables from .env file.")
 
-       # Populate ENV_API_KEYS (add more providers as needed)
-       # Use provider slugs consistent with ModelConfig
-       ENV_API_KEYS["anthropic"] = os.getenv("ANTHROPIC_API_KEY", "")
-       ENV_API_KEYS["openai"] = os.getenv("OPENAI_API_KEY", "")
-       ENV_API_KEYS["google_genai"] = os.getenv("GOOGLE_API_KEY", "") # Or specific name like GOOGLE_GENERATIVE_AI_API_KEY
-       # Vertex AI often uses ADC, but check if a specific env var is sometimes used
-       # ENV_API_KEYS["google_vertex"] = os.getenv("GOOGLE_VERTEX_AI_API_KEY", "")
-       # Add others if needed, e.g., OPENROUTER_API_KEY
-       print(f"Loaded .env keys for providers: {[k for k, v in ENV_API_KEYS.items() if v]}")
+        # Populate ENV_API_KEYS (add more providers as needed)
+        # Use provider slugs consistent with ModelConfig
+        ENV_API_KEYS["anthropic"] = os.getenv("ANTHROPIC_API_KEY", "")
+        ENV_API_KEYS["openai"] = os.getenv("OPENAI_API_KEY", "")
+        ENV_API_KEYS["google_genai"] = os.getenv("GOOGLE_API_KEY", "") # Or specific name like GOOGLE_GENERATIVE_AI_API_KEY
+        # Vertex AI often uses ADC, but check if a specific env var is sometimes used
+        # ENV_API_KEYS["google_vertex"] = os.getenv("GOOGLE_VERTEX_AI_API_KEY", "")
+        # Add others if needed, e.g., OPENROUTER_API_KEY
+        print(f"Loaded .env keys for providers: {[k for k, v in ENV_API_KEYS.items() if v]}")
 
-       # The API key will be provided by the frontend
-       # This message might be misleading now, as .env keys are loaded first.
-       # Consider removing or rephrasing.
-       # print("Waiting for API key to be provided by the frontend...")
+        # Continue with normal initialization
+        # Models are now created dynamically within graph nodes, so create_models() is removed.
+        # create_workflow no longer takes model arguments.
+        graph_app, checkpointer, inner_agent_app = await create_workflow()
+        if not checkpointer:
+             print("Warning: Checkpointer was not initialized during startup.")
+        if not graph_app:
+            print("Warning: Main graph app was not initialized.")
+        if not inner_agent_app:
+            print("Warning: Inner agent app was not initialized.")
 
-       # Continue with normal initialization
-       # Continue with normal initialization
-       superego_model, inner_model = create_models()
-       graph_app, checkpointer, inner_agent_app = await create_workflow(
-           superego_model=superego_model, inner_model=inner_model
-       )
-       if not checkpointer:
-           print("Warning: Checkpointer was not initialized during startup.")
-       if not graph_app:
-           print("Warning: Main graph app was not initialized.")
-       if not inner_agent_app:
-           print("Warning: Inner agent app was not initialized.")
+        # print("Models, graph, and databases initialized successfully.")
 
-       # print("Models, graph, and databases initialized successfully.")
+        # Pass instances to routers after they are created
+        # This ensures routers have access to the necessary components
+        if graph_app:
+            runs_router.router.graph_app_instance = graph_app
+            api_key_router.router.graph_app_instance = graph_app
+            print("Passed graph_app instance to runs_router and api_key_router.")
+        if checkpointer:
+            runs_router.router.checkpointer_instance = checkpointer
+            threads_router.router.checkpointer_instance = checkpointer
+            api_key_router.router.checkpointer_instance = checkpointer
+            print(
+                "Passed checkpointer instance to runs_router, threads_router, and api_key_router."
+            )
+        # Pass graph_app instance to threads_router as well
+        if graph_app:
+            threads_router.router.graph_app_instance = graph_app
+            print("Passed graph_app instance to threads_router.")
+        # Pass inner_agent_app instance to api_key_router
+        if inner_agent_app:
+            api_key_router.router.inner_agent_app_instance = inner_agent_app
+            print("Passed inner_agent_app instance to api_key_router.")
 
-       # Pass instances to routers after they are created
-       # This ensures routers have access to the necessary components
-       if graph_app:
-           runs_router.router.graph_app_instance = graph_app
-           api_key_router.router.graph_app_instance = graph_app
-           print("Passed graph_app instance to runs_router and api_key_router.")
-       if checkpointer:
-           runs_router.router.checkpointer_instance = checkpointer
-           threads_router.router.checkpointer_instance = checkpointer
-           api_key_router.router.checkpointer_instance = checkpointer
-           print(
-               "Passed checkpointer instance to runs_router, threads_router, and api_key_router."
-           )
-       # Pass graph_app instance to threads_router as well
-       if graph_app:
-           threads_router.router.graph_app_instance = graph_app
-           print("Passed graph_app instance to threads_router.")
-       # Pass inner_agent_app instance to api_key_router
-       if inner_agent_app:
-           api_key_router.router.inner_agent_app_instance = inner_agent_app
-           print("Passed inner_agent_app instance to api_key_router.")
     except Exception as e:
         print(f"FATAL: Error during startup: {e}")
         traceback.print_exc()
         raise RuntimeError("Failed to initialize backend components") from e
 
-    yield
+    yield # This should be correctly indented now, outside the try but inside the function
 
     # --- Shutdown ---
     print("Backend server shutting down...")

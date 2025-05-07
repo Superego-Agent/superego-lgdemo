@@ -22,7 +22,8 @@ from config import CONFIG
 from inner_agent_definitions import default_inner_agent_node
 from keystore import keystore # Import the keystore instance
 from utils import shout_if_fails
-from backend_server_async import ENV_API_KEYS # Import ENV keys for fallback
+# Removed top-level import to break circular dependency:
+# from backend_server_async import ENV_API_KEYS
 
 # API keys are now fetched dynamically within node functions
 
@@ -137,6 +138,8 @@ def call_superego(
         raise ValueError(f"Invalid 'model_config' provided: {e}") from e
 
     # --- 2. Fetch API Key with Fallback ---
+    # Import ENV_API_KEYS here, inside the function, to avoid circular import
+    from backend_server_async import ENV_API_KEYS
     provider = model_config.provider
     user_api_key = keystore.get_key(session_id, provider) if session_id else None
     env_api_key = ENV_API_KEYS.get(provider, "")
